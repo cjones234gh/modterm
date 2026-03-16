@@ -97,8 +97,8 @@ namespace modterm
             }
 
 			// draw all UI controls
-			_rightControlGroup?.DrawControls(sender, args.DrawingSession);
-            _rightBottomControlGroup?.DrawControls(sender, args.DrawingSession);
+			_upperRightControls?.DrawControls(sender, args.DrawingSession);
+            _lowerRightControls?.DrawControls(sender, args.DrawingSession);
 		}
 
 		private void DrawAnsiText(CanvasDrawingSession ds, float x, float y, string text, Color defaultColor, CanvasTextFormat format)

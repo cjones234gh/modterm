@@ -144,11 +144,11 @@ namespace modterm
                 ModtermCanvas.Invalidate();
             }
 
-            foreach (var control in _rightControlGroup.Controls)
+            foreach (var control in _upperRightControls.Controls)
             {
                 control.IsHovered = control.Location.Contains(currentPoint);
             }
-            foreach (var control in _rightBottomControlGroup.Controls)
+            foreach (var control in _lowerRightControls.Controls)
             {
                 control.IsHovered = control.Location.Contains(currentPoint);
             }

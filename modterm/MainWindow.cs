@@ -33,8 +33,8 @@ namespace modterm
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
 
         // modglass UI controls
-        private ModglassControlGroup    _rightControlGroup;
-        private ModglassControlGroup    _rightBottomControlGroup;
+        private ModglassCornerControlGroup    _upperRightControls;
+        private ModglassCornerControlGroup    _lowerRightControls;
         private DisplayTextControl      _scrollLockControl;
         private DisplayTextControl      _pathControl;
         private DisplayTextControl      _currentTintTransparencyControl;
@@ -99,43 +99,34 @@ namespace modterm
             _shellApplicationPath = _shellEnv["bash"];
 
             // ui controls and dock groups
-            _rightControlGroup = new ModglassControlGroup() { Dock = ModglassControlGroup.GroupDock.Right };
-            _rightBottomControlGroup = new ModglassControlGroup() { Dock = ModglassControlGroup.GroupDock.BottomRight };
+            _upperRightControls = new ModglassCornerControlGroup(
+                ModglassCornerControlGroup.CornerGroupDock.UpperRightHorizontal);
+            _lowerRightControls = new ModglassCornerControlGroup(
+                ModglassCornerControlGroup.CornerGroupDock.LowerRightVertical);
 
-            _testRunningGraphControlR = new RunningGraphControl();
-            _testRunningGraphControlR.Location = new Rect(0, 0, 120, 120); 
-            _testRunningGraphControlR.DataPointMaxValue = 255;
-            _testRunningGraphControlR.DataPointMinValue = 0;
-
-            _testRunningGraphControlG = new RunningGraphControl();
-            _testRunningGraphControlG.Location = new Rect(0, 0, 120, 120);
-            _testRunningGraphControlG.DataPointMaxValue = 255;
-            _testRunningGraphControlG.DataPointMinValue = 0;
+            _testRunningGraphControlR = new RunningGraphControl(
+                new Rect(0, 0, 120, 120), 1000, 0, 255);
             
-            _testRunningGraphControlB = new RunningGraphControl();
-            _testRunningGraphControlB.Location = new Rect(0, 0, 120, 120); // fixed width and height for a graph control
-            _testRunningGraphControlB.DataPointMaxValue = 255;
-            _testRunningGraphControlB.DataPointMinValue = 0;
-
-            _scrollLockControl = new DisplayTextControl();
-            _scrollLockControl.TextContent = "S C R L K";
-            _scrollLockControl.Location = new Rect(0, ModglassDisplay.ModglassCanvasPaddingTop, 0, 0); 
-
-            _pathControl = new DisplayTextControl();
-            _pathControl.TextContent = _shellApplicationPath;   
-            _pathControl.Location = new Rect(0, ModglassDisplay.ModglassCanvasPaddingTop, 0, 0);
-
-            _currentTintTransparencyControl = new DisplayTextControl();
-            _currentTintTransparencyControl.TextContent = GetCurrentTintTransparencyInfo();
-            _currentTintTransparencyControl.Location = new Rect(0, ModglassDisplay.ModglassCanvasPaddingTop, 0, 0);
-
-            _rightBottomControlGroup.Controls.Add(_testRunningGraphControlB);
-            _rightBottomControlGroup.Controls.Add(_testRunningGraphControlG);
-            _rightBottomControlGroup.Controls.Add(_testRunningGraphControlR);
+            _testRunningGraphControlG = new RunningGraphControl(
+                new Rect(0, 0, 120, 120), 1000, 0, 255);
             
-            _rightControlGroup.Controls.Add(_scrollLockControl);
-            _rightControlGroup.Controls.Add(_pathControl);
-            _rightControlGroup.Controls.Add(_currentTintTransparencyControl);
+            _testRunningGraphControlB = new RunningGraphControl(
+                new Rect(0, 0, 120, 120), 1000, 0, 255);
+            
+            _scrollLockControl = new DisplayTextControl
+                (new Rect(0, 0, 0, 0), "S C R L K");
+
+            _pathControl = new DisplayTextControl(
+                new Rect(0, 0, 0, 0), _shellApplicationPath);   
+
+            _currentTintTransparencyControl = new DisplayTextControl(
+                new Rect(0, 0, 0, 0), GetCurrentTintTransparencyInfo());
+
+            _lowerRightControls.Controls.AddRange(
+                [_testRunningGraphControlB, _testRunningGraphControlG, _testRunningGraphControlR]);
+            
+            _upperRightControls.Controls.AddRange(
+                [_scrollLockControl, _pathControl, _currentTintTransparencyControl]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
