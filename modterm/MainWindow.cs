@@ -1,24 +1,17 @@
-﻿using Microsoft.Graphics.Canvas;
-using Microsoft.Graphics.Canvas.Effects;
-using Microsoft.Graphics.Canvas.Text;
-using Microsoft.Graphics.Canvas.UI.Xaml;
+﻿
 using Microsoft.UI;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
-using System.Numerics;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 using Windows.UI;
-using Windows.UI.Core;
 using Windows.Foundation;
 using Modglass;
 
@@ -41,6 +34,8 @@ namespace modterm
         private RunningGraphControl     _testRunningGraphControlR;
         private RunningGraphControl _testRunningGraphControlG;
         private RunningGraphControl _testRunningGraphControlB;
+
+        private DisplayTextControl _testControl;
 
         // background tint drift state
         private bool            _bgTintDriftEnabled = false;
@@ -253,119 +248,6 @@ namespace modterm
             }
         }
 
-        private List<(string Text, Color Color)> ParseAnsiSegments(string line, Color defaultColor)
-        {
-            var segments = new List<(string, Color)>();
-            var currentColor = defaultColor;
-            var sb = new StringBuilder();
-
-            int i = 0;
-            while (i < line.Length)
-            {
-                if (line[i] == '\x1B' && i + 1 < line.Length && line[i + 1] == '[')
-                {
-                    // Flush pending text
-                    if (sb.Length > 0)
-                    {
-                        segments.Add((sb.ToString(), currentColor));
-                        sb.Clear();
-                    }
-
-                    // Parse escape sequence
-                    i += 2; // skip \x1B[
-                    string code = "";
-                    while (i < line.Length && line[i] != 'm')
-                    {
-                        code += line[i];
-                        i++;
-                        }
-                    if (i < line.Length) i++; // skip 'm'
-
-                    // === Apply color codes ===
-                    if (code == "0" || code == "39" || code == "")
-                    {
-                        currentColor = defaultColor;
-                    }
-                    else if (code.StartsWith("38;2;")) // 24-bit truecolor
-                    {
-                        var rgb = code.Substring(5).Split(';');
-                        if (rgb.Length == 3 &&
-                            byte.TryParse(rgb[0], out byte r) &&
-                            byte.TryParse(rgb[1], out byte g) &&
-                            byte.TryParse(rgb[2], out byte b))
-                        {
-                            currentColor = Color.FromArgb(255, r, g, b);
-                        }
-                    }
-                    else if (code.StartsWith("38;5;")) // 256-color (basic mapping)
-                    {
-                        if (int.TryParse(code.Substring(5), out int n))
-                        {
-                            currentColor = n switch
-                            {
-                                0 => Color.FromArgb(255, 0, 0, 0),
-                                1 => Color.FromArgb(255, 128, 0, 0),
-                                2 => Color.FromArgb(255, 0, 128, 0),
-                                3 => Color.FromArgb(255, 128, 128, 0),
-                                4 => Color.FromArgb(255, 0, 0, 128),
-                                5 => Color.FromArgb(255, 128, 0, 128),
-                                6 => Color.FromArgb(255, 0, 128, 128),
-                                7 => Color.FromArgb(255, 192, 192, 192),
-                                8 => Color.FromArgb(255, 128, 128, 128),
-                                9 => Color.FromArgb(255, 255, 0, 0),
-                                10 => Color.FromArgb(255, 0, 255, 0),
-                                11 => Color.FromArgb(255, 255, 255, 0),
-                                12 => Color.FromArgb(255, 0, 0, 255),
-                                13 => Color.FromArgb(255, 255, 0, 255),
-                                14 => Color.FromArgb(255, 0, 255, 255),
-                                15 => Color.FromArgb(255, 255, 255, 255),
-                                _ => defaultColor // fallback for other 256 colors
-                            };
-                        }
-                    }
-                    else if (int.TryParse(code, out int basic) && basic >= 30 && basic <= 37)
-                    {
-                        currentColor = basic switch
-                        {
-                            30 => Color.FromArgb(255, 0, 0, 0),
-                            31 => Color.FromArgb(255, 255, 85, 85),
-                            32 => Color.FromArgb(255, 85, 255, 85),
-                            33 => Color.FromArgb(255, 255, 255, 85),
-                            34 => Color.FromArgb(255, 85, 85, 255),
-                            35 => Color.FromArgb(255, 255, 85, 255),
-                            36 => Color.FromArgb(255, 85, 255, 255),
-                            37 => Color.FromArgb(255, 255, 255, 255),
-                            _ => defaultColor
-                        };
-                    }
-                    else if (int.TryParse(code, out int bright) && bright >= 90 && bright <= 97)
-                    {
-                        currentColor = bright switch
-                        {
-                            90 => Color.FromArgb(255, 128, 128, 128),
-                            91 => Color.FromArgb(255, 255, 85, 85),
-                            92 => Color.FromArgb(255, 85, 255, 85),
-                            93 => Color.FromArgb(255, 255, 255, 85),
-                            94 => Color.FromArgb(255, 85, 85, 255),
-                            95 => Color.FromArgb(255, 255, 85, 255),
-                            96 => Color.FromArgb(255, 85, 255, 255),
-                            97 => Color.FromArgb(255, 255, 255, 255),
-                            _ => defaultColor
-                        };
-                    }
-                    continue;
-                }
-
-                sb.Append(line[i]);
-                i++;
-            }
-
-            if (sb.Length > 0)
-                segments.Add((sb.ToString(), currentColor));
-
-            return segments;
-        }
-
         private void InitializeFlyouts()
         {
             _flyout = new MenuFlyout();
@@ -425,11 +307,22 @@ namespace modterm
             // window tint
             var tintSub = new MenuFlyoutSubItem { Text = "Tint" };
             var tintOptions = new (string, Color)[] {
-                ("Transparent", Colors.Transparent), ("Snow White", Colors.White),
+                ("Transparent", Colors.Transparent),
+                ("Snow White", Colors.White),
                 ("Pitch Black", Colors.Black),
-                ("Violet", Color.FromArgb(255,153,0,255)), ("Azure", Colors.Blue),
-                ("Verdant", Colors.Lime), ("Sunny", Colors.Yellow),
-                ("Citrus", Color.FromArgb(255,255,153,0)), ("Ember", Colors.Red)
+                ("Alice Blue", Colors.AliceBlue),
+                ("Coral", Colors.Coral),
+                ("Medium Purple", Colors.MediumPurple),
+                ("Medium Sea Green", Colors.MediumSeaGreen),
+                ("Gold", Colors.Gold),
+                ("Deep Pink", Colors.DeepPink),
+                ("Crimson", Colors.Crimson),
+                ("Dark Turquoise", Colors.DarkTurquoise),
+                ("Magenta", Colors.Magenta),
+                ("Dark Violet", Colors.DarkViolet),
+                ("Dark Cyan", Colors.DarkCyan),
+                ("Dark Goldenrod", Colors.DarkGoldenrod),
+                ("Dark Slate Blue", Colors.DarkSlateBlue)
             };
             foreach (var (label, tint) in tintOptions)
             {
