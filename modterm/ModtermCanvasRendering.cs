@@ -15,10 +15,10 @@ namespace modterm
         private int _bannerColorOffset = 0;
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
-            ModglassDisplay.BeginEffectSequence(Effects.Glow);
+            ModglassDisplay.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
             double cmdY = sender.ActualHeight - ModglassDisplay.CurrentFontSize - 20;
-            ModglassDisplay.DrawAnsiText(sender, args.DrawingSession, 10f, (float)cmdY, "> " + _commandLine);
+            ModglassDisplay.DrawAnsiText(10f, (float)cmdY, "> " + _commandLine);
 
             double y = sender.ActualHeight - ModglassDisplay.CurrentFontSize * 2 - 25;
             int startIdx = Math.Max(0, _bufferLines.Count - 1 - _scrollOffset);
@@ -32,7 +32,7 @@ namespace modterm
                     //color = ModglassDisplay.InputColor;
                     line = "> " + line; // prefix command lines with >
                 }
-                ModglassDisplay.DrawAnsiText(sender, args.DrawingSession, 10f, (float)y, line);
+                ModglassDisplay.DrawAnsiText(10f, (float)y, line);
                 y -= ModglassDisplay.CurrentFontSize + 5;
                 if (y < 0) break;
             }
@@ -45,8 +45,10 @@ namespace modterm
                 int cursorPosInText = 2 + _commandLineCursorPos; // 2 for '> '
                 string textUpToCursor = cmdLineWithPrompt.Substring(0, Math.Min(cursorPosInText, cmdLineWithPrompt.Length));
                 double cursorX = 10 + MeasureTextWidth(textUpToCursor, sender);
-                ModglassDisplay.DrawAnsiText(sender, args.DrawingSession, (float)cursorX, (float)cmdY, "|");
+                ModglassDisplay.DrawAnsiText((float)cursorX, (float)cmdY, "|");
             }
+
+            ModglassDisplay.EndEffectSequence();
 
             // Visual selection highlight (simple semi-transparent overlay)
             if (!string.IsNullOrEmpty(_selectedText) && _isSelecting)
@@ -63,7 +65,7 @@ namespace modterm
                 }
             }
 
-            ModglassDisplay.EndEffectSequence();
+            
 
             // draw all UI controls
             _upperRightControls?.DrawControls(sender, args.DrawingSession);
