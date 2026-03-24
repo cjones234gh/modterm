@@ -145,16 +145,16 @@ namespace modterm
                 WriteInput(". ~/.bashrc && bash -i -l\n");
             }
 
-            // show the banner (true ASCII art with 24-bit ANSI encoded color, because why not)
-            OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[0]) + "                                                                                    ");
-            OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[0]) + "                                  .o8      .                                        ");
-            OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[1]) + "                                 \"888    .o8                                        ");
-            OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[2]) + "ooo. .oo.  .oo.    .ooooo.   .oooo888  .o888oo  .ooooo.  oooo d8b ooo. .oo.  .oo.   ");
-            OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[3]) + "`888P\"Y88bP\"Y88b  d88' `88b d88' `888    888   d88' `88b `888\"\"8P `888P\"Y88bP\"Y88b  ");
-            OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[4]) + " 888   888   888  888   888 888   888    888   888ooo888  888      888   888   888  ");
-            OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[5]) + " 888   888   888  888   888 888   888    888 . 888    .o  888      888   888   888  ");
-            OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[6]) + "o888o o888o o888o `Y8bod8P' `Y8bod88P\"   \"888\" `Y8bod8P' d888b    o888o o888o o888o \x1B[0m");
-            OutputReceived?.Invoke(this, "\x1B[0m\n\x1B[0m\n\x1B[0m\n");
+            //// show the banner (true ASCII art with 24-bit ANSI encoded color, because why not)
+            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[0]) + "                                                                                    ");
+            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[0]) + "                                  .o8      .                                        ");
+            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[1]) + "                                 \"888    .o8                                        ");
+            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[2]) + "ooo. .oo.  .oo.    .ooooo.   .oooo888  .o888oo  .ooooo.  oooo d8b ooo. .oo.  .oo.   ");
+            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[3]) + "`888P\"Y88bP\"Y88b  d88' `88b d88' `888    888   d88' `88b `888\"\"8P `888P\"Y88bP\"Y88b  ");
+            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[4]) + " 888   888   888  888   888 888   888    888   888ooo888  888      888   888   888  ");
+            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[5]) + " 888   888   888  888   888 888   888    888 . 888    .o  888      888   888   888  ");
+            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[6]) + "o888o o888o o888o `Y8bod8P' `Y8bod88P\"   \"888\" `Y8bod8P' d888b    o888o o888o o888o \x1B[0m");
+            //OutputReceived?.Invoke(this, "\x1B[0m\n\x1B[0m\n\x1B[0m\n");
         }
 
         private string GetAnsiRGB(Color c)

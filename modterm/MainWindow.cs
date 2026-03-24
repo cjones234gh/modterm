@@ -30,7 +30,7 @@ namespace modterm
         private ModglassCornerControlGroup    _lowerRightControls;
         private DisplayTextControl      _scrollLockControl;
         private DisplayTextControl      _pathControl;
-        private DisplayTextControl      _currentTintTransparencyControl;
+        private DisplayTextControl      _appearanceInfoControl;
         private RunningGraphControl     _testRunningGraphControlR;
         private RunningGraphControl _testRunningGraphControlG;
         private RunningGraphControl _testRunningGraphControlB;
@@ -114,14 +114,14 @@ namespace modterm
             _pathControl = new DisplayTextControl(
                 new Rect(0, 0, 0, 0), _shellApplicationPath);   
 
-            _currentTintTransparencyControl = new DisplayTextControl(
-                new Rect(0, 0, 0, 0), GetCurrentTintTransparencyInfo());
+            _appearanceInfoControl = new DisplayTextControl(
+                new Rect(0, 0, 0, 0), GetAppearanceInfo());
 
             _lowerRightControls.Controls.AddRange(
                 [_testRunningGraphControlB, _testRunningGraphControlG, _testRunningGraphControlR]);
             
             _upperRightControls.Controls.AddRange(
-                [_scrollLockControl, _pathControl, _currentTintTransparencyControl]);
+                [_scrollLockControl, _pathControl, _appearanceInfoControl]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
@@ -168,7 +168,7 @@ namespace modterm
             {
                 _bgTintDriftColorOffset = (_bgTintDriftColorOffset + 1) % _bgTintDriftColors.Count;
                 ModglassDisplay.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
-                _currentTintTransparencyControl.TextContent = GetCurrentTintTransparencyInfo();
+                _appearanceInfoControl.TextContent = GetAppearanceInfo();
                 _testRunningGraphControlR.DataPoints.Add(ModglassDisplay.TintColor.R); // example of using the current tint color to drive a graph control
                 _testRunningGraphControlG.DataPoints.Add(ModglassDisplay.TintColor.G); // example of using the current tint color to drive a graph control
                 _testRunningGraphControlB.DataPoints.Add(ModglassDisplay.TintColor.B); // example of using the current tint color to drive a graph control
@@ -284,7 +284,7 @@ namespace modterm
                     ModglassDisplay.SetColorConfiguration(preset); 
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
-                    _currentTintTransparencyControl.TextContent = GetCurrentTintTransparencyInfo();
+                    _appearanceInfoControl.TextContent = GetAppearanceInfo();
                     ModtermCanvas.Invalidate(); };
                 themeSub.Items.Add(item);
             }
@@ -298,7 +298,7 @@ namespace modterm
                 var item = new MenuFlyoutItem { Text = i == 0 ? "Transparent (0%)" : $"{pct}%" };
                 item.Click += (_, __) => { 
                     ModglassDisplay.TransparencyPct = pct;
-                    _currentTintTransparencyControl.TextContent = GetCurrentTintTransparencyInfo();
+                    _appearanceInfoControl.TextContent = GetAppearanceInfo();
                     ModtermCanvas.Invalidate(); };
                 transSub.Items.Add(item);
             }
@@ -331,7 +331,7 @@ namespace modterm
                     ModglassDisplay.TintColor = tint; 
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
-                    _currentTintTransparencyControl.TextContent = GetCurrentTintTransparencyInfo();
+                    _appearanceInfoControl.TextContent = GetAppearanceInfo();
                     ModtermCanvas.Invalidate(); };
                 tintSub.Items.Add(item);
             }
@@ -438,11 +438,10 @@ namespace modterm
             return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
         }
 
-        private string GetCurrentTintTransparencyInfo()
+        private string GetAppearanceInfo()
         {
-            return 
-                $"Tint: {GetColorHexString(ModglassDisplay.TintColor)} @ {ModglassDisplay.TransparencyPct}% transparency " +
-                $"Color {_bgTintDriftColorOffset} of {_bgTintDriftColors.Count} set."; 
+            return
+                $"Theme: {ModglassDisplay.CurrentConfigurationName} Tint: {GetColorHexString(ModglassDisplay.TintColor)} Transparency: {ModglassDisplay.TransparencyPct}%";
         }
 
         private readonly (string Name, Color Color)[] _colorOptions = new[]

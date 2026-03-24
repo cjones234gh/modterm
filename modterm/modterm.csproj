@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\modglass\modglass\modglass.csproj" />
+    <ProjectReference Include="..\..\VtNetCore\VtNetCore\VtNetCore.csproj" />
   </ItemGroup>
 
   <!--
