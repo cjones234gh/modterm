@@ -11,7 +11,7 @@ namespace modterm
 {
     public sealed partial class  MainWindow : Window
     {
-        private int _rows;
+        private int _lines;
         private int _columns;
 
         // Offset for banner color cycling effect
@@ -28,7 +28,7 @@ namespace modterm
             //_vtController.Columns = cols;
             _vtController.VisibleRows = rows;
             _vtController.VisibleColumns = cols;
-            _rows = rows;
+            _lines = rows;
             _columns = cols;
 
             // Get VT buffer page spans for visible area

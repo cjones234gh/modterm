@@ -202,14 +202,19 @@ namespace modterm
             float fontHeight = ModglassDisplay.CurrentFontSize + 2f;
             int cols = (int)(canvas.ActualWidth / fontWidth);
             int rows = (int)(canvas.ActualHeight / fontHeight);
-            _rows = rows;
+            _lines = rows;
             _columns = cols;
         }
 
         private void StartConPTY()
         {
             _terminal.OutputReceived += OnOutputReceived;
-            _terminal.Start(_shellApplicationPath, _shellArguments, _rows, _columns);
+            // temp fix for bash rows cols startup.
+            if (_shellApplicationPath.EndsWith("bash.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                _shellArguments = "-c 'export LINES=" + _lines + " COLUMNS=" + _columns + " && exec /usr/bin/bash -i'";
+            }
+            _terminal.Start(_shellApplicationPath, _shellArguments, _lines, _columns);
         }
 
         private void OnOutputReceived(object? sender, string line)
@@ -425,7 +430,7 @@ namespace modterm
                     await Task.Delay(1000); // Pauses for 1 second without blocking the UI thread
                     _terminal = new ConPTYTerminal();
                     _terminal.OutputReceived += OnOutputReceived;
-                    _terminal.Start(sh.Path, sh.Arguments, _rows, _columns);
+                    _terminal.Start(sh.Path, sh.Arguments, _lines, _columns);
                 };
                 shellSub.Items.Add(item);
             }
@@ -441,7 +446,7 @@ namespace modterm
         {
             return
                 $"Theme: {ModglassDisplay.CurrentConfigurationName} Tint: {GetColorHexString(ModglassDisplay.TintColor)} Transparency: {ModglassDisplay.TransparencyPct}% " +
-                $"Rows: {_rows} Columns: {_columns}";
+                $"Rows: {_lines} Columns: {_columns}";
         }
 
         private readonly (string Name, Color Color)[] _colorOptions = new[]

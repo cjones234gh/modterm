@@ -152,9 +152,9 @@ namespace modterm
             DetermineRowsAndColumns();
             _appearanceInfoControl.TextContent = GetAppearanceInfo().Replace(" ", "\u00A0"); // Use non-breaking spaces for better layout in the info control
             if (_columns < 1) _columns = 1;
-            if (_rows < 1) _rows = 1;
-            _vtController.ResizeView(_columns, _rows);
-            _terminal?.Resize((short)_columns, (short)_rows);
+            if (_lines < 1) _lines = 1;
+            _vtController.ResizeView(_columns, _lines);
+            _terminal?.Resize((short)_columns, (short)_lines);
         }
 
         private char? GetCharFromVirtualKey(Windows.System.VirtualKey key, KeyRoutedEventArgs e)
