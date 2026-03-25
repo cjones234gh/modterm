@@ -142,7 +142,7 @@ namespace modterm
             // temporarily force bash interactive with login profile to test;
             if (_applicationName.Contains("bash"))
             {
-                WriteInput(". ~/.bashrc && bash -i -l\n");
+                WriteInput("export PATH=/usr/bin:$PATH && bash -i -l\n");
             }
 
             //// show the banner (true ASCII art with 24-bit ANSI encoded color, because why not)

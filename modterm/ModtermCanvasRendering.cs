@@ -11,6 +11,9 @@ namespace modterm
 {
     public sealed partial class  MainWindow : Window
     {
+        private int _rows;
+        private int _columns;
+
         // Offset for banner color cycling effect
         private int _bannerColorOffset = 0;
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
@@ -25,6 +28,8 @@ namespace modterm
             //_vtController.Columns = cols;
             _vtController.VisibleRows = rows;
             _vtController.VisibleColumns = cols;
+            _rows = rows;
+            _columns = cols;
 
             // Get VT buffer page spans for visible area
             var pageSpans = _vtController.ViewPort.GetPageSpans(0, rows, cols);

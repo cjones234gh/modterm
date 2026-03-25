@@ -154,6 +154,9 @@ namespace modterm
             float fontHeight = ModglassDisplay.CurrentFontSize + 2f;
             int cols = (int)(canvas.ActualWidth / fontWidth);
             int rows = (int)(canvas.ActualHeight / fontHeight);
+            _rows = rows;
+            _columns = cols;
+            _appearanceInfoControl.TextContent = GetAppearanceInfo().Replace(" ", "\u00A0"); // Use non-breaking spaces for better layout in the info control
             if (cols < 1) cols = 1;
             if (rows < 1) rows = 1;
             _vtController.ResizeView(cols, rows);

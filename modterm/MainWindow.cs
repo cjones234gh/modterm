@@ -435,7 +435,8 @@ namespace modterm
         private string GetAppearanceInfo()
         {
             return
-                $"Theme: {ModglassDisplay.CurrentConfigurationName} Tint: {GetColorHexString(ModglassDisplay.TintColor)} Transparency: {ModglassDisplay.TransparencyPct}%";
+                $"Theme: {ModglassDisplay.CurrentConfigurationName} Tint: {GetColorHexString(ModglassDisplay.TintColor)} Transparency: {ModglassDisplay.TransparencyPct}% " +
+                $"Rows: {_rows} Columns: {_columns}";
         }
 
         private readonly (string Name, Color Color)[] _colorOptions = new[]
