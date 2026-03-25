@@ -372,7 +372,7 @@ namespace modterm
 
             // font size
             var sizeSub = new MenuFlyoutSubItem { Text = "Font Size" };
-            var sizes = new[] { 13.5, 14.5, 15.5, 16.5, 17.5 };
+            var sizes = new[] { 8, 10, 12, 13.5, 14.5, 15.5, 16.5, 17.5 };
             foreach (var s in sizes)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
@@ -382,6 +382,28 @@ namespace modterm
                 sizeSub.Items.Add(item);
             }
             _flyout.Items.Add(sizeSub);
+
+            // control font family
+            var controlFontSub = new MenuFlyoutSubItem { Text = "Control Font Family" };
+            var controlFonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "Segoe UI Mono" };
+            foreach (var f in controlFonts)
+            {
+                var item = new MenuFlyoutItem { Text = f };
+                item.Click += (_, __) => { ModglassDisplay.CurrentControlFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
+                controlFontSub.Items.Add(item);
+            }
+            _flyout.Items.Add(controlFontSub);
+
+            // control font size
+            var controlSizeSub = new MenuFlyoutSubItem { Text = "Control Font Size" };
+            var controlSizes = new[] { 8, 10, 12, 13.5, 14.5, 15.5, 16.5, 17.5 };
+            foreach (var s in controlSizes)
+            {
+                var item = new MenuFlyoutItem { Text = $"{s} pt" };
+                item.Click += (_, __) => { ModglassDisplay.CurrentControlFontSize = (float)s; ModtermCanvas.Invalidate(); };
+                controlSizeSub.Items.Add(item);
+            }
+            _flyout.Items.Add(controlSizeSub);
 
             // font glow
             var glowSub = new MenuFlyoutSubItem { Text = "UI Glow" };
