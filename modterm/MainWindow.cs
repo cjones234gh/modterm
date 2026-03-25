@@ -19,6 +19,9 @@ namespace modterm
 {
     public sealed partial class MainWindow : Window
     {
+        // VtNetCore terminal state
+        private VtNetCore.VirtualTerminal.VirtualTerminalController _vtController;
+        private VtNetCore.XTermParser.DataConsumer _vtDataConsumer;
         // main terminal logic and state
         private ConPTYTerminal  _terminal;
         private string           _shellApplicationPath;
@@ -45,15 +48,8 @@ namespace modterm
         private int             _bgTintDriftIntervalMs = 333;
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _bgTintDriftTimer;
 
-        // command line and buffer state
-        private string          _commandLine = "";
-        private List<string>    _commandLineHistory = new List<string>();
-        private int             _commandHistorySize;
-        private int             _commandHistoryIndex = 0;
-        private int             _bufferSize;
-        private List<string>    _bufferLines = new List<string>();
+        // VT mode: cursor visibility only
         private bool            _cursorVisible = true;
-        private int             _commandLineCursorPos = 0;
         
 
         // context menu flyout for right-click and shell definitions
@@ -74,15 +70,20 @@ namespace modterm
                 
         private void InitializeApplication()
         {
+
             _cursorTimer = DispatcherQueue.CreateTimer();
             _bgTintDriftTimer = DispatcherQueue.CreateTimer();
 
-            _commandHistorySize = 200;
-            _bufferSize = 1000;
+            //_commandHistorySize = 200;
+            //_bufferSize = 1000;
             _terminal = new ConPTYTerminal();
             _flyout = new MenuFlyout();
             _shellApplicationPath = _shellEnv.ContainsKey("bash") ? _shellEnv["bash"] :
                 (_shellEnv.ContainsKey("cmd") ? _shellEnv["cmd"] : "cmd.exe");
+
+            // Initialize VtNetCore terminal controller and data consumer
+            _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
+            _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
 
             // todo: load/create user config here
             ModglassDisplay.Initialize();
@@ -183,20 +184,8 @@ namespace modterm
         {
             // TODO: this is broke af - also, we should just copy when the rectangle is drawn (mouse button up),
             // not wait for a ctrl-c or context copy selection.
-            int startLine = Math.Max(0, _bufferLines.Count - 1 - _scrollOffset - 
-                (int)(_selectionStart.Y / (ModglassDisplay.CurrentFontSize + 5)));
-            int endLine = Math.Max(0, _bufferLines.Count - 1 - _scrollOffset - 
-                (int)(_selectionEnd.Y / (ModglassDisplay.CurrentFontSize + 5)));
-
-            if (startLine > endLine) (startLine, endLine) = (endLine, startLine);
-
-            var selectedLines = new List<string>();
-            for (int i = Math.Min(startLine, endLine); i <= Math.Max(startLine, endLine); i++)
-            {
-                if (i < _bufferLines.Count)
-                    selectedLines.Add(_bufferLines[i]);
-            }
-            _selectedText = string.Join("\r\n", selectedLines);
+            // Selection logic should be updated to use VT buffer if selection is needed
+            _selectedText = string.Empty;
         }
 
         private async void PasteFromClipboard()
@@ -205,22 +194,9 @@ namespace modterm
             if (dataPackageView.Contains(StandardDataFormats.Text))
             {
                 string text = await dataPackageView.GetTextAsync();
-                text = text.Replace("\r\n", "\n").Replace("\r", "\n");
-                foreach (char c in text)
+                if (!string.IsNullOrEmpty(text))
                 {
-                    if (c == '\n')
-                    {
-                        _terminal?.WriteInput(_commandLine + "\n");
-                        _bufferLines.Add("> " + _commandLine);
-                        if (_bufferLines.Count > _bufferSize) _bufferLines.RemoveAt(0);
-                        if (_commandLine != string.Empty)
-                            _commandLineHistory.Add(_commandLine);
-                        _commandLine = "";
-                    }
-                    else
-                    {
-                        _commandLine += c;
-                    }
+                    _terminal?.WriteInput(text);
                 }
                 ModtermCanvas.Invalidate();
             }
@@ -234,16 +210,11 @@ namespace modterm
 
         private void OnOutputReceived(object? sender, string line)
         {
-            // Reset scroll when new output arrives (optional quality-of-life)
+            // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;
-
-            if (string.IsNullOrWhiteSpace(line)) return;
-            var lines = line.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var l in lines)
+            if (!string.IsNullOrEmpty(line))
             {
-                _bufferLines.Add(l);
-                if (_bufferLines.Count > _bufferSize)
-                    _bufferLines.RemoveAt(0);
+                _vtDataConsumer.Write(line);
                 ModtermCanvas.Invalidate();
             }
         }
@@ -255,17 +226,18 @@ namespace modterm
             var copyItem = new MenuFlyoutItem { Text = "Copy" };
             copyItem.Click += (_, __) =>
             {
-                DataPackage dataPackage = new DataPackage();
-                if (!string.IsNullOrEmpty(_selectedText))
-                {
-                    dataPackage.SetText(_selectedText);
-                    Clipboard.SetContent(dataPackage);
-                }
-                else if (!string.IsNullOrEmpty(_commandLine))
-                {
-                    dataPackage.SetText(_commandLine);
-                    Clipboard.SetContent(dataPackage);
-                }
+                //DataPackage dataPackage = new DataPackage();
+                //if (!string.IsNullOrEmpty(_selectedText))
+                //{
+                //    dataPackage.SetText(_selectedText);
+                //    Clipboard.SetContent(dataPackage);
+                //}
+                //else if (!string.IsNullOrEmpty(_commandLine))
+                //{
+                //    dataPackage.SetText(_commandLine);
+                //    Clipboard.SetContent(dataPackage);
+                //}
+                Debug.WriteLine("Copy command executed - selection: " + _selectedText);
 
             };
             _flyout.Items.Add(copyItem);

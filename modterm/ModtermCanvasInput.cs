@@ -17,103 +17,65 @@ namespace modterm
     {
         private void ModtermCanvas_KeyDown(object sender, KeyRoutedEventArgs e)
         {
-            // Handle Ctrl+C (send interrupt)
+            // Forward key events as VT sequences to the shell process
             var ctrlState = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control);
             bool isCtrlPressed = ctrlState.HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+
+            // Handle Ctrl+C (send interrupt)
             if (isCtrlPressed && e.Key == Windows.System.VirtualKey.C)
             {
                 _terminal.WriteInput("\x03");
                 return;
             }
+
+            // Map special keys to VT sequences
+            string vtSeq = null;
             switch (e.Key)
             {
-                case Windows.System.VirtualKey.Home:
-                    _commandLineCursorPos = 0;
-                    break;
-                case Windows.System.VirtualKey.End:
-                    _commandLineCursorPos = _commandLine.Length;
-                    break;
-                case Windows.System.VirtualKey.Left:
-                    if (_commandLineCursorPos > 0)
-                        _commandLineCursorPos--;
-                    break;
-                case Windows.System.VirtualKey.Right:
-                    if (_commandLineCursorPos < _commandLine.Length)
-                        _commandLineCursorPos++;
-                    break;
                 case Windows.System.VirtualKey.Enter:
-                    _terminal.WriteInput(_commandLine + "\n");
-                    //_bufferLines.Add("> " + _commandLine);
-                    if (_bufferLines.Count > _bufferSize) // Limit buffer size
-                        _bufferLines.RemoveAt(0);
-                    if (_commandLine != string.Empty)
-                    {
-                        _commandLineHistory.Add(_commandLine);
-                        if (_commandLineHistory.Count > _commandHistorySize) // Limit history size
-                            _commandLineHistory.RemoveAt(0);
-                    }
-                    _commandLine = "";
-                    _commandLineCursorPos = 0;
-                    _commandHistoryIndex = 0;
-                    _scrollOffset = 0;  // Reset scroll to bottom on new command
+                    vtSeq = "\r";
                     break;
                 case Windows.System.VirtualKey.Tab:
-                    // Optional: implement command auto-completion here
-                    break;
-                case Windows.System.VirtualKey.Escape:
-                    _commandLine = "";
-                    _commandLineCursorPos = 0;
-                    _commandHistoryIndex = 0;
-                    break;
-                case Windows.System.VirtualKey.Space:
-                    _commandLine += " ";
-                    _commandLineCursorPos++;
-                    break;
-                case Windows.System.VirtualKey.Scroll:
-                    _scrollLockControl.IsEngaged = !_scrollLockControl.IsEngaged;
+                    vtSeq = "\t";
                     break;
                 case Windows.System.VirtualKey.Back:
-                    if (_commandLineCursorPos > 0 && _commandLine.Length > 0)
-                    {
-                        _commandLine = _commandLine.Remove(_commandLineCursorPos - 1, 1);
-                        _commandLineCursorPos--;
-                    }
+                    vtSeq = "\x7F";
+                    break;
+                case Windows.System.VirtualKey.Left:
+                    vtSeq = "\x1B[D";
+                    break;
+                case Windows.System.VirtualKey.Right:
+                    vtSeq = "\x1B[C";
                     break;
                 case Windows.System.VirtualKey.Up:
-                    if (_commandLineHistory.Count > 0 && _commandHistoryIndex < _commandLineHistory.Count)
-                    {
-                        _commandHistoryIndex++;
-                        _commandLine = _commandLineHistory[_commandLineHistory.Count - _commandHistoryIndex];
-                        _commandLineCursorPos = _commandLine.Length;
-                    }
+                    vtSeq = "\x1B[A";
                     break;
                 case Windows.System.VirtualKey.Down:
-                    if (_commandHistoryIndex > 1)
-                    {
-                        _commandHistoryIndex--;
-                        _commandLine = _commandLineHistory[_commandLineHistory.Count - _commandHistoryIndex];
-                        _commandLineCursorPos = _commandLine.Length;
-                    }
-                    else
-                    {
-                        _commandHistoryIndex = 0;
-                        _commandLine = "";
-                        _commandLineCursorPos = 0;
-                    }
+                    vtSeq = "\x1B[B";
+                    break;
+                case Windows.System.VirtualKey.Home:
+                    vtSeq = "\x1B[H";
+                    break;
+                case Windows.System.VirtualKey.End:
+                    vtSeq = "\x1B[F";
+                    break;
+                case Windows.System.VirtualKey.Delete:
+                    vtSeq = "\x1B[3~";
+                    break;
+                case Windows.System.VirtualKey.Escape:
+                    vtSeq = "\x1B";
                     break;
                 default:
-                    // Handle character input
                     var keyChar = GetCharFromVirtualKey(e.Key, e);
                     if (keyChar != null)
-                    {
-                        // Insert at cursor position
-                        _commandLine = _commandLine.Insert(_commandLineCursorPos, keyChar.ToString());
-                        _commandLineCursorPos++;
-                    }
+                        vtSeq = keyChar.ToString();
                     break;
             }
-
-            ModtermCanvas.Invalidate(); // Trigger redraw to show updated command line
+            if (!string.IsNullOrEmpty(vtSeq))
+            {
+                _terminal.WriteInput(vtSeq);
+            }
+            ModtermCanvas.Invalidate();
         }
 
         private void ModtermCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -180,13 +142,22 @@ namespace modterm
         {
             int delta = e.GetCurrentPoint(ModtermCanvas).Properties.MouseWheelDelta;
             int step = delta > 0 ? 1 : -1;                 // scroll up = positive delta
-            _scrollOffset = Math.Clamp(_scrollOffset + step, 0, Math.Max(0, _bufferLines.Count - 1));
+            //_scrollOffset = Math.Clamp(_scrollOffset + step, 0, Math.Max(0, _bufferLines.Count - 1));
             ModtermCanvas.Invalidate();
         }
 
         private void MainWindow_SizeChanged(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)
         {
-            _terminal?.Resize((short)(args.Size.Width / 8.8), (short)(args.Size.Height / 19.5));
+            // Calculate new rows/columns based on font size and canvas size
+            var canvas = ModtermCanvas;
+            float fontWidth = ModglassDisplay.CurrentFontSize * 0.6f;
+            float fontHeight = ModglassDisplay.CurrentFontSize + 2f;
+            int cols = (int)(canvas.ActualWidth / fontWidth);
+            int rows = (int)(canvas.ActualHeight / fontHeight);
+            if (cols < 1) cols = 1;
+            if (rows < 1) rows = 1;
+            _vtController.ResizeView(cols, rows);
+            _terminal?.Resize((short)cols, (short)rows);
         }
 
         private char? GetCharFromVirtualKey(Windows.System.VirtualKey key, KeyRoutedEventArgs e)

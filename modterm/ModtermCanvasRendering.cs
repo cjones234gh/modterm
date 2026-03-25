@@ -15,40 +15,71 @@ namespace modterm
         private int _bannerColorOffset = 0;
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
+
             ModglassDisplay.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
-            double cmdY = sender.ActualHeight - ModglassDisplay.CurrentFontSize - 20;
-            ModglassDisplay.DrawAnsiText(10f, (float)cmdY, "> " + _commandLine);
+            // Calculate rows/columns based on font size and canvas size
+            int rows = (int)(sender.ActualHeight / (ModglassDisplay.CurrentFontSize + 2));
+            int cols = (int)(sender.ActualWidth / (ModglassDisplay.CurrentFontSize * 0.6));
+            //_vtController.Rows = rows;
+            //_vtController.Columns = cols;
+            _vtController.VisibleRows = rows;
+            _vtController.VisibleColumns = cols;
 
-            double y = sender.ActualHeight - ModglassDisplay.CurrentFontSize * 2 - 25;
-            int startIdx = Math.Max(0, _bufferLines.Count - 1 - _scrollOffset);
-            
-            for (int i = startIdx; i > 0; i--)
+            // Get VT buffer page spans for visible area
+            var pageSpans = _vtController.ViewPort.GetPageSpans(0, rows, cols);
+            double y = 0;
+            foreach (var row in pageSpans)
             {
-                var line = _bufferLines[i];
-                var color = ModglassDisplay.OutputColor;
-                if (_commandLineHistory.Contains(line))
+                float x = 0;
+                foreach (var span in row.Spans)
                 {
-                    //color = ModglassDisplay.InputColor;
-                    line = "> " + line; // prefix command lines with >
+                    // Convert VT color string to Windows.UI.Color
+                    Color fg = ModglassDisplay.OutputColor;
+                    try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
+                    // Draw the text span
+                    if (!string.IsNullOrEmpty(span.Text))
+                        args.DrawingSession.DrawText(span.Text, x, (float)y, fg, ModglassControlHelpers.GetTextFormat());
+                    // Advance X by measured width
+                    using (var layout = new CanvasTextLayout(args.DrawingSession, span.Text ?? "", ModglassControlHelpers.GetTextFormat(), 9999, 9999))
+                    {
+                        x += (float)layout.DrawBounds.Width;
+                    }
                 }
-                ModglassDisplay.DrawAnsiText(10f, (float)y, line);
-                y -= ModglassDisplay.CurrentFontSize + 5;
-                if (y < 0) break;
+                y += ModglassDisplay.CurrentFontSize + 2;
             }
-            
-            // Blinking cursor at correct position
+
+            // Draw blinking cursor if visible
             if (_cursorVisible)
             {
-                // Caculate the text up to the cursor position
-                string cmdLineWithPrompt = "> " + _commandLine;
-                int cursorPosInText = 2 + _commandLineCursorPos; // 2 for '> '
-                string textUpToCursor = cmdLineWithPrompt.Substring(0, Math.Min(cursorPosInText, cmdLineWithPrompt.Length));
-                double cursorX = 10 + MeasureTextWidth(textUpToCursor, sender);
-                ModglassDisplay.DrawAnsiText((float)cursorX, (float)cmdY, "|");
+                var cursor = _vtController.ViewPort.CursorPosition;
+                float cursorX = (float)(cursor.Column * (ModglassDisplay.CurrentFontSize * 0.6));
+                float cursorY = (float)(cursor.Row * (ModglassDisplay.CurrentFontSize + 2));
+                args.DrawingSession.DrawText("|", cursorX, cursorY, ModglassDisplay.OutputColor, ModglassControlHelpers.GetTextFormat());
             }
 
             ModglassDisplay.EndEffectSequence();
+
+            // Helper: Convert #RRGGBB or #AARRGGBB to Color
+            Color ColorFromWeb(string web)
+            {
+                if (string.IsNullOrEmpty(web)) return ModglassDisplay.OutputColor;
+                if (web.StartsWith("#"))
+                {
+                    if (web.Length == 7)
+                        return Color.FromArgb(255,
+                            Convert.ToByte(web.Substring(1, 2), 16),
+                            Convert.ToByte(web.Substring(3, 2), 16),
+                            Convert.ToByte(web.Substring(5, 2), 16));
+                    if (web.Length == 9)
+                        return Color.FromArgb(
+                            Convert.ToByte(web.Substring(1, 2), 16),
+                            Convert.ToByte(web.Substring(3, 2), 16),
+                            Convert.ToByte(web.Substring(5, 2), 16),
+                            Convert.ToByte(web.Substring(7, 2), 16));
+                }
+                return ModglassDisplay.OutputColor;
+            }
 
             // Visual selection highlight (simple semi-transparent overlay)
             if (!string.IsNullOrEmpty(_selectedText) && _isSelecting)
