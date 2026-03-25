@@ -14,6 +14,7 @@ using Windows.System;
 using Windows.UI;
 using Windows.Foundation;
 using Modglass;
+using System.Linq;
 
 namespace modterm
 {
@@ -24,7 +25,8 @@ namespace modterm
         private VtNetCore.XTermParser.DataConsumer _vtDataConsumer;
         // main terminal logic and state
         private ConPTYTerminal  _terminal;
-        private string           _shellApplicationPath;
+        private string          _shellApplicationPath;
+        private string          _shellArguments;
         private int             _scrollOffset = 0;
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
 
@@ -54,12 +56,13 @@ namespace modterm
 
         // context menu flyout for right-click and shell definitions
         private MenuFlyout _flyout;
-        private Dictionary<string, string> _shellEnv = new Dictionary<string, string>()
+        private List<Shell> _shellEnv = new List<Shell>()
         {
-            { "cmd", "C:\\Windows\\System32\\cmd.exe" },
-            { "powershell", "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
-            { "pwsh", "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
-            { "bash", "C:\\Program Files\\Git\\usr\\bin\\bash.exe" },
+            new Shell { Name = "cmd", Path = "C:\\Windows\\System32\\cmd.exe" },
+            new Shell { Name = "powershell", Path = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
+            new Shell { Name = "pwsh", Path = "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
+            new Shell { Name = "bash", Path = "C:\\Program Files\\Git\\usr\\bin\\bash.exe", Arguments = "-i -l" }
+            //new Shell { Name = "git-bash", Path = "C:\\Program Files\\Git\\git-bash.exe", Arguments = "-i -l" },
         };
 
         // mouse selection state
@@ -78,8 +81,10 @@ namespace modterm
             //_bufferSize = 1000;
             _terminal = new ConPTYTerminal();
             _flyout = new MenuFlyout();
-            _shellApplicationPath = _shellEnv.ContainsKey("bash") ? _shellEnv["bash"] :
-                (_shellEnv.ContainsKey("cmd") ? _shellEnv["cmd"] : "cmd.exe");
+
+            // default shell
+            _shellApplicationPath = _shellEnv.First(s => s.Name == "bash")?.Path ?? "";
+            _shellArguments = _shellEnv.First(s => s.Name == "bash")?.Arguments ?? "";
 
             // Initialize VtNetCore terminal controller and data consumer
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
@@ -90,9 +95,6 @@ namespace modterm
 
             // set the color config to a preset on startup
             ModglassDisplay.SetColorConfiguration("Glowmancer");
-
-            // the launch shell
-            _shellApplicationPath = _shellEnv["bash"];
 
             // ui controls and dock groups
             _upperRightControls = new ModglassCornerControlGroup(
@@ -133,18 +135,10 @@ namespace modterm
             this.SizeChanged += MainWindow_SizeChanged;
             this.Closed += (s, e) => _terminal?.Dispose();
 
-            this.Activated += (s, e) =>
-            {
-                if (!_terminal.Started)
-                {
-                    StartConPTY();
-                    Debug.WriteLine("Window activated, terminal started");
-                }
-            };
-
             RootGrid.Background = ModglassDisplay.GetBackgroundBrush();
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
+            ModtermCanvas.Loaded += (s, e) => { DetermineRowsAndColumns(); StartConPTY(); Debug.WriteLine("Canvas activated, terminal started"); };
             ModtermCanvas.Draw += this.ModtermCanvas_Draw;
             ModtermCanvas.RightTapped += this.ModtermCanvas_RightTapped;
 
@@ -177,7 +171,6 @@ namespace modterm
             };
 
             this.InitializeFlyouts();
-            
         }
 
         private void UpdateSelectedText()
@@ -202,14 +195,26 @@ namespace modterm
             }
         }
 
+        private void DetermineRowsAndColumns()
+        {
+            var canvas = ModtermCanvas;
+            float fontWidth = ModglassDisplay.CurrentFontSize * 0.6f;
+            float fontHeight = ModglassDisplay.CurrentFontSize + 2f;
+            int cols = (int)(canvas.ActualWidth / fontWidth);
+            int rows = (int)(canvas.ActualHeight / fontHeight);
+            _rows = rows;
+            _columns = cols;
+        }
+
         private void StartConPTY()
         {
             _terminal.OutputReceived += OnOutputReceived;
-            _terminal.Start(_shellApplicationPath, "");
+            _terminal.Start(_shellApplicationPath, _shellArguments, _rows, _columns);
         }
 
         private void OnOutputReceived(object? sender, string line)
         {
+            Debug.WriteLine($"OnOutputReceived before _vtDataConsumer.Write(), line: {line}");
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;
             if (!string.IsNullOrEmpty(line))
@@ -410,9 +415,9 @@ namespace modterm
 
             // shell selection
             var shellSub = new MenuFlyoutSubItem { Text = "Shell" };
-            foreach (var (name, shell) in _shellEnv)
+            foreach (Shell sh in _shellEnv)
             {
-                var item = new MenuFlyoutItem { Text = name };
+                var item = new MenuFlyoutItem { Text = sh.Name };
                 item.Click += async (_, __) =>
                 {
                     _terminal.Started = false;
@@ -420,7 +425,7 @@ namespace modterm
                     await Task.Delay(1000); // Pauses for 1 second without blocking the UI thread
                     _terminal = new ConPTYTerminal();
                     _terminal.OutputReceived += OnOutputReceived;
-                    _terminal.Start(shell, "");
+                    _terminal.Start(sh.Path, sh.Arguments, _rows, _columns);
                 };
                 shellSub.Items.Add(item);
             }

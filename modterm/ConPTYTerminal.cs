@@ -45,7 +45,7 @@ namespace modterm
             _bannerColors = ModglassDisplay.GetColorWheelProgression(10f, 100, 7);
         }
 
-        public void Start(string applicationName, string arguments)
+        public void Start(string applicationName, string arguments, int lines, int columns)
         {
             _applicationName = applicationName;
             _arguments = arguments;
@@ -76,7 +76,7 @@ namespace modterm
             Marshal.FreeHGlobal(saPtr);
 
             // Create pseudo console (initial 120x40); 
-            var coord = new COORD { X = 120, Y = 40 };
+            var coord = new COORD { X = (short)columns, Y = (short)lines };
             if (CreatePseudoConsole(coord, _inputRead, _outputWrite, 0, out _hPC) != 0)
                 throw new Exception("CreatePseudoConsole failed");
 
@@ -118,7 +118,7 @@ namespace modterm
 
             ShellPath = commandLine;
 
-            Debug.WriteLine($"Starting process with command line: [[{commandLine}]]");
+            Debug.WriteLine($"Starting process with command line: {commandLine}");
 
             // P/Invoke requires a null in this call, not a null string, so we have to disable nullable warnings for this section
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
@@ -139,11 +139,6 @@ namespace modterm
             // Start async reader
             _readTask = Task.Run(ReadOutputLoop);
 
-            // temporarily force bash interactive with login profile to test;
-            if (_applicationName.Contains("bash"))
-            {
-                WriteInput("export PATH=/usr/bin:$PATH && bash -i -l\n");
-            }
 
             //// show the banner (true ASCII art with 24-bit ANSI encoded color, because why not)
             //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[0]) + "                                                                                    ");
@@ -173,6 +168,7 @@ namespace modterm
 
         public void Resize(short cols, short rows)
         {
+            Debug.WriteLine($"Resizing ConPTY to {cols} cols x {rows} rows");
             if (_hPC != IntPtr.Zero && cols > 10 && rows > 5)
                 ResizePseudoConsole(_hPC, new COORD { X = cols, Y = rows });
         }

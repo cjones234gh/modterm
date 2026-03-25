@@ -149,18 +149,12 @@ namespace modterm
         private void MainWindow_SizeChanged(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)
         {
             // Calculate new rows/columns based on font size and canvas size
-            var canvas = ModtermCanvas;
-            float fontWidth = ModglassDisplay.CurrentFontSize * 0.6f;
-            float fontHeight = ModglassDisplay.CurrentFontSize + 2f;
-            int cols = (int)(canvas.ActualWidth / fontWidth);
-            int rows = (int)(canvas.ActualHeight / fontHeight);
-            _rows = rows;
-            _columns = cols;
+            DetermineRowsAndColumns();
             _appearanceInfoControl.TextContent = GetAppearanceInfo().Replace(" ", "\u00A0"); // Use non-breaking spaces for better layout in the info control
-            if (cols < 1) cols = 1;
-            if (rows < 1) rows = 1;
-            _vtController.ResizeView(cols, rows);
-            _terminal?.Resize((short)cols, (short)rows);
+            if (_columns < 1) _columns = 1;
+            if (_rows < 1) _rows = 1;
+            _vtController.ResizeView(_columns, _rows);
+            _terminal?.Resize((short)_columns, (short)_rows);
         }
 
         private char? GetCharFromVirtualKey(Windows.System.VirtualKey key, KeyRoutedEventArgs e)
