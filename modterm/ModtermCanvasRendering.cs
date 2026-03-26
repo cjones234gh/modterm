@@ -41,10 +41,12 @@ namespace modterm
                 {
                     // Convert VT color string to Windows.UI.Color
                     Color fg = ModglassDisplay.OutputColor;
-                    try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
+                    try { fg = ColorFromWeb(span.ForgroundColor); } catch { } 
                     // Draw the text span
                     if (!string.IsNullOrEmpty(span.Text))
-                        args.DrawingSession.DrawText(span.Text, x, (float)y, fg, ModglassControlHelpers.GetTextFormat());
+                    {
+                        ModglassDisplay.DrawText(span.Text, x, (float)y, fg);
+                    }
                     // Advance X by measured width
                     using (var layout = new CanvasTextLayout(args.DrawingSession, span.Text ?? "", ModglassControlHelpers.GetTextFormat(), 9999, 9999))
                     {
