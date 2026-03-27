@@ -22,9 +22,9 @@ using Modglass;
 
 namespace modterm
 {
-    public sealed partial class MainWindow : Window
+    public sealed partial class ModtermWindow : Window
     {
-        public MainWindow()
+        public ModtermWindow()
         {
             this.InitializeComponent();
             this.InitializeApplication();

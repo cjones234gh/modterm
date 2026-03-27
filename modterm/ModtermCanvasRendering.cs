@@ -9,7 +9,7 @@ using Windows.UI;
 
 namespace modterm
 {
-    public sealed partial class  MainWindow : Window
+    public sealed partial class  ModtermWindow : Window
     {
         private int _lines;
         private int _columns;
@@ -45,7 +45,7 @@ namespace modterm
                     // Draw the text span
                     if (!string.IsNullOrEmpty(span.Text))
                     {
-                        ModglassDisplay.DrawText(span.Text, x, (float)y, fg);
+                        ModglassDisplay.DrawText(span.Text, x, (float)y, fg, ModglassControlHelpers.GetTextFormat());
                     }
                     // Advance X by measured width
                     using (var layout = new CanvasTextLayout(args.DrawingSession, span.Text ?? "", ModglassControlHelpers.GetTextFormat(), 9999, 9999))

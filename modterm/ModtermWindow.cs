@@ -18,7 +18,7 @@ using System.Linq;
 
 namespace modterm
 {
-    public sealed partial class MainWindow : Window
+    public sealed partial class ModtermWindow : Window
     {
         // VtNetCore terminal state
         private VtNetCore.VirtualTerminal.VirtualTerminalController _vtController;

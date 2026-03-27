@@ -13,7 +13,7 @@ using Windows.System;
 
 namespace modterm
 {
-    public sealed partial class MainWindow : Window
+    public sealed partial class ModtermWindow : Window
     {
         private void ModtermCanvas_KeyDown(object sender, KeyRoutedEventArgs e)
         {
