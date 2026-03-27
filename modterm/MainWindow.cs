@@ -96,6 +96,9 @@ namespace modterm
             // set the color config to a preset on startup
             ModglassDisplay.SetColorConfiguration("Glowmancer");
 
+            _vtController.SetRgbForegroundColor(ModglassDisplay.OutputColor.R, 
+                ModglassDisplay.OutputColor.G, ModglassDisplay.OutputColor.B);
+
             // ui controls and dock groups
             _upperRightControls = new ModglassCornerControlGroup(
                 ModglassCornerControlGroup.CornerGroupDock.UpperRightHorizontal);
@@ -204,6 +207,7 @@ namespace modterm
             int rows = (int)(canvas.ActualHeight / fontHeight);
             _lines = rows;
             _columns = cols;
+            _appearanceInfoControl.TextContent = GetAppearanceInfo();
         }
 
         private void StartConPTY()
@@ -219,7 +223,13 @@ namespace modterm
 
         private void OnOutputReceived(object? sender, string line)
         {
-            Debug.WriteLine($"OnOutputReceived before _vtDataConsumer.Write(), line: {line}");
+            Debug.WriteLine($"Direct output |   {line}  |");
+
+            // for now, replace ANSI 0m, default color, with ANSI version of ModglassDisplay.OutputColor in this line
+            // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
+
+            line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModglassDisplay.OutputColor.R};{ModglassDisplay.OutputColor.G};{ModglassDisplay.OutputColor.B}m");
+
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;
             if (!string.IsNullOrEmpty(line))
@@ -444,9 +454,10 @@ namespace modterm
 
         private string GetAppearanceInfo()
         {
-            return
+            string info = 
                 $"Theme: {ModglassDisplay.CurrentConfigurationName} Tint: {GetColorHexString(ModglassDisplay.TintColor)} Transparency: {ModglassDisplay.TransparencyPct}% " +
                 $"Rows: {_lines} Columns: {_columns}";
+            return info.Replace(" ", "\u00A0"); // replace spaces with non-breaking spaces to prevent collapsing in the UI
         }
 
         private readonly (string Name, Color Color)[] _colorOptions = new[]

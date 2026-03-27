@@ -154,6 +154,8 @@ namespace modterm
 
         private string GetAnsiRGB(Color c)
         {
+            //  \x1B[38;2;+GetAnsiRGB(<color>)
+            //  \x1B[0m
             return c.R.ToString() + ";" + c.G.ToString() + ";" + c.B.ToString() + "m";
         }
                 
