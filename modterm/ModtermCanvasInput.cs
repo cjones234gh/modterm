@@ -148,6 +148,11 @@ namespace modterm
 
         private void MainWindow_SizeChanged(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)
         {
+            ResizeTerminal();
+        }
+
+        private void ResizeTerminal()
+        {
             // Calculate new rows/columns based on font size and canvas size
             DetermineRowsAndColumns();
             if (_columns < 1) _columns = 1;

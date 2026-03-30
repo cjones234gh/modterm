@@ -141,7 +141,12 @@ namespace modterm
             RootGrid.Background = ModglassDisplay.GetBackgroundBrush();
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
-            ModtermCanvas.Loaded += (s, e) => { DetermineRowsAndColumns(); StartConPTY(); Debug.WriteLine("Canvas activated, terminal started"); };
+            ModtermCanvas.Loaded += (s, e) => { 
+                DetermineRowsAndColumns(); 
+                StartConPTY(); 
+                ResizeTerminal(); 
+                Debug.WriteLine("Canvas activated, terminal started"); 
+            };
             ModtermCanvas.Draw += this.ModtermCanvas_Draw;
             ModtermCanvas.RightTapped += this.ModtermCanvas_RightTapped;
 
