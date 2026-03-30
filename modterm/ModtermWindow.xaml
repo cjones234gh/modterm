@@ -23,7 +23,7 @@
 
         <!-- Single drawing pane -->
         <win2dcanvas:CanvasControl x:Name="ModtermCanvas"
-                Margin="0,20,0,0" 
+                Margin="0,30,0,0"
                 Background="Transparent"/>
     </Grid>
 </Window>

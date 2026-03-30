@@ -14,6 +14,8 @@ namespace modterm
         private int _lines;
         private int _columns;
 
+        private int _leftTextPadding = 10;
+
         // Offset for banner color cycling effect
         private int _bannerColorOffset = 0;
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
@@ -31,12 +33,13 @@ namespace modterm
             _lines = rows;
             _columns = cols;
 
-            // Get VT buffer page spans for visible area
-            var pageSpans = _vtController.ViewPort.GetPageSpans(0, rows, cols);
+            // use toprow to calculate visible area
+            int topRow = _vtController.ViewPort.TopRow;
+            var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, rows, cols);
             double y = 0;
             foreach (var row in pageSpans)
             {
-                float x = 0;
+                float x = _leftTextPadding;
                 foreach (var span in row.Spans)
                 {
                     // Convert VT color string to Windows.UI.Color
