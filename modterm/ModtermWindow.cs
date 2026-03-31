@@ -31,7 +31,7 @@ namespace modterm
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
 
         // modglass UI controls
-        private ModglassCornerControlGroup    _upperRightControls;
+        private ModglassCornerControlGroup    _titleBarControls;
         private ModglassCornerControlGroup    _lowerRightControls;
         private DisplayTextControl      _scrollLockControl;
         private DisplayTextControl      _pathControl;
@@ -100,8 +100,8 @@ namespace modterm
                 ModglassDisplay.OutputColor.G, ModglassDisplay.OutputColor.B);
 
             // ui controls and dock groups
-            _upperRightControls = new ModglassCornerControlGroup(
-                ModglassCornerControlGroup.CornerGroupDock.UpperRightHorizontal);
+            _titleBarControls = new ModglassCornerControlGroup(
+                ModglassCornerControlGroup.CornerGroupDock.UpperCenterHorizontal);
             _lowerRightControls = new ModglassCornerControlGroup(
                 ModglassCornerControlGroup.CornerGroupDock.LowerRightVertical);
 
@@ -126,7 +126,7 @@ namespace modterm
             _lowerRightControls.Controls.AddRange(
                 [_testRunningGraphControlB, _testRunningGraphControlG, _testRunningGraphControlR]);
             
-            _upperRightControls.Controls.AddRange(
+            _titleBarControls.Controls.AddRange(
                 [_scrollLockControl, _pathControl, _appearanceInfoControl]);
 
             // modglass style window setup
@@ -140,6 +140,8 @@ namespace modterm
 
             RootGrid.Background = ModglassDisplay.GetBackgroundBrush();
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
+
+            ControlCanvas.Draw += this.ControlCanvas_Draw;
 
             ModtermCanvas.Loaded += (s, e) => { 
                 DetermineRowsAndColumns(); 
@@ -180,7 +182,7 @@ namespace modterm
 
             this.InitializeFlyouts();
         }
-
+        
         private void UpdateSelectedText()
         {
             // TODO: this is broke af - also, we should just copy when the rectangle is drawn (mouse button up),

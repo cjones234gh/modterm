@@ -106,7 +106,7 @@ namespace modterm
                 ModtermCanvas.Invalidate();
             }
 
-            foreach (var control in _upperRightControls.Controls)
+            foreach (var control in _titleBarControls.Controls)
             {
                 control.IsHovered = control.Location.Contains(currentPoint);
             }
