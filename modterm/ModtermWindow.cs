@@ -31,8 +31,8 @@ namespace modterm
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
 
         // modglass UI controls
-        private ModglassCornerControlGroup    _titleBarControls;
-        private ModglassCornerControlGroup    _lowerRightControls;
+        private ModglassControlGroup    _titleBarControls;
+        private ModglassControlGroup    _lowerRightControls;
         private DisplayTextControl      _scrollLockControl;
         private DisplayTextControl      _pathControl;
         private DisplayTextControl      _appearanceInfoControl;
@@ -95,15 +95,16 @@ namespace modterm
 
             // set the color config to a preset on startup
             ModglassDisplay.SetColorConfiguration("Glowmancer");
+            ControlCanvas.Invalidate();
 
             _vtController.SetRgbForegroundColor(ModglassDisplay.OutputColor.R, 
                 ModglassDisplay.OutputColor.G, ModglassDisplay.OutputColor.B);
 
             // ui controls and dock groups
-            _titleBarControls = new ModglassCornerControlGroup(
-                ModglassCornerControlGroup.CornerGroupDock.UpperCenterHorizontal);
-            _lowerRightControls = new ModglassCornerControlGroup(
-                ModglassCornerControlGroup.CornerGroupDock.LowerRightVertical);
+            _titleBarControls = new ModglassControlGroup(
+                ModglassControlGroup.CornerGroupDock.UpperCenterHorizontal);
+            _lowerRightControls = new ModglassControlGroup(
+                ModglassControlGroup.CornerGroupDock.LowerRightVertical);
 
             _testRunningGraphControlR = new RunningGraphControl(
                 new Rect(0, 0, 120, 120), 1000, 0, 255);
@@ -157,6 +158,8 @@ namespace modterm
             ModtermCanvas.PointerPressed += this.ModtermCanvas_PointerPressed;
             ModtermCanvas.PointerMoved += this.ModtermCanvas_PointerMoved;
             ModtermCanvas.PointerReleased += this.ModtermCanvas_PointerReleased;
+
+            ControlCanvas.PointerMoved += this.ControlCanvas_PointerMoved;
 
             // Blinking cursor
             _cursorTimer.Interval = TimeSpan.FromMilliseconds(500);
@@ -284,7 +287,9 @@ namespace modterm
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
                     _appearanceInfoControl.TextContent = GetAppearanceInfo();
-                    ModtermCanvas.Invalidate(); };
+                    ModtermCanvas.Invalidate();
+                    ControlCanvas.Invalidate();
+                };
                 themeSub.Items.Add(item);
             }
             _flyout.Items.Add(themeSub);
@@ -388,7 +393,7 @@ namespace modterm
             foreach (var f in controlFonts)
             {
                 var item = new MenuFlyoutItem { Text = f };
-                item.Click += (_, __) => { ModglassDisplay.CurrentControlFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModglassDisplay.CurrentControlFont = new FontFamily(f); ControlCanvas.Invalidate(); };
                 controlFontSub.Items.Add(item);
             }
             _flyout.Items.Add(controlFontSub);
@@ -399,7 +404,7 @@ namespace modterm
             foreach (var s in controlSizes)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
-                item.Click += (_, __) => { ModglassDisplay.CurrentControlFontSize = (float)s; ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModglassDisplay.CurrentControlFontSize = (float)s; ControlCanvas.Invalidate(); };
                 controlSizeSub.Items.Add(item);
             }
             _flyout.Items.Add(controlSizeSub);
@@ -410,7 +415,7 @@ namespace modterm
             foreach (var s in glowSubAmts)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} radius" };
-                item.Click += (_, __) => { ModglassDisplay.BlurAmount = s; ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModglassDisplay.BlurAmount = s; ModtermCanvas.Invalidate(); ControlCanvas.Invalidate(); };
                 glowSub.Items.Add(item);
             }
             _flyout.Items.Add(glowSub);

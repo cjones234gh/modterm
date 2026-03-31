@@ -106,17 +106,25 @@ namespace modterm
                 ModtermCanvas.Invalidate();
             }
 
-            foreach (var control in _titleBarControls.Controls)
-            {
-                control.IsHovered = control.Location.Contains(currentPoint);
-            }
             foreach (var control in _lowerRightControls.Controls)
             {
                 control.IsHovered = control.Location.Contains(currentPoint);
             }
 
             ModtermCanvas.Invalidate();
+        }
 
+        public void ControlCanvas_PointerMoved(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            Point currentPoint = e.GetCurrentPoint(ControlCanvas).Position;
+
+            foreach (var control in _titleBarControls.Controls)
+            {
+                control.IsHovered = control.Location.Contains(currentPoint);
+                Debug.WriteLine("Control " + control.TextContent + " hovered: " + control.IsHovered);
+            }
+
+            ControlCanvas.Invalidate();
         }
 
         private void ModtermCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)

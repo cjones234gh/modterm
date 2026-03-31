@@ -113,24 +113,11 @@ namespace modterm
             _lowerRightControls?.DrawControls(sender, args.DrawingSession);
 		}
 
-        //private double MeasureTextWidth(string text, CanvasControl canvas)
-        //{
-        //    // adjust width since a trailing space isn't measured by CanvasTextLayout
-        //    // - add a small fudge factor to account for this
-        //    float trailingSpaceOffset = text.EndsWith(' ') ? ModglassDisplay.CurrentFontSize * 0.4f : 0f;
-
-        //    using (var layout = new CanvasTextLayout(canvas, text,
-        //        new CanvasTextFormat { FontFamily = ModglassDisplay.CurrentFont.Source, FontSize = (float)ModglassDisplay.CurrentFontSize }, 9999, 9999))
-        //    {
-        //        return layout.DrawBounds.Width + trailingSpaceOffset;
-        //    }
-        //}
-
         public void ControlCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {             // draw all UI controls
             _titleBarControls?.DrawControls(sender, args.DrawingSession);
-            //ModglassDisplay.DrawControlBox(sender, args.DrawingSession, 
-            //    new Windows.Foundation.Rect { X = 0, Y = 0, Width = sender.ActualWidth, Height = sender.ActualHeight });
         }
+
+        
     }
 }
