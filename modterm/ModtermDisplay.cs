@@ -321,8 +321,8 @@ namespace modterm
                     //    (float)control.Location.Y + ModtermDisplay.ModglassControlPadding / 2, controlBlurColor, textFormat);
                 }
 
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
-                cds.DrawImage(blurEffect);
+                //var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
+                //cds.DrawImage(blurEffect);
             }
 
             //
@@ -438,3 +438,4 @@ namespace modterm
         }
     }
 }
+
