@@ -5,13 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:winuiex="using:WinUIEx" 
         xmlns:local="using:modterm"
-        xmlns:modglass="using:Modglass"
+        xmlns:modterm="using:modterm"
         xmlns:win2dcanvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
         mc:Ignorable="d"
         Title="Modern Terminal">
 
     <Window.SystemBackdrop>
-        <modglass:BlurredBackdrop/>
+        <modterm:BlurredBackdrop/>
     </Window.SystemBackdrop>
 
     <Grid x:Name="RootGrid" Background="Transparent">

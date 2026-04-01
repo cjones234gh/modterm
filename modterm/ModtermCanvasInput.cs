@@ -1,7 +1,7 @@
 ﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Modglass;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -80,11 +80,6 @@ namespace modterm
 
         private void ModtermCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (_scrollLockControl.Location.Contains(e.GetCurrentPoint(ModtermCanvas).Position))
-            {
-                _scrollLockControl.IsPressed = true;
-                ModtermCanvas.Invalidate();
-            }
             if (e.GetCurrentPoint(ModtermCanvas).Properties.IsLeftButtonPressed)
             {
                 _isSelecting = true;
@@ -128,13 +123,6 @@ namespace modterm
 
         private void ModtermCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            if (_scrollLockControl.Location.Contains(e.GetCurrentPoint(ModtermCanvas).Position))
-            {
-                _scrollLockControl.IsPressed = false;
-                _scrollLockControl.IsEngaged = !_scrollLockControl.IsEngaged;
-                Debug.WriteLine("Scroll Lock toggled: " + _scrollLockControl.IsEngaged);
-                ModtermCanvas.Invalidate();
-            }
             _isSelecting = false;
             UpdateSelectedText();
             ModtermCanvas.Invalidate();

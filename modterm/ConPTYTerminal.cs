@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Windows.UI;
-using Modglass;
 
 namespace modterm
 {
@@ -42,7 +41,7 @@ namespace modterm
             _inputRead = new SafeFileHandle();
             _outputWrite = new SafeFileHandle();
             _outputRead = new SafeFileHandle();
-            _bannerColors = ModglassDisplay.GetColorWheelProgression(10f, 100, 7);
+            _bannerColors = ModtermDisplay.GetColorWheelProgression(10f, 100, 7);
         }
 
         public void Start(string applicationName, string arguments, int lines, int columns)

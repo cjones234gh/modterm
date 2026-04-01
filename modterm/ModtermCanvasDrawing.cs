@@ -3,7 +3,7 @@ using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.Text;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.UI.Xaml;
-using Modglass;
+
 using System;
 using Windows.UI;
 
@@ -21,10 +21,10 @@ namespace modterm
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
 
-            ModglassDisplay.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
+            ModtermDisplay.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
             // Calculate rows/columns based on measured character width and font size
-            int rows = (int)(sender.ActualHeight / (ModglassDisplay.CurrentFontSize + 2));
+            int rows = (int)(sender.ActualHeight / (ModtermDisplay.CurrentFontSize + 2));
             float measuredCharWidth = MeasureCharWidth(sender, args);
             int cols = (int)(sender.ActualWidth / measuredCharWidth);
             _vtController.VisibleRows = rows;
@@ -42,20 +42,20 @@ namespace modterm
                 foreach (var span in row.Spans)
                 {
                     // Convert VT color string to Windows.UI.Color
-                    Color fg = ModglassDisplay.OutputColor;
+                    Color fg = ModtermDisplay.OutputColor;
                     try { fg = ColorFromWeb(span.ForgroundColor); } catch { } 
                     // Draw the text span
                     if (!string.IsNullOrEmpty(span.Text))
                     {
-                        ModglassDisplay.DrawText(span.Text, x, (float)y, fg, ModglassControlHelpers.GetTextFormat());
+                        ModtermDisplay.DrawText(span.Text, x, (float)y, fg, ModtermDisplay.GetTextFormat());
                     }
                     // Advance X by measured width
-                    using (var layout = new CanvasTextLayout(args.DrawingSession, span.Text ?? "", ModglassControlHelpers.GetTextFormat(), 9999, 9999))
+                    using (var layout = new CanvasTextLayout(args.DrawingSession, span.Text ?? "", ModtermDisplay.GetTextFormat(), 9999, 9999))
                     {
                         x += (float)layout.DrawBounds.Width;
                     }
                 }
-                y += ModglassDisplay.CurrentFontSize + 2;
+                y += ModtermDisplay.CurrentFontSize + 2;
             }
 
             // Draw blinking cursor if visible
@@ -63,16 +63,16 @@ namespace modterm
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
                 float cursorX = _leftTextPadding + (float)(cursor.Column * measuredCharWidth);
-                float cursorY = (float)(cursor.Row * (ModglassDisplay.CurrentFontSize + 2));
-                args.DrawingSession.DrawText("|", cursorX, cursorY, ModglassDisplay.OutputColor, ModglassControlHelpers.GetTextFormat());
+                float cursorY = (float)(cursor.Row * (ModtermDisplay.CurrentFontSize + 2));
+                args.DrawingSession.DrawText("|", cursorX, cursorY, ModtermDisplay.OutputColor, ModtermDisplay.GetTextFormat());
             }
 
-            ModglassDisplay.EndEffectSequence();
+            ModtermDisplay.EndEffectSequence();
 
             // Helper: Convert #RRGGBB or #AARRGGBB to Color
             Color ColorFromWeb(string web)
             {
-                if (string.IsNullOrEmpty(web)) return ModglassDisplay.OutputColor;
+                if (string.IsNullOrEmpty(web)) return ModtermDisplay.OutputColor;
                 if (web.StartsWith("#"))
                 {
                     if (web.Length == 7)
@@ -87,7 +87,7 @@ namespace modterm
                             Convert.ToByte(web.Substring(5, 2), 16),
                             Convert.ToByte(web.Substring(7, 2), 16));
                 }
-                return ModglassDisplay.OutputColor;
+                return ModtermDisplay.OutputColor;
             }
 
             // Visual selection highlight (simple semi-transparent overlay)
@@ -122,7 +122,7 @@ namespace modterm
         private float MeasureCharWidth(CanvasControl sender, CanvasDrawEventArgs args)
         {
             // Use 'W' as a typical wide character for monospace fonts
-            using (var layout = new CanvasTextLayout(args.DrawingSession, "W", ModglassControlHelpers.GetTextFormat(), 9999, 9999))
+            using (var layout = new CanvasTextLayout(args.DrawingSession, "W", ModtermDisplay.GetTextFormat(), 9999, 9999))
             {
                 return (float)layout.DrawBounds.Width;
             }

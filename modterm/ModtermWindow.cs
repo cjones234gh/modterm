@@ -13,7 +13,6 @@ using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 using Windows.UI;
 using Windows.Foundation;
-using Modglass;
 using System.Linq;
 
 namespace modterm
@@ -31,16 +30,13 @@ namespace modterm
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
 
         // modglass UI controls
-        private ModglassControlGroup    _titleBarControls;
-        private ModglassControlGroup    _lowerRightControls;
-        private TextDisplayControl      _scrollLockControl;
+        private ModtermControlGroup    _titleBarControls;
+        private ModtermControlGroup    _lowerRightControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
         private RunningGraphControl     _testRunningGraphControlR;
         private RunningGraphControl _testRunningGraphControlG;
         private RunningGraphControl _testRunningGraphControlB;
-
-        private TextDisplayControl _testControl;
 
         // background tint drift state
         private bool            _bgTintDriftEnabled = false;
@@ -91,20 +87,20 @@ namespace modterm
             _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
 
             // todo: load/create user config here
-            ModglassDisplay.Initialize();
+            ModtermDisplay.Initialize();
 
             // set the color config to a preset on startup
-            ModglassDisplay.SetColorConfiguration("Glowmancer");
+            ModtermDisplay.SetColorConfiguration("Glowmancer");
             ControlCanvas.Invalidate();
 
-            _vtController.SetRgbForegroundColor(ModglassDisplay.OutputColor.R, 
-                ModglassDisplay.OutputColor.G, ModglassDisplay.OutputColor.B);
+            _vtController.SetRgbForegroundColor(ModtermDisplay.OutputColor.R, 
+                ModtermDisplay.OutputColor.G, ModtermDisplay.OutputColor.B);
 
             // ui controls and dock groups
-            _titleBarControls = new ModglassControlGroup(
-                ModglassControlGroup.CornerGroupDock.UpperCenterHorizontal);
-            _lowerRightControls = new ModglassControlGroup(
-                ModglassControlGroup.CornerGroupDock.LowerRightVertical);
+            _titleBarControls = new ModtermControlGroup(
+                ModtermControlGroup.CornerGroupDock.UpperCenterHorizontal);
+            _lowerRightControls = new ModtermControlGroup(
+                ModtermControlGroup.CornerGroupDock.LowerRightVertical);
 
             _testRunningGraphControlR = new RunningGraphControl(
                 new Rect(0, 0, 120, 120), 1000, 0, 255);
@@ -115,9 +111,6 @@ namespace modterm
             _testRunningGraphControlB = new RunningGraphControl(
                 new Rect(0, 0, 120, 120), 1000, 0, 255);
             
-            _scrollLockControl = new TextDisplayControl
-                (new Rect(0, 0, 0, 0), "S C R L K");
-
             _pathControl = new TextDisplayControl(
                 new Rect(0, 0, 0, 0), _shellApplicationPath);   
 
@@ -128,7 +121,7 @@ namespace modterm
                 [_testRunningGraphControlB, _testRunningGraphControlG, _testRunningGraphControlR]);
             
             _titleBarControls.Controls.AddRange(
-                [_scrollLockControl, _pathControl, _appearanceInfoControl]);
+                [_pathControl, _appearanceInfoControl]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
@@ -139,7 +132,7 @@ namespace modterm
             this.SizeChanged += MainWindow_SizeChanged;
             this.Closed += (s, e) => _terminal?.Dispose();
 
-            RootGrid.Background = ModglassDisplay.GetBackgroundBrush();
+            RootGrid.Background = ModtermDisplay.GetBackgroundBrush();
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
             ControlCanvas.Draw += this.ControlCanvas_Draw;
@@ -176,11 +169,11 @@ namespace modterm
             _bgTintDriftTimer.Tick += (s, e) =>
             {
                 _bgTintDriftColorOffset = (_bgTintDriftColorOffset + 1) % _bgTintDriftColors.Count;
-                ModglassDisplay.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
+                ModtermDisplay.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
                 _appearanceInfoControl.TextContent = GetAppearanceInfo();
-                _testRunningGraphControlR.DataPoints.Add(ModglassDisplay.TintColor.R); // example of using the current tint color to drive a graph control
-                _testRunningGraphControlG.DataPoints.Add(ModglassDisplay.TintColor.G); // example of using the current tint color to drive a graph control
-                _testRunningGraphControlB.DataPoints.Add(ModglassDisplay.TintColor.B); // example of using the current tint color to drive a graph control
+                _testRunningGraphControlR.DataPoints.Add(ModtermDisplay.TintColor.R); // example of using the current tint color to drive a graph control
+                _testRunningGraphControlG.DataPoints.Add(ModtermDisplay.TintColor.G); // example of using the current tint color to drive a graph control
+                _testRunningGraphControlB.DataPoints.Add(ModtermDisplay.TintColor.B); // example of using the current tint color to drive a graph control
                 ModtermCanvas.Invalidate();
             };
 
@@ -217,7 +210,7 @@ namespace modterm
         private void DetermineRowsAndColumns()
         {
             var canvas = ModtermCanvas;
-            float fontHeight = ModglassDisplay.CurrentFontSize + 2f;
+            float fontHeight = ModtermDisplay.CurrentFontSize + 2f;
             float charWidth = 10f;
             // Use the same char width measurement as rendering
             if (canvas != null && canvas.ActualWidth > 0 && canvas.ActualHeight > 0)
@@ -226,7 +219,7 @@ namespace modterm
                 {
                     // Use CanvasTextLayout to measure 'W' width
                     using (var ds = new Microsoft.Graphics.Canvas.CanvasRenderTarget(canvas, 10, 10))
-                    using (var layout = new Microsoft.Graphics.Canvas.Text.CanvasTextLayout(ds, "W", ModglassControlHelpers.GetTextFormat(), 9999, 9999))
+                    using (var layout = new Microsoft.Graphics.Canvas.Text.CanvasTextLayout(ds, "W", ModtermDisplay.GetTextFormat(), 9999, 9999))
                     {
                         charWidth = (float)layout.DrawBounds.Width;
                     }
@@ -267,10 +260,10 @@ namespace modterm
         {
             Debug.WriteLine($"Unescaped (raw) output: {line} ");
 
-            // for now, replace ANSI 0m, default color, with ANSI version of ModglassDisplay.OutputColor in this line
+            // for now, replace ANSI 0m, default color, with ANSI version of ModtermDisplay.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
 
-            line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModglassDisplay.OutputColor.R};{ModglassDisplay.OutputColor.G};{ModglassDisplay.OutputColor.B}m");
+            line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModtermDisplay.OutputColor.R};{ModtermDisplay.OutputColor.G};{ModtermDisplay.OutputColor.B}m");
             Debug.WriteLine($"After default color   : {line} ");
 
             // Feed all output directly to the VT parser
@@ -312,11 +305,11 @@ namespace modterm
 
             // theme
             var themeSub = new MenuFlyoutSubItem { Text = "Theme" };
-            foreach (var preset in ModglassDisplay.GetConfigurationNames())
+            foreach (var preset in ModtermDisplay.GetConfigurationNames())
             {
                 var item = new MenuFlyoutItem { Text = preset };
                 item.Click += (_, __) => { 
-                    ModglassDisplay.SetColorConfiguration(preset); 
+                    ModtermDisplay.SetColorConfiguration(preset); 
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
                     _appearanceInfoControl.TextContent = GetAppearanceInfo();
@@ -334,7 +327,7 @@ namespace modterm
                 byte pct = (byte)(i * 10);
                 var item = new MenuFlyoutItem { Text = i == 0 ? "Transparent (0%)" : $"{pct}%" };
                 item.Click += (_, __) => { 
-                    ModglassDisplay.TransparencyPct = pct;
+                    ModtermDisplay.TransparencyPct = pct;
                     _appearanceInfoControl.TextContent = GetAppearanceInfo();
                     ModtermCanvas.Invalidate(); };
                 transSub.Items.Add(item);
@@ -365,7 +358,7 @@ namespace modterm
             {
                 var item = new MenuFlyoutItem { Text = label };
                 item.Click += (_, __) => { 
-                    ModglassDisplay.TintColor = tint; 
+                    ModtermDisplay.TintColor = tint; 
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
                     _appearanceInfoControl.TextContent = GetAppearanceInfo();
@@ -384,7 +377,7 @@ namespace modterm
                     _bgTintDriftSaturation = (float)sat / 100f;
                     _bgTintDriftColors.Clear();
                     _bgTintDriftIntervalMs = 333; // 3 colors per second
-                    _bgTintDriftColors = ModglassDisplay.GetColorWheelProgression(0.5, _bgTintDriftSaturation, 720);
+                    _bgTintDriftColors = ModtermDisplay.GetColorWheelProgression(0.5, _bgTintDriftSaturation, 720);
                     _bgTintDriftColorOffset = 0;
                     _bgTintDriftTimer.Start();
                     ModtermCanvas.Invalidate();
@@ -402,7 +395,7 @@ namespace modterm
             foreach (var f in fonts)
             {
                 var item = new MenuFlyoutItem { Text = f };
-                item.Click += (_, __) => { ModglassDisplay.CurrentFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModtermDisplay.CurrentFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
                 fontSub.Items.Add(item);
             }
             _flyout.Items.Add(fontSub);
@@ -414,7 +407,7 @@ namespace modterm
             {
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
                 item.Click += (_, __) => { 
-                    ModglassDisplay.CurrentFontSize = (float)s;
+                    ModtermDisplay.CurrentFontSize = (float)s;
                     ModtermCanvas.Invalidate(); };
                 sizeSub.Items.Add(item);
             }
@@ -426,7 +419,7 @@ namespace modterm
             foreach (var f in controlFonts)
             {
                 var item = new MenuFlyoutItem { Text = f };
-                item.Click += (_, __) => { ModglassDisplay.CurrentControlFont = new FontFamily(f); ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModtermDisplay.CurrentControlFont = new FontFamily(f); ControlCanvas.Invalidate(); };
                 controlFontSub.Items.Add(item);
             }
             _flyout.Items.Add(controlFontSub);
@@ -437,7 +430,7 @@ namespace modterm
             foreach (var s in controlSizes)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
-                item.Click += (_, __) => { ModglassDisplay.CurrentControlFontSize = (float)s; ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModtermDisplay.CurrentControlFontSize = (float)s; ControlCanvas.Invalidate(); };
                 controlSizeSub.Items.Add(item);
             }
             _flyout.Items.Add(controlSizeSub);
@@ -448,7 +441,7 @@ namespace modterm
             foreach (var s in glowSubAmts)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} radius" };
-                item.Click += (_, __) => { ModglassDisplay.BlurAmount = s; ModtermCanvas.Invalidate(); ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModtermDisplay.BlurAmount = s; ModtermCanvas.Invalidate(); ControlCanvas.Invalidate(); };
                 glowSub.Items.Add(item);
             }
             _flyout.Items.Add(glowSub);
@@ -458,7 +451,7 @@ namespace modterm
             foreach (var (name, col) in _colorOptions)
             {
                 var item = new MenuFlyoutItem { Text = name };
-                item.Click += (_, __) => { ModglassDisplay.InputColor = col; ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModtermDisplay.InputColor = col; ModtermCanvas.Invalidate(); };
                 inputColorSub.Items.Add(item);
             }
             _flyout.Items.Add(inputColorSub);
@@ -468,7 +461,7 @@ namespace modterm
             foreach (var (name, col) in _colorOptions)
             {
                 var item = new MenuFlyoutItem { Text = name };
-                item.Click += (_, __) => { ModglassDisplay.OutputColor = col; ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { ModtermDisplay.OutputColor = col; ModtermCanvas.Invalidate(); };
                 outputColorSub.Items.Add(item);
             }
             _flyout.Items.Add(outputColorSub);
@@ -500,8 +493,8 @@ namespace modterm
         private string GetAppearanceInfo()
         {
             string info = 
-                $"Theme: {ModglassDisplay.CurrentConfigurationName} Tint: {GetColorHexString(ModglassDisplay.TintColor)} Transparency: {ModglassDisplay.TransparencyPct}% " +
-                $"Rows: {_lines} Columns: {_columns}";
+                $"\"{ModtermDisplay.CurrentConfigurationName}\" Tint: {GetColorHexString(ModtermDisplay.TintColor)} Transparency: {ModtermDisplay.TransparencyPct}%" +
+                $" Lines: {_lines} Cols: {_columns}";
             return info.Replace(" ", "\u00A0"); // replace spaces with non-breaking spaces to prevent collapsing in the UI
         }
 
