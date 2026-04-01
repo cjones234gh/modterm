@@ -33,14 +33,14 @@ namespace modterm
         // modglass UI controls
         private ModglassControlGroup    _titleBarControls;
         private ModglassControlGroup    _lowerRightControls;
-        private DisplayTextControl      _scrollLockControl;
-        private DisplayTextControl      _pathControl;
-        private DisplayTextControl      _appearanceInfoControl;
+        private TextDisplayControl      _scrollLockControl;
+        private TextDisplayControl      _pathControl;
+        private TextDisplayControl      _appearanceInfoControl;
         private RunningGraphControl     _testRunningGraphControlR;
         private RunningGraphControl _testRunningGraphControlG;
         private RunningGraphControl _testRunningGraphControlB;
 
-        private DisplayTextControl _testControl;
+        private TextDisplayControl _testControl;
 
         // background tint drift state
         private bool            _bgTintDriftEnabled = false;
@@ -115,13 +115,13 @@ namespace modterm
             _testRunningGraphControlB = new RunningGraphControl(
                 new Rect(0, 0, 120, 120), 1000, 0, 255);
             
-            _scrollLockControl = new DisplayTextControl
+            _scrollLockControl = new TextDisplayControl
                 (new Rect(0, 0, 0, 0), "S C R L K");
 
-            _pathControl = new DisplayTextControl(
+            _pathControl = new TextDisplayControl(
                 new Rect(0, 0, 0, 0), _shellApplicationPath);   
 
-            _appearanceInfoControl = new DisplayTextControl(
+            _appearanceInfoControl = new TextDisplayControl(
                 new Rect(0, 0, 0, 0), GetAppearanceInfo());
 
             _lowerRightControls.Controls.AddRange(
@@ -144,8 +144,9 @@ namespace modterm
 
             ControlCanvas.Draw += this.ControlCanvas_Draw;
 
-            ModtermCanvas.Loaded += (s, e) => { 
-                DetermineRowsAndColumns(); 
+            ModtermCanvas.Loaded += (s, e) => {
+                //DetermineRowsAndColumns(); 
+                _lines = 40; _columns = 80;
                 StartConPTY(); 
                 ResizeTerminal(); 
                 Debug.WriteLine("Canvas activated, terminal started"); 
@@ -185,6 +186,11 @@ namespace modterm
 
             this.InitializeFlyouts();
         }
+
+        private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
+        {
+            ResizeTerminal();
+        }
         
         private void UpdateSelectedText()
         {
@@ -211,9 +217,25 @@ namespace modterm
         private void DetermineRowsAndColumns()
         {
             var canvas = ModtermCanvas;
-            float fontWidth = ModglassDisplay.CurrentFontSize * 0.6f;
             float fontHeight = ModglassDisplay.CurrentFontSize + 2f;
-            int cols = (int)(canvas.ActualWidth / fontWidth);
+            float charWidth = 10f;
+            // Use the same char width measurement as rendering
+            if (canvas != null && canvas.ActualWidth > 0 && canvas.ActualHeight > 0)
+            {
+                try
+                {
+                    // Use CanvasTextLayout to measure 'W' width
+                    using (var ds = new Microsoft.Graphics.Canvas.CanvasRenderTarget(canvas, 10, 10))
+                    using (var layout = new Microsoft.Graphics.Canvas.Text.CanvasTextLayout(ds, "W", ModglassControlHelpers.GetTextFormat(), 9999, 9999))
+                    {
+                        charWidth = (float)layout.DrawBounds.Width;
+                    }
+                } catch (Exception ex)
+                {
+                    Debug.WriteLine($"Exception during measurement of character width: {ex.Message}");
+                }
+            }
+            int cols = (int)(canvas.ActualWidth / charWidth);
             int rows = (int)(canvas.ActualHeight / fontHeight);
             _lines = rows;
             _columns = cols;
@@ -231,14 +253,25 @@ namespace modterm
             _terminal.Start(_shellApplicationPath, _shellArguments, _lines, _columns);
         }
 
+        // Ensure ConPTY and VT buffer are resized with accurate values after window/canvas resize
+        private void ResizeTerminal()
+        {
+            DetermineRowsAndColumns();
+            Debug.WriteLine($"ModtermWindow::ResizeTerminal() called. Resizing _vtCon and _terminal with {_lines} lines and {_columns} columns.");
+            _vtController.ResizeView(_columns, _lines);
+            _terminal?.Resize((short)_columns, (short)_lines);
+            
+        }
+
         private void OnOutputReceived(object? sender, string line)
         {
-            Debug.WriteLine($"Direct output |   {line}  |");
+            Debug.WriteLine($"Unescaped (raw) output: {line} ");
 
             // for now, replace ANSI 0m, default color, with ANSI version of ModglassDisplay.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
 
             line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModglassDisplay.OutputColor.R};{ModglassDisplay.OutputColor.G};{ModglassDisplay.OutputColor.B}m");
+            Debug.WriteLine($"After default color   : {line} ");
 
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;

@@ -23,11 +23,10 @@ namespace modterm
 
             ModglassDisplay.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
-            // Calculate rows/columns based on font size and canvas size
+            // Calculate rows/columns based on measured character width and font size
             int rows = (int)(sender.ActualHeight / (ModglassDisplay.CurrentFontSize + 2));
-            int cols = (int)(sender.ActualWidth / (ModglassDisplay.CurrentFontSize * 0.6));
-            //_vtController.Rows = rows;
-            //_vtController.Columns = cols;
+            float measuredCharWidth = MeasureCharWidth(sender, args);
+            int cols = (int)(sender.ActualWidth / measuredCharWidth);
             _vtController.VisibleRows = rows;
             _vtController.VisibleColumns = cols;
             _lines = rows;
@@ -63,7 +62,7 @@ namespace modterm
             if (_cursorVisible)
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
-                float cursorX = (float)(cursor.Column * (ModglassDisplay.CurrentFontSize * 0.6));
+                float cursorX = _leftTextPadding + (float)(cursor.Column * measuredCharWidth);
                 float cursorY = (float)(cursor.Row * (ModglassDisplay.CurrentFontSize + 2));
                 args.DrawingSession.DrawText("|", cursorX, cursorY, ModglassDisplay.OutputColor, ModglassControlHelpers.GetTextFormat());
             }
@@ -114,8 +113,19 @@ namespace modterm
 		}
 
         public void ControlCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
+
         {             // draw all UI controls
             _titleBarControls?.DrawControls(sender, args.DrawingSession);
+        }
+
+        // Measure the width of a typical monospace character for accurate column calculation
+        private float MeasureCharWidth(CanvasControl sender, CanvasDrawEventArgs args)
+        {
+            // Use 'W' as a typical wide character for monospace fonts
+            using (var layout = new CanvasTextLayout(args.DrawingSession, "W", ModglassControlHelpers.GetTextFormat(), 9999, 9999))
+            {
+                return (float)layout.DrawBounds.Width;
+            }
         }
 
         

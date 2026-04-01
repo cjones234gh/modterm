@@ -121,7 +121,6 @@ namespace modterm
             foreach (var control in _titleBarControls.Controls)
             {
                 control.IsHovered = control.Location.Contains(currentPoint);
-                Debug.WriteLine("Control " + control.TextContent + " hovered: " + control.IsHovered);
             }
 
             ControlCanvas.Invalidate();
@@ -154,20 +153,6 @@ namespace modterm
             ModtermCanvas.Invalidate();
         }
 
-        private void MainWindow_SizeChanged(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)
-        {
-            ResizeTerminal();
-        }
-
-        private void ResizeTerminal()
-        {
-            // Calculate new rows/columns based on font size and canvas size
-            DetermineRowsAndColumns();
-            if (_columns < 1) _columns = 1;
-            if (_lines < 1) _lines = 1;
-            _vtController.ResizeView(_columns, _lines);
-            _terminal?.Resize((short)_columns, (short)_lines);
-        }
 
         private char? GetCharFromVirtualKey(Windows.System.VirtualKey key, KeyRoutedEventArgs e)
         {
