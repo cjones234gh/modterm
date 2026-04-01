@@ -398,7 +398,7 @@ namespace modterm
 
             // font family
             var fontSub = new MenuFlyoutSubItem { Text = "Font Family" };
-            var fonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "Segoe UI Mono" };
+            var fonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "Segoe UI Mono", "SimSun-ExtB" };
             foreach (var f in fonts)
             {
                 var item = new MenuFlyoutItem { Text = f };
@@ -422,7 +422,7 @@ namespace modterm
 
             // control font family
             var controlFontSub = new MenuFlyoutSubItem { Text = "Control Font Family" };
-            var controlFonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "Segoe UI Mono" };
+            var controlFonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "Segoe UI Mono", "SimSun-ExtB" };
             foreach (var f in controlFonts)
             {
                 var item = new MenuFlyoutItem { Text = f };
