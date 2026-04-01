@@ -89,6 +89,13 @@ namespace modterm
             // todo: load/create user config here
             ModtermDisplay.Initialize();
 
+            // set fonts until we have a config system in place
+            ModtermDisplay.CurrentFont = new FontFamily("Consolas");
+            ModtermDisplay.CurrentFontSize = 12f;
+            ModtermDisplay.CurrentControlFont = new FontFamily("Cascadia Mono");
+            ModtermDisplay.CurrentControlFontSize = 11;
+
+
             // set the color config to a preset on startup
             ModtermDisplay.SetColorConfiguration("Glowmancer");
             ControlCanvas.Invalidate();
@@ -237,6 +244,7 @@ namespace modterm
 
         private void StartConPTY()
         {
+            DetermineRowsAndColumns();
             _terminal.OutputReceived += OnOutputReceived;
             // temp fix for bash rows cols startup.
             if (_shellApplicationPath.EndsWith("bash.exe", StringComparison.OrdinalIgnoreCase))
@@ -426,7 +434,7 @@ namespace modterm
 
             // control font size
             var controlSizeSub = new MenuFlyoutSubItem { Text = "Control Font Size" };
-            var controlSizes = new[] { 8, 10, 12, 13.5, 14.5, 15.5, 16.5, 17.5 };
+            var controlSizes = new[] { 8, 9, 10, 10.5, 11, 11.5, 12, 12.5, 13, 14 };
             foreach (var s in controlSizes)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
