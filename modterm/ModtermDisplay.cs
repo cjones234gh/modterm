@@ -97,7 +97,7 @@ namespace modterm
             set
             {
                 _currentControlFontSize = value;
-                ModglassControlPadding = _currentControlFontSize;
+                ModglassControlPadding = _currentControlFontSize/1.5f;
                 ModglassCanvasPaddingLeft = 0;
                 ModglassCanvasPaddingTop = 5;// + (_currentFontSize / 2);
                 ModglassCanvasPaddingBottom = _currentControlFontSize + (_currentControlFontSize / 2);

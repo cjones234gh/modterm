@@ -93,7 +93,7 @@ namespace modterm
             ModtermDisplay.CurrentFont = new FontFamily("Consolas");
             ModtermDisplay.CurrentFontSize = 12f;
             ModtermDisplay.CurrentControlFont = new FontFamily("Cascadia Mono");
-            ModtermDisplay.CurrentControlFontSize = 11;
+            ModtermDisplay.CurrentControlFontSize = 9.5f;
 
 
             // set the color config to a preset on startup
