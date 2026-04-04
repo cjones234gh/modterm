@@ -44,7 +44,7 @@ namespace modterm
 
         private void ArrangeControls(CanvasControl sender, CanvasDrawingSession cds)
         {
-            float padding = ModtermDisplay.ModglassControlPadding;
+            float padding = ModtermDisplay.ControlPadding;
             float canvasWidth = (float)sender.ActualWidth;
             float canvasHeight = (float)sender.ActualHeight;
 
@@ -55,14 +55,14 @@ namespace modterm
                 case CornerGroupDock.FullCanvas:
                     // testing a fully anchored text panel.
                     Controls[0].Location = new Windows.Foundation.Rect
-                        (ModtermDisplay.ModglassCanvasPaddingLeft,
-                         ModtermDisplay.ModglassCanvasPaddingTop,
-                         sender.ActualWidth - ModtermDisplay.ModglassCanvasPaddingLeft - ModtermDisplay.ModglassCanvasPaddingRight,
-                         sender.ActualHeight - ModtermDisplay.ModglassCanvasPaddingTop - ModtermDisplay.ModglassCanvasPaddingBottom);
+                        (ModtermDisplay.ControlMargin,
+                         ModtermDisplay.ControlMargin,
+                         sender.ActualWidth - ModtermDisplay.ControlMargin - ModtermDisplay.ControlMargin,
+                         sender.ActualHeight - ModtermDisplay.ControlMargin - ModtermDisplay.ControlMargin);
                     break;
                 case CornerGroupDock.UpperRightHorizontal:
-                    x = canvasWidth - ModtermDisplay.ModglassCanvasPaddingRight;
-                    y = ModtermDisplay.ModglassCanvasPaddingTop;
+                    x = canvasWidth - ModtermDisplay.ControlMargin;
+                    y = ModtermDisplay.ControlMargin;
                     for (int i = 0; i < Controls.Count; i++)
                     {
                         var control = Controls[i];
@@ -97,7 +97,7 @@ namespace modterm
                             : (float)control.Location.Width + padding;
                     }
                     float startX = (canvasWidth - totalWidth) / 2;
-                    float yy = ModtermDisplay.ModglassCanvasPaddingTop;
+                    float yy = ModtermDisplay.ControlMargin;
                     foreach (var control in Controls)
                     {
                         float width = control.ContentSizing
@@ -129,7 +129,7 @@ namespace modterm
                     throw new NotImplementedException();
                     break;
                 case CornerGroupDock.LowerRightVertical:
-                    y = canvasHeight - ModtermDisplay.ModglassCanvasPaddingBottom;
+                    y = canvasHeight - ModtermDisplay.ControlMargin;
                     for (int i = 0; i < Controls.Count; i++)
                     {
                         var control = Controls[i];
@@ -147,7 +147,7 @@ namespace modterm
                             height = (float)control.Location.Height;
                         }
                         y -= height;
-                        float xRight = canvasWidth - ModtermDisplay.ModglassCanvasPaddingRight - width;
+                        float xRight = canvasWidth - ModtermDisplay.ControlMargin - width;
                         control.Location = new Windows.Foundation.Rect(xRight, y, width, height);
                         y -= padding;
                     }

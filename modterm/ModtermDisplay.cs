@@ -50,13 +50,10 @@ namespace modterm
         public static string CurrentConfigurationName;
 
         // space between content and control borders
-        public static float ModglassControlPadding;
+        public static float ControlPadding;
 
-        // space between controls and canvas edges
-        public static float ModglassCanvasPaddingTop;
-        public static float ModglassCanvasPaddingBottom;
-        public static float ModglassCanvasPaddingLeft;
-        public static float ModglassCanvasPaddingRight;
+        // space between controls and canvas edges/other controls
+        public static float ControlMargin;
 
         // control scale based on font size to maintain consistent proportions
         public static float CurrentFontSizeControlScale;
@@ -97,11 +94,8 @@ namespace modterm
             set
             {
                 _currentControlFontSize = value;
-                ModglassControlPadding = _currentControlFontSize/1.5f;
-                ModglassCanvasPaddingLeft = 0;
-                ModglassCanvasPaddingTop = 5;// + (_currentFontSize / 2);
-                ModglassCanvasPaddingBottom = _currentControlFontSize + (_currentControlFontSize / 2);
-                ModglassCanvasPaddingRight = _currentControlFontSize;
+                ControlPadding = _currentControlFontSize/1.5f;
+                ControlMargin = 5;// + (_currentFontSize / 2);
             }
         }
 
@@ -317,8 +311,8 @@ namespace modterm
                     //        Color.FromArgb(ModtermDisplay.BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
 
                     // Draw TextContent
-                    //clds.DrawText(control.TextContent, (float)control.Location.X + ModtermDisplay.ModglassControlPadding,
-                    //    (float)control.Location.Y + ModtermDisplay.ModglassControlPadding / 2, controlBlurColor, textFormat);
+                    //clds.DrawText(control.TextContent, (float)control.Location.X + ModtermDisplay.ControlPadding,
+                    //    (float)control.Location.Y + ModtermDisplay.ControlPadding / 2, controlBlurColor, textFormat);
                 }
 
                 //var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
@@ -338,8 +332,8 @@ namespace modterm
                 Color.FromArgb(ModtermDisplay.SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
 
             // Draw TextContent
-            cds.DrawText(control.TextContent, (float)control.Location.X + ModtermDisplay.ModglassControlPadding,
-                (float)control.Location.Y + ModtermDisplay.ModglassControlPadding / 2, controlColor, textFormat);
+            cds.DrawText(control.TextContent, (float)control.Location.X + ModtermDisplay.ControlPadding,
+                (float)control.Location.Y + ModtermDisplay.ControlPadding / 2, controlColor, textFormat);
         }
 
         public static List<Color> GetColorWheelProgression(double StepDegrees, double Saturation, int NumColors)

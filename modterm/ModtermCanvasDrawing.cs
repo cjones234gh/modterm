@@ -109,7 +109,6 @@ namespace modterm
 
             // draw all UI controls
             //_titleBarControls?.DrawControls(sender, args.DrawingSession);
-            _lowerRightControls?.DrawControls(sender, args.DrawingSession);
 		}
 
         public void ControlCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)

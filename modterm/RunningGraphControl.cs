@@ -91,8 +91,8 @@ namespace modterm
             }
 
             // Sharp layer
-            cds.DrawRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-                Color.FromArgb(ModtermDisplay.SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), ModtermDisplay.LineWidth);
+            //cds.DrawRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
+            //    Color.FromArgb(ModtermDisplay.SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), ModtermDisplay.LineWidth);
             cds.FillRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
                 Color.FromArgb(ModtermDisplay.SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
             // Draw line graph (sharp layer)

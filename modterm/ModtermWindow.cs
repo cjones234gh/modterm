@@ -31,12 +31,10 @@ namespace modterm
 
         // modglass UI controls
         private ModtermControlGroup    _titleBarControls;
-        private ModtermControlGroup    _lowerRightControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
-        private RunningGraphControl     _testRunningGraphControlR;
-        private RunningGraphControl _testRunningGraphControlG;
-        private RunningGraphControl _testRunningGraphControlB;
+        private RunningGraphControl     _processCpuPercent;
+        private RunningGraphControl     _processMemoryMB;
 
         // background tint drift state
         private bool            _bgTintDriftEnabled = false;
@@ -45,11 +43,11 @@ namespace modterm
         private int             _bgTintDriftColorOffset = 0;
         private int             _bgTintDriftIntervalMs = 333;
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _bgTintDriftTimer;
+        private Microsoft.UI.Dispatching.DispatcherQueueTimer _procInfoTimer;
 
         // VT mode: cursor visibility only
         private bool            _cursorVisible = true;
         
-
         // context menu flyout for right-click and shell definitions
         private MenuFlyout _flyout;
         private List<Shell> _shellEnv = new List<Shell>()
@@ -66,12 +64,16 @@ namespace modterm
         private Windows.Foundation.Point _selectionStart;
         private Windows.Foundation.Point _selectionEnd;
         private string _selectedText = "";
-                
+
+        private bool _procInfoTimerRunning = false;
+        private int _processId = 0;
+
         private void InitializeApplication()
         {
 
             _cursorTimer = DispatcherQueue.CreateTimer();
             _bgTintDriftTimer = DispatcherQueue.CreateTimer();
+            _procInfoTimer = DispatcherQueue.CreateTimer();
 
             //_commandHistorySize = 200;
             //_bufferSize = 1000;
@@ -97,7 +99,7 @@ namespace modterm
 
 
             // set the color config to a preset on startup
-            ModtermDisplay.SetColorConfiguration("Glowmancer");
+            ModtermDisplay.SetColorConfiguration("Cyberpunk");
             ControlCanvas.Invalidate();
 
             _vtController.SetRgbForegroundColor(ModtermDisplay.OutputColor.R, 
@@ -106,29 +108,20 @@ namespace modterm
             // ui controls and dock groups
             _titleBarControls = new ModtermControlGroup(
                 ModtermControlGroup.CornerGroupDock.UpperCenterHorizontal);
-            _lowerRightControls = new ModtermControlGroup(
-                ModtermControlGroup.CornerGroupDock.LowerRightVertical);
 
-            _testRunningGraphControlR = new RunningGraphControl(
-                new Rect(0, 0, 120, 120), 1000, 0, 255);
-            
-            _testRunningGraphControlG = new RunningGraphControl(
-                new Rect(0, 0, 120, 120), 1000, 0, 255);
-            
-            _testRunningGraphControlB = new RunningGraphControl(
-                new Rect(0, 0, 120, 120), 1000, 0, 255);
-            
+            _processCpuPercent = new RunningGraphControl(
+                new Rect(0, 0, 90, 20), 2000, 0, 100);
+            _processMemoryMB = new RunningGraphControl(
+                new Rect(0, 0, 90, 20), 2000, 0, 800);
+
             _pathControl = new TextDisplayControl(
                 new Rect(0, 0, 0, 0), _shellApplicationPath);   
 
             _appearanceInfoControl = new TextDisplayControl(
                 new Rect(0, 0, 0, 0), GetAppearanceInfo());
 
-            _lowerRightControls.Controls.AddRange(
-                [_testRunningGraphControlB, _testRunningGraphControlG, _testRunningGraphControlR]);
-            
             _titleBarControls.Controls.AddRange(
-                [_pathControl, _appearanceInfoControl]);
+                [_pathControl, _appearanceInfoControl, _processCpuPercent, _processMemoryMB]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
@@ -178,11 +171,23 @@ namespace modterm
                 _bgTintDriftColorOffset = (_bgTintDriftColorOffset + 1) % _bgTintDriftColors.Count;
                 ModtermDisplay.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
                 _appearanceInfoControl.TextContent = GetAppearanceInfo();
-                _testRunningGraphControlR.DataPoints.Add(ModtermDisplay.TintColor.R); // example of using the current tint color to drive a graph control
-                _testRunningGraphControlG.DataPoints.Add(ModtermDisplay.TintColor.G); // example of using the current tint color to drive a graph control
-                _testRunningGraphControlB.DataPoints.Add(ModtermDisplay.TintColor.B); // example of using the current tint color to drive a graph control
+                _processCpuPercent.DataPoints.Add(ModtermDisplay.TintColor.R); // example of using the current tint color to drive a graph control
                 ModtermCanvas.Invalidate();
             };
+
+            // proc graph info update timer
+            _procInfoTimer.Interval = TimeSpan.FromMilliseconds(2000);
+            _procInfoTimer.Tick += (s, e) =>
+            {
+                ProcStats? procStats = ProcessStats.GetProcessStatsAsync((uint)_processId);
+                if (procStats.HasValue)
+                {
+                    _processCpuPercent.DataPoints.Add((float)procStats.Value.CpuUsagePercentage);
+                    _processMemoryMB.DataPoints.Add((float)(procStats.Value.WorkingSetBytes / 1024 / 1024));
+                }
+                ControlCanvas.Invalidate();
+            };
+            
 
             this.InitializeFlyouts();
         }
@@ -266,13 +271,20 @@ namespace modterm
 
         private void OnOutputReceived(object? sender, string line)
         {
-            Debug.WriteLine($"Unescaped (raw) output: {line} ");
+            if (_procInfoTimerRunning == false)
+            {
+                _processId = _terminal.GetProcessId();
+                _procInfoTimer.Start();
+                _procInfoTimerRunning = true;
+            }
+
+            //Debug.WriteLine($"Unescaped (raw) output: {line} ");
 
             // for now, replace ANSI 0m, default color, with ANSI version of ModtermDisplay.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
 
             line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModtermDisplay.OutputColor.R};{ModtermDisplay.OutputColor.G};{ModtermDisplay.OutputColor.B}m");
-            Debug.WriteLine($"After default color   : {line} ");
+            //Debug.WriteLine($"After default color   : {line} ");
 
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;

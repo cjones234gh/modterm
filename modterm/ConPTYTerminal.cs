@@ -33,6 +33,10 @@ namespace modterm
 
         public event EventHandler<string>? OutputReceived;
 
+        public int GetProcessId()
+        {
+            return _process?.Id ?? -1;
+        }
         public ConPTYTerminal()
         {
             _applicationName = string.Empty; 
