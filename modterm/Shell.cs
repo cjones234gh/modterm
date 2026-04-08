@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace modterm
 {
-    internal class Shell
+    public class Shell
     {
         public string Name { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;

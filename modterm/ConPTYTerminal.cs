@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -27,8 +28,6 @@ namespace modterm
         private Task?           _readTask;
         private bool            _disposed;
         private IntPtr          _attrListPtr = IntPtr.Zero;
-        private string          _applicationName;
-        private string          _arguments;
         private List<Color>     _bannerColors;
 
         public event EventHandler<string>? OutputReceived;
@@ -39,8 +38,6 @@ namespace modterm
         }
         public ConPTYTerminal()
         {
-            _applicationName = string.Empty; 
-            _arguments = string.Empty;
             _inputWrite = new SafeFileHandle();
             _inputRead = new SafeFileHandle();
             _outputWrite = new SafeFileHandle();
@@ -48,11 +45,8 @@ namespace modterm
             _bannerColors = ModtermDisplay.GetColorWheelProgression(10f, 100, 7);
         }
 
-        public void Start(string applicationName, string arguments, int lines, int columns)
+        public void Start(Shell targetShell, int lines, int columns)
         {
-            _applicationName = applicationName;
-            _arguments = arguments;
-
             // security attributes for the pipes: must allow handle inheritance for ConPTY to use them
             var sa = new SECURITY_ATTRIBUTES();
             sa.nLength = Marshal.SizeOf<SECURITY_ATTRIBUTES>();
@@ -115,9 +109,9 @@ namespace modterm
                 throw new Exception("UpdateProcThreadAttribute failed");
 
             // Build full command line: application path + arguments
-            string commandLine = string.IsNullOrEmpty(_arguments)
-                ? $"\"{_applicationName}\""
-                : $"\"{_applicationName}\" {_arguments}";
+            string commandLine = string.IsNullOrEmpty(targetShell.Arguments)
+                ? $"\"{targetShell.Path}\""
+                : $"\"{targetShell.Path}\" {targetShell.Arguments}";
 
             ShellPath = commandLine;
 
@@ -128,8 +122,12 @@ namespace modterm
                 Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>().ToDictionary(
                     e => (string)e.Key, e => (string?)e.Value ?? ""));
             envVars["TERM"] = "xterm-256color";
-            envVars["LINES"] = lines.ToString();
-            envVars["COLUMNS"] = columns.ToString(); // Environment block must be a null-terminated sequence of null-terminated "key=value" strings
+            if (targetShell.Name == "bash")
+            {
+                envVars["LINES"] = lines.ToString();
+                envVars["COLUMNS"] = columns.ToString(); // Environment block must be a null-terminated sequence of null-terminated "key=value" strings
+            }
+            
             string envBlockStr = string.Join("\0", envVars.Select(kv => $"{kv.Key}={kv.Value}")) + "\0\0";
             IntPtr envBlockPtr = Marshal.StringToHGlobalUni(envBlockStr);
 

@@ -28,6 +28,13 @@ namespace modterm
         {
             this.InitializeComponent();
             this.InitializeApplication();
+
+            this.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () =>
+                {
+                    StartConPTY();
+                    ControlCanvas.Invalidate();
+                });
         }
     }
 }
