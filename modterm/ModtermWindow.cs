@@ -54,7 +54,7 @@ namespace modterm
             new Shell { Name = "cmd", Path = "C:\\Windows\\System32\\cmd.exe" },
             new Shell { Name = "powershell", Path = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
             new Shell { Name = "pwsh", Path = "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
-            new Shell { Name = "bash", Path = "C:\\Program Files\\Git\\usr\\bin\\bash.exe", Arguments = "-i -l" },
+            new Shell { Name = "bash", Path = "C:\\Program Files\\Git\\bin\\bash.exe", Arguments = "-i -l" },
             new Shell { Name = "wsl", Path = "wsl.exe", Arguments = "bash -i -l" },
             //new Shell { Name = "git-bash", Path = "C:\\Program Files\\Git\\git-bash.exe", Arguments = "-i -l" },
         };
@@ -75,7 +75,7 @@ namespace modterm
             _flyout = new MenuFlyout();
 
             // default shell is wsl
-            _currentShell = _shellEnv.First(item => item.Name == "bash");
+            _currentShell = _shellEnv.First(item => item.Name == "cmd");
 
             // Initialize VtNetCore terminal controller and data consumer
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
@@ -237,13 +237,13 @@ namespace modterm
         private void OnOutputReceived(object? sender, string line)
         {
 
-            Debug.WriteLine($"Unescaped (raw) output: {line} ");
+            //Debug.WriteLine($"Unescaped (raw) output: {line} ");
 
             // for now, replace ANSI 0m, default color, with ANSI version of ModtermDisplay.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
 
             line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModtermDisplay.OutputColor.R};{ModtermDisplay.OutputColor.G};{ModtermDisplay.OutputColor.B}m");
-            Debug.WriteLine($"After default color   : {line} ");
+            //Debug.WriteLine($"After default color   : {line} ");
 
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;
@@ -456,6 +456,7 @@ namespace modterm
                     await Task.Delay(1000); // Pauses for 1 second without blocking the UI thread
                     _terminal = new ConPTYTerminal();
                     _terminal.OutputReceived += OnOutputReceived;
+                    DetermineRowsAndColumns();
                     _terminal.Start(sh, _lines, _columns);
                 };
                 shellSub.Items.Add(item);

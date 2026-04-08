@@ -77,12 +77,14 @@ namespace modterm
             if (CreatePseudoConsole(coord, _inputRead, _outputWrite, 0, out _hPC) != 0)
                 throw new Exception("CreatePseudoConsole failed");
 
-            // prepare process data with attribute list that includes the HPCON handle, so child process is attached to it
+            // prepare process data with attribute list that includes the HPCON handle,
+            // so child process is attached to it
             IntPtr attrListSize = IntPtr.Zero;
             InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref attrListSize);
             _attrListPtr = Marshal.AllocHGlobal(attrListSize);
 
-            // lpValue must be a *pointer* to the HPCON (kernel reads the handle from that address), not the handle value itself.
+            // lpValue must be a *pointer* to the HPCON (kernel reads the handle from that address),
+            // not the handle value itself.
             _hPCPtr = Marshal.AllocHGlobal(IntPtr.Size);
             Marshal.WriteIntPtr(_hPCPtr, _hPC);
 
@@ -121,9 +123,12 @@ namespace modterm
             var envVars = new Dictionary<string, string>(
                 Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>().ToDictionary(
                     e => (string)e.Key, e => (string?)e.Value ?? ""));
-            envVars["TERM"] = "xterm-256color";
-            if (targetShell.Name == "bash")
+
+            bool linux = targetShell.Name == "bash" || targetShell.Name == "wsl";
+
+            if (linux)
             {
+                envVars["TERM"] = "xterm-256color";
                 envVars["LINES"] = lines.ToString();
                 envVars["COLUMNS"] = columns.ToString(); // Environment block must be a null-terminated sequence of null-terminated "key=value" strings
             }
@@ -136,7 +141,7 @@ namespace modterm
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             // Create the process with the extended startup info
             if (!CreateProcess(null, commandLine, (nint)null, (nint)null, true,
-                EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, (nint)envBlockPtr, null, ref startupInfo, out pi))
+                EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, linux ? (nint)envBlockPtr : (nint)null, null, ref startupInfo, out pi))
             {
                 int error = Marshal.GetLastWin32Error();
                 throw new Exception($"CreateProcess failed with error code: {error}");
@@ -184,7 +189,13 @@ namespace modterm
         {
             Debug.WriteLine($"Resizing ConPTY to {cols} cols x {rows} rows");
             if (_hPC != IntPtr.Zero && cols > 10 && rows > 5)
-                ResizePseudoConsole(_hPC, new COORD { X = cols, Y = rows });
+            {
+                int hr = ResizePseudoConsole(_hPC, new COORD { X = cols, Y = rows });
+                if (hr != 0)
+                {
+                    Debug.WriteLine($"ResizePseudoConsole failed with HRESULT: 0x{hr:X8}");
+                }
+            }
         }
 
         // Use UTF-8 decoder that replaces invalid bytes instead of throwing (ConPTY may send OEM/code-page or binary)
@@ -271,7 +282,7 @@ namespace modterm
         [DllImport("kernel32.dll", SetLastError = true)] private static extern void DeleteProcThreadAttributeList(IntPtr lpAttributeList);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool CreatePipe(out SafeFileHandle hReadPipe, out SafeFileHandle hWritePipe, IntPtr lpPipeAttributes, uint nSize);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern int CreatePseudoConsole(COORD size, SafeFileHandle hInput, SafeFileHandle hOutput, uint dwFlags, out IntPtr phPC);
-        [DllImport("kernel32.dll", SetLastError = true)] private static extern bool ResizePseudoConsole(IntPtr hPC, COORD size);
+        [DllImport("kernel32.dll", SetLastError = true)] private static extern int ResizePseudoConsole(IntPtr hPC, COORD size);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool ClosePseudoConsole(IntPtr hPC);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFOEX lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool InitializeProcThreadAttributeList(IntPtr lpAttributeList, int dwAttributeCount, uint dwFlags, ref IntPtr lpSize);
