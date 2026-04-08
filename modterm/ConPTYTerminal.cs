@@ -140,12 +140,26 @@ namespace modterm
             // P/Invoke requires a null in this call, not a null string, so we have to disable nullable warnings for this section
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             // Create the process with the extended startup info
-            if (!CreateProcess(null, commandLine, (nint)null, (nint)null, true,
-                EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, linux ? (nint)envBlockPtr : (nint)null, null, ref startupInfo, out pi))
+            if (linux)
             {
-                int error = Marshal.GetLastWin32Error();
-                throw new Exception($"CreateProcess failed with error code: {error}");
+                if (!CreateProcess(null, commandLine, (nint)null, (nint)null, true,
+                        EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
+                        (nint)envBlockPtr, null, ref startupInfo, out pi))
+                {
+                    int error = Marshal.GetLastWin32Error();
+                    throw new Exception($"CreateProcess failed with error code: {error}");
+                }
             }
+            else
+            {
+                if (!CreateProcess(null, commandLine, (nint)null, (nint)null, true,
+                        EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW, (nint)null, null, ref startupInfo, out pi))
+                {
+                    int error = Marshal.GetLastWin32Error();
+                    throw new Exception($"CreateProcess failed with error code: {error}");
+                }
+            }
+            
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
             // get the process by PID so we can monitor/end it later;

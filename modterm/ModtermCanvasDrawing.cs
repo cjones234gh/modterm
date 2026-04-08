@@ -3,7 +3,7 @@ using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.Text;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.UI.Xaml;
-
+using System.Diagnostics;
 using System;
 using Windows.UI;
 
@@ -25,7 +25,7 @@ namespace modterm
 
             // Calculate rows/columns based on measured character width and font size
             int rows = (int)(sender.ActualHeight / (ModtermDisplay.CurrentFontSize + 2));
-            float measuredCharWidth = MeasureCharWidth(sender, args);
+            float measuredCharWidth = MeasureCharWidth(sender, args) * 1.1f;
             int cols = (int)(sender.ActualWidth / measuredCharWidth);
             _vtController.VisibleRows = rows;
             _vtController.VisibleColumns = cols;
@@ -39,21 +39,29 @@ namespace modterm
             foreach (var row in pageSpans)
             {
                 float x = _leftTextPadding;
+                int col = 0; // Reset column at the start of each row
                 foreach (var span in row.Spans)
                 {
                     // Convert VT color string to Windows.UI.Color
                     Color fg = ModtermDisplay.OutputColor;
-                    try { fg = ColorFromWeb(span.ForgroundColor); } catch { } 
-                    // Draw the text span
-                    if (!string.IsNullOrEmpty(span.Text))
+                    try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
+                    // replace tabs with spaces (assuming tab stops every 4 columns)
+                    //string textToDraw = span.Text?.Replace("\t", "    ") ?? "";
+                    string textToDraw = (string)span.Text.TrimStart(' ');
+                    // replace spaces with non-breaking spaces to prevent collapsing
+                    //textToDraw = textToDraw.Replace(" ", "\u00A0");
+
+                    // Draw the text span at the correct column position
+                    float _measuredCharWidth = MeasureCharWidth(sender, args) * 1.1f;
+                    //x = _leftTextPadding + (col * _measuredCharWidth);
+                    if (!string.IsNullOrEmpty(textToDraw))
                     {
-                        ModtermDisplay.DrawText(span.Text, x, (float)y, fg, ModtermDisplay.GetTextFormat());
+                        x = _leftTextPadding + (col * _measuredCharWidth);
+                        ModtermDisplay.DrawText(textToDraw, x, (float)y, fg, ModtermDisplay.GetTextFormat());
+                        //Debug.WriteLine("Drawing span: '" + textToDraw + "' at col " + col + " (x=" + x + ")");
                     }
-                    // Advance X by measured width
-                    using (var layout = new CanvasTextLayout(args.DrawingSession, span.Text ?? "", ModtermDisplay.GetTextFormat(), 9999, 9999))
-                    {
-                        x += (float)layout.DrawBounds.Width;
-                    }
+                    // Advance col by the number of characters in the span
+                    col += textToDraw?.Length ?? 0;
                 }
                 y += ModtermDisplay.CurrentFontSize + 2;
             }

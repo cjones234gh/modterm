@@ -75,7 +75,7 @@ namespace modterm
             _flyout = new MenuFlyout();
 
             // default shell is wsl
-            _currentShell = _shellEnv.First(item => item.Name == "cmd");
+            _currentShell = _shellEnv.First(item => item.Name == "bash");
 
             // Initialize VtNetCore terminal controller and data consumer
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
@@ -237,13 +237,13 @@ namespace modterm
         private void OnOutputReceived(object? sender, string line)
         {
 
-            //Debug.WriteLine($"Unescaped (raw) output: {line} ");
+            //Debug.WriteLine($"Unescaped (raw) output: [{line}] ");
 
             // for now, replace ANSI 0m, default color, with ANSI version of ModtermDisplay.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
 
             line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModtermDisplay.OutputColor.R};{ModtermDisplay.OutputColor.G};{ModtermDisplay.OutputColor.B}m");
-            //Debug.WriteLine($"After default color   : {line} ");
+            //Debug.WriteLine($"After default color   : [{line.Replace("\r\n", "ENDL")}] ");
 
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;
