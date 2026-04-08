@@ -14,7 +14,7 @@ namespace modterm
 
     public class ProcessStats
     {
-        public static ProcStats? GetProcessStatsAsync(uint processId)
+        public static ProcStats? GetProcessStats(uint processId)
         {
             // Request diagnostics for a specific process ID
             var processInfo = ProcessDiagnosticInfo.TryGetForProcessId(processId);

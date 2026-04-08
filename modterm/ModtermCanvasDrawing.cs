@@ -25,7 +25,7 @@ namespace modterm
 
             // Calculate rows/columns based on measured character width and font size
             int rows = (int)(sender.ActualHeight / (ModtermDisplay.CurrentFontSize + 2));
-            float measuredCharWidth = MeasureCharWidth(sender, args) * 1.1f;
+            float measuredCharWidth = MeasureCharWidth(sender, args);
             int cols = (int)(sender.ActualWidth / measuredCharWidth);
             _vtController.VisibleRows = rows;
             _vtController.VisibleColumns = cols;
@@ -52,11 +52,9 @@ namespace modterm
                     //textToDraw = textToDraw.Replace(" ", "\u00A0");
 
                     // Draw the text span at the correct column position
-                    float _measuredCharWidth = MeasureCharWidth(sender, args) * 1.1f;
-                    //x = _leftTextPadding + (col * _measuredCharWidth);
                     if (!string.IsNullOrEmpty(textToDraw))
                     {
-                        x = _leftTextPadding + (col * _measuredCharWidth);
+                        x = _leftTextPadding + (col * measuredCharWidth);
                         ModtermDisplay.DrawText(textToDraw, x, (float)y, fg, ModtermDisplay.GetTextFormat());
                         //Debug.WriteLine("Drawing span: '" + textToDraw + "' at col " + col + " (x=" + x + ")");
                     }
@@ -131,7 +129,7 @@ namespace modterm
             // Use 'W' as a typical wide character for monospace fonts
             using (var layout = new CanvasTextLayout(args.DrawingSession, "W", ModtermDisplay.GetTextFormat(), 9999, 9999))
             {
-                return (float)layout.DrawBounds.Width;
+                return (float)layout.DrawBounds.Width * 1.1f; // add a small buffer to prevent clipping
             }
         }
 
