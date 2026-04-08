@@ -123,11 +123,22 @@ namespace modterm
 
             Debug.WriteLine($"Starting process with command line: {commandLine}");
 
+            // Build environment block with TERM, LINES, and COLUMNS
+            var envVars = new Dictionary<string, string>(
+                Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>().ToDictionary(
+                    e => (string)e.Key, e => (string?)e.Value ?? ""));
+            envVars["TERM"] = "xterm-256color";
+            envVars["LINES"] = lines.ToString();
+            envVars["COLUMNS"] = columns.ToString(); // Environment block must be a null-terminated sequence of null-terminated "key=value" strings
+            string envBlockStr = string.Join("\0", envVars.Select(kv => $"{kv.Key}={kv.Value}")) + "\0\0";
+            IntPtr envBlockPtr = Marshal.StringToHGlobalUni(envBlockStr);
+
+
             // P/Invoke requires a null in this call, not a null string, so we have to disable nullable warnings for this section
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             // Create the process with the extended startup info
             if (!CreateProcess(null, commandLine, (nint)null, (nint)null, true,
-                EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW, (nint)null, null, ref startupInfo, out pi))
+                EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, (nint)envBlockPtr, null, ref startupInfo, out pi))
             {
                 int error = Marshal.GetLastWin32Error();
                 throw new Exception($"CreateProcess failed with error code: {error}");
@@ -249,6 +260,7 @@ namespace modterm
         private const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
         private const uint PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x0002000A;
         private const uint CREATE_NO_WINDOW = 0x08000000;
+        private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
         private const uint STARTF_USESTDHANDLES = 0x00000100;
         private const uint HANDLE_FLAG_INHERIT = 0x00000001;
         [StructLayout(LayoutKind.Sequential)] private struct COORD { public short X; public short Y; }

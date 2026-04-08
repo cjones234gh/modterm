@@ -72,10 +72,10 @@ namespace modterm
             {
                 using (var clds = commandList.CreateDrawingSession())
                 {
-                    clds.DrawRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius, controlBlurColor, ModtermDisplay.LineWidth);
-                    if (!this.IsHovered)
-                        clds.FillRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-                            Color.FromArgb(ModtermDisplay.BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
+                    //clds.DrawRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius, controlBlurColor, ModtermDisplay.LineWidth);
+                    //if (!this.IsHovered)
+                    //    clds.FillRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
+                    //        Color.FromArgb(ModtermDisplay.BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
                     // Draw line graph (blur layer)
                     for (int i = 1; i < points.Length; i++)
                     {

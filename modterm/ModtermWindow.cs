@@ -1,5 +1,4 @@
-﻿
-using Microsoft.UI;
+﻿using Microsoft.UI;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -33,21 +32,19 @@ namespace modterm
         private ModtermControlGroup    _titleBarControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
-        private RunningGraphControl     _processCpuPercent;
-        private RunningGraphControl     _processMemoryMB;
 
         // background tint drift state
         private bool            _bgTintDriftEnabled = false;
         private float           _bgTintDriftSaturation = 0;
         private List<Color>     _bgTintDriftColors = new List<Color>();
         private int             _bgTintDriftColorOffset = 0;
-        private int             _bgTintDriftIntervalMs = 333;
+        private int             _bgTintDriftIntervalMs = 300;
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _bgTintDriftTimer;
-        private Microsoft.UI.Dispatching.DispatcherQueueTimer _procInfoTimer;
 
         // VT mode: cursor visibility only
         private bool            _cursorVisible = true;
-        
+        private int             _cursorSpeed = 500;
+
         // context menu flyout for right-click and shell definitions
         private MenuFlyout _flyout;
         private List<Shell> _shellEnv = new List<Shell>()
@@ -65,18 +62,12 @@ namespace modterm
         private Windows.Foundation.Point _selectionEnd;
         private string _selectedText = "";
 
-        private bool _procInfoTimerRunning = false;
-        private int _processId = 0;
-
         private void InitializeApplication()
         {
 
             _cursorTimer = DispatcherQueue.CreateTimer();
             _bgTintDriftTimer = DispatcherQueue.CreateTimer();
-            _procInfoTimer = DispatcherQueue.CreateTimer();
 
-            //_commandHistorySize = 200;
-            //_bufferSize = 1000;
             _terminal = new ConPTYTerminal();
             _flyout = new MenuFlyout();
 
@@ -109,11 +100,6 @@ namespace modterm
             _titleBarControls = new ModtermControlGroup(
                 ModtermControlGroup.CornerGroupDock.UpperCenterHorizontal);
 
-            _processCpuPercent = new RunningGraphControl(
-                new Rect(0, 0, 90, 20), 2000, 0, 100);
-            _processMemoryMB = new RunningGraphControl(
-                new Rect(0, 0, 90, 20), 2000, 0, 800);
-
             _pathControl = new TextDisplayControl(
                 new Rect(0, 0, 0, 0), _shellApplicationPath);   
 
@@ -121,7 +107,7 @@ namespace modterm
                 new Rect(0, 0, 0, 0), GetAppearanceInfo());
 
             _titleBarControls.Controls.AddRange(
-                [_pathControl, _appearanceInfoControl, _processCpuPercent, _processMemoryMB]);
+                [_pathControl, _appearanceInfoControl]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
@@ -156,7 +142,7 @@ namespace modterm
             ControlCanvas.PointerMoved += this.ControlCanvas_PointerMoved;
 
             // Blinking cursor
-            _cursorTimer.Interval = TimeSpan.FromMilliseconds(500);
+            _cursorTimer.Interval = TimeSpan.FromMilliseconds(_cursorSpeed);
             _cursorTimer.Tick += (s, e) =>
             {
                 _cursorVisible = !_cursorVisible;
@@ -165,29 +151,14 @@ namespace modterm
             _cursorTimer.Start();
 
             // Background tint drift timer
-            _bgTintDriftTimer.Interval = TimeSpan.FromMilliseconds(_bgTintDriftIntervalMs); /*/ 3 colors per second / 1 minute loop /*/
+            _bgTintDriftTimer.Interval = TimeSpan.FromMilliseconds(_bgTintDriftIntervalMs);
             _bgTintDriftTimer.Tick += (s, e) =>
             {
                 _bgTintDriftColorOffset = (_bgTintDriftColorOffset + 1) % _bgTintDriftColors.Count;
                 ModtermDisplay.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
                 _appearanceInfoControl.TextContent = GetAppearanceInfo();
-                _processCpuPercent.DataPoints.Add(ModtermDisplay.TintColor.R); // example of using the current tint color to drive a graph control
-                ModtermCanvas.Invalidate();
-            };
-
-            // proc graph info update timer
-            _procInfoTimer.Interval = TimeSpan.FromMilliseconds(2000);
-            _procInfoTimer.Tick += (s, e) =>
-            {
-                ProcStats? procStats = ProcessStats.GetProcessStatsAsync((uint)_processId);
-                if (procStats.HasValue)
-                {
-                    _processCpuPercent.DataPoints.Add((float)procStats.Value.CpuUsagePercentage);
-                    _processMemoryMB.DataPoints.Add((float)(procStats.Value.WorkingSetBytes / 1024 / 1024));
-                }
                 ControlCanvas.Invalidate();
             };
-            
 
             this.InitializeFlyouts();
         }
@@ -251,11 +222,6 @@ namespace modterm
         {
             DetermineRowsAndColumns();
             _terminal.OutputReceived += OnOutputReceived;
-            // temp fix for bash rows cols startup.
-            if (_shellApplicationPath.EndsWith("bash.exe", StringComparison.OrdinalIgnoreCase))
-            {
-                _shellArguments = "-c 'export LINES=" + _lines + " COLUMNS=" + _columns + " && exec /usr/bin/bash -i'";
-            }
             _terminal.Start(_shellApplicationPath, _shellArguments, _lines, _columns);
         }
 
@@ -271,12 +237,6 @@ namespace modterm
 
         private void OnOutputReceived(object? sender, string line)
         {
-            if (_procInfoTimerRunning == false)
-            {
-                _processId = _terminal.GetProcessId();
-                _procInfoTimer.Start();
-                _procInfoTimerRunning = true;
-            }
 
             //Debug.WriteLine($"Unescaped (raw) output: {line} ");
 
@@ -396,7 +356,6 @@ namespace modterm
                     _bgTintDriftEnabled = true;
                     _bgTintDriftSaturation = (float)sat / 100f;
                     _bgTintDriftColors.Clear();
-                    _bgTintDriftIntervalMs = 333; // 3 colors per second
                     _bgTintDriftColors = ModtermDisplay.GetColorWheelProgression(0.5, _bgTintDriftSaturation, 720);
                     _bgTintDriftColorOffset = 0;
                     _bgTintDriftTimer.Start();
