@@ -22,10 +22,10 @@ namespace modterm
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
 
-            ModtermDisplay.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
+            _mtd.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
             // Calculate rows/columns based on measured character width and font size
-            int rows = (int)(sender.ActualHeight / (ModtermDisplay.CurrentFontSize + 2));
+            int rows = (int)(sender.ActualHeight / (_mtd.CurrentFontSize + 2));
             float measuredCharWidth = MeasureCharWidth(sender, args);
             int cols = (int)(sender.ActualWidth / measuredCharWidth);
             _vtController.VisibleRows = rows;
@@ -38,7 +38,7 @@ namespace modterm
                 Debug.WriteLine($"Resize Needed. Resizing _vtCon and _terminal with {_lines} lines and {_columns} columns calc'd from drawing and measuring.");
                 _vtController.ResizeView(_columns, _lines);
                 _terminal?.Resize((short)_columns, (short)_lines);
-                _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
+                _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                 ControlCanvas.Invalidate();
                 _resizeNeeded = false;
             }
@@ -54,7 +54,7 @@ namespace modterm
                 foreach (var span in row.Spans)
                 {
                     // Convert VT color string to Windows.UI.Color
-                    Color fg = ModtermDisplay.OutputColor;
+                    Color fg = _mtd.OutputColor;
                     try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
                     
                     string textToDraw = span.Text ?? "";
@@ -67,12 +67,12 @@ namespace modterm
 
                     // Draw the text span at the correct column position
                     x = _leftTextPadding + (col * measuredCharWidth);
-                    ModtermDisplay.DrawText(textToDraw, x, (float)y, fg, ModtermDisplay.GetTextFormat());
+                    _mtd.DrawText(textToDraw, x, (float)y, fg, _mtd.GetTextFormat());
                     
                     // Advance col by the number of characters in the span
                     col += textToDraw?.Length ?? 0;
                 }
-                y += ModtermDisplay.CurrentFontSize + 2;
+                y += _mtd.CurrentFontSize + 2;
             }
 
 
@@ -87,7 +87,7 @@ namespace modterm
             //// Draw debug grid lines for rows
             //for (int r = 0; r < rows; r++)
             //{
-            //    float yLine = r * (ModtermDisplay.CurrentFontSize + 2);
+            //    float yLine = r * (_mtd.CurrentFontSize + 2);
             //    args.DrawingSession.DrawLine(0, yLine, (float)sender.ActualWidth, yLine, Colors.Blue, 0.5f);
             //    if (yLine > sender.ActualHeight)
             //    {   Debug.WriteLine("Row " + r + " y=" + yLine + " exceeds canvas height " + sender.ActualHeight); break; }
@@ -98,16 +98,16 @@ namespace modterm
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
                 float cursorX = _leftTextPadding + (float)(cursor.Column * measuredCharWidth);
-                float cursorY = (float)(cursor.Row * (ModtermDisplay.CurrentFontSize + 2));
-                args.DrawingSession.DrawText("|", cursorX, cursorY, ModtermDisplay.OutputColor, ModtermDisplay.GetTextFormat());
+                float cursorY = (float)(cursor.Row * (_mtd.CurrentFontSize + 2));
+                args.DrawingSession.DrawText("|", cursorX, cursorY, _mtd.OutputColor, _mtd.GetTextFormat());
             }
 
-            ModtermDisplay.EndEffectSequence();
+            _mtd.EndEffectSequence();
 
             // Helper: Convert #RRGGBB or #AARRGGBB to Color
             Color ColorFromWeb(string web)
             {
-                if (string.IsNullOrEmpty(web)) return ModtermDisplay.OutputColor;
+                if (string.IsNullOrEmpty(web)) return _mtd.OutputColor;
                 if (web.StartsWith("#"))
                 {
                     if (web.Length == 7)
@@ -122,7 +122,7 @@ namespace modterm
                             Convert.ToByte(web.Substring(5, 2), 16),
                             Convert.ToByte(web.Substring(7, 2), 16));
                 }
-                return ModtermDisplay.OutputColor;
+                return _mtd.OutputColor;
             }
 
             // Visual selection highlight (simple semi-transparent overlay)
@@ -147,14 +147,14 @@ namespace modterm
         public void ControlCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
 
         {             // draw all UI controls
-            _titleBarControls?.DrawControls(sender, args.DrawingSession);
+            _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
         }
 
         // Measure the width of a typical monospace character for accurate column calculation
         private float MeasureCharWidth(CanvasControl sender, CanvasDrawEventArgs args)
         {
             // Use 'W' as a typical wide character for monospace fonts
-            using (var layout = new CanvasTextLayout(args.DrawingSession, "W", ModtermDisplay.GetTextFormat(), 9999, 9999))
+            using (var layout = new CanvasTextLayout(args.DrawingSession, "W", _mtd.GetTextFormat(), 9999, 9999))
             {
                 return (float)layout.DrawBounds.Width * 1.1f; // add a small buffer to prevent clipping
             }

@@ -42,7 +42,7 @@ namespace modterm
             _inputRead = new SafeFileHandle();
             _outputWrite = new SafeFileHandle();
             _outputRead = new SafeFileHandle();
-            _bannerColors = ModtermDisplay.GetColorWheelProgression(10f, 100, 7);
+            //_bannerColors = ModtermDisplay.GetColorWheelProgression(10f, 100, 7);
         }
 
         public void Start(Shell targetShell, int lines, int columns)

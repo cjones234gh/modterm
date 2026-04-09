@@ -18,6 +18,6 @@ namespace modterm
         public string TextContent { get; set; }
         public bool ContentSizing { get; set; }
 
-        public void Draw(CanvasControl sender, CanvasDrawingSession cds);
+        public void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd);
     }
 }

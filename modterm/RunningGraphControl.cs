@@ -38,10 +38,11 @@ namespace modterm
             DataPointMaxValue = dataPointMaxValue;
         }
 
-        public void Draw(CanvasControl sender, CanvasDrawingSession cds)
+        public void Draw(CanvasControl sender, CanvasDrawingSession cds,
+            ModtermDisplay modtermDisplay)
         {
-            Color controlColor = ModtermDisplay.GetControlColor(this);
-            Color controlBlurColor = ModtermDisplay.GetControlGlowColor(this);
+            Color controlColor = modtermDisplay.GetControlColor(this);
+            Color controlBlurColor = modtermDisplay.GetControlGlowColor(this);
 
             // Graph parameters
             float width = (float)Location.Width;
@@ -82,23 +83,23 @@ namespace modterm
                         // draw brighter line for blur layer to enhance the glow effect when blurred
                         clds.DrawLine(points[i - 1], points[i],
                             Color.FromArgb(255 /*ModtermDisplay.BlurFillTransparency*/, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B),
-                            ModtermDisplay.LineWidth * 2);
+                            modtermDisplay.LineWidth * 2);
                     }
 
                 }
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = modtermDisplay.BlurAmount };
                 cds.DrawImage(blurEffect);
             }
 
             // Sharp layer
-            //cds.DrawRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-            //    Color.FromArgb(ModtermDisplay.SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), ModtermDisplay.LineWidth);
-            cds.FillRoundedRectangle(Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-                Color.FromArgb(ModtermDisplay.SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
+            //cds.DrawRoundedRectangle(Location, modtermDisplay.CornerRadius, modtermDisplay.CornerRadius,
+            //    Color.FromArgb(modtermDisplay.SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), modtermDisplay.LineWidth);
+            cds.FillRoundedRectangle(Location, modtermDisplay.CornerRadius, modtermDisplay.CornerRadius,
+                Color.FromArgb(modtermDisplay.SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
             // Draw line graph (sharp layer)
             for (int i = 1; i < points.Length; i++)
             {
-                cds.DrawLine(points[i - 1], points[i], controlColor, ModtermDisplay.LineWidth + 1);
+                cds.DrawLine(points[i - 1], points[i], controlColor, modtermDisplay.LineWidth + 1);
             }
         }
     }

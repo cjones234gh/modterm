@@ -25,55 +25,55 @@ namespace modterm
         Glow,
     }
 
-    public static partial class ModtermDisplay
+    public partial class ModtermDisplay
     {
-        public static FontFamily CurrentFont = new FontFamily("SimSun-ExtB");
-        public static FontFamily CurrentControlFont = new FontFamily("Consolas");
-        public static Color InputColor;
-        public static Color InputGlowColor;
-        public static Color OutputGlowColor;
-        public static Color OutputColor;
-        public static Color ControlColor;
-        public static Color ControlGlowColor;
-        public static Color ControlEngagedColor;
-        public static Color ControlEngagedHoverColor;
+        public FontFamily CurrentFont = new FontFamily("SimSun-ExtB");
+        public FontFamily CurrentControlFont = new FontFamily("Consolas");
+        public Color InputColor { get; set; }
+        public Color InputGlowColor { get; set; }
+        public Color OutputGlowColor { get; set; }
+        public Color OutputColor { get; set; }
+        public Color ControlColor { get; set; }
+        public Color ControlGlowColor { get; set; }
+        public Color ControlEngagedColor { get; set; }
+        public Color ControlEngagedHoverColor { get; set; }
 
-        public static float CornerRadius;
-        public static float LineWidth;
-        public static byte BlurFillTransparency;
-        public static byte SharpBorderTransparency;
-        public static byte SharpFillTransparency;
+        public float CornerRadius { get; set; }
+        public float LineWidth { get; set; }
+        public byte BlurFillTransparency { get; set; }
+        public byte SharpBorderTransparency { get; set; }
+        public byte SharpFillTransparency { get; set; }
 
-        public static float BlurAmount;
+        public float BlurAmount { get; set; }
 
         // theme
-        public static string CurrentConfigurationName;
+        public string CurrentConfigurationName { get; set; }
 
         // space between content and control borders
-        public static float ControlPadding;
+        public float ControlPadding { get; set; }
 
         // space between controls and canvas edges/other controls
-        public static float ControlMargin;
+        public float ControlMargin { get; set; }
 
         // control scale based on font size to maintain consistent proportions
-        public static float CurrentFontSizeControlScale;
+        public float CurrentFontSizeControlScale { get; set; }
 
-        private static float _currentFontSize;
-        private static float _currentControlFontSize;
-        private static int _transparencyPct;
-        private static byte _alpha;
-        private static Color _tintColor;
-        private static SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.Red);
-        private static List<ColorConfiguration> _namedColorConfigurations = new List<ColorConfiguration>();
-        private static int _namedColorConfigIndex = 0;
+        private float _currentFontSize;
+        private float _currentControlFontSize;
+        private int _transparencyPct;
+        private byte _alpha;
+        private Color _tintColor;
+        private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.Red);
+        private List<ColorConfiguration> _namedColorConfigurations = new List<ColorConfiguration>();
+        private int _namedColorConfigIndex = 0;
 
-        private static bool _effectSequenceStarted = false;
-        private static List<DrawTextCall> _effectSequence = new List<DrawTextCall>();
-        private static CanvasControl _sender;
-        private static CanvasDrawingSession _drawSession;
-        private static Effects _effect = Effects.None;
+        private bool _effectSequenceStarted = false;
+        private List<DrawTextCall> _effectSequence = new List<DrawTextCall>();
+        private CanvasControl _sender;
+        private CanvasDrawingSession _drawSession;
+        private Effects _effect = Effects.None;
 
-        public static float CurrentFontSize
+        public float CurrentFontSize
         {
             get
             {
@@ -85,7 +85,7 @@ namespace modterm
             }
         }
 
-        public static float CurrentControlFontSize
+        public float CurrentControlFontSize
         {
             get
             {
@@ -99,7 +99,7 @@ namespace modterm
             }
         }
 
-        public static int TransparencyPct
+        public int TransparencyPct
         {
             get
             {
@@ -113,7 +113,7 @@ namespace modterm
             }
         }
 
-        public static Color TintColor
+        public Color TintColor
         {
             get
             {
@@ -126,14 +126,14 @@ namespace modterm
             }
         }
 
-        public static void Initialize()
+        public void Initialize()
         {
             // set default values
             CurrentFontSize = 12f;
             CurrentControlFontSize = 11f;
 
 
-            _namedColorConfigurations = ModtermDisplay.CreateColorConfigurations();
+            _namedColorConfigurations = CreateColorConfigurations();
             _namedColorConfigIndex = 0;
 
             // internal control defaults
@@ -147,7 +147,7 @@ namespace modterm
 
         }
 
-        public static List<string> GetConfigurationNames()
+        public List<string> GetConfigurationNames()
         {
             List<string> names = new List<string>();
             foreach (var config in _namedColorConfigurations)
@@ -157,7 +157,7 @@ namespace modterm
             return names;
         }
 
-        public static Color GetControlColor(IModtermControl control)
+        public Color GetControlColor(IModtermControl control)
         {
             if (control.IsPressed)
                 return Color.FromArgb(180, ControlColor.R, ControlColor.G, ControlColor.B);
@@ -169,7 +169,7 @@ namespace modterm
                 return ControlColor;
         }
 
-        public static Color GetControlGlowColor(IModtermControl control)
+        public Color GetControlGlowColor(IModtermControl control)
         {
             if (control.IsPressed)
                 // return output glow
@@ -184,14 +184,14 @@ namespace modterm
                 return ControlGlowColor;
         }
 
-        private static Color GetBackgroundArgb()
+        private Color GetBackgroundArgb()
         {
             return TintColor == Colors.Transparent
                 ? Colors.Transparent
                 : Color.FromArgb(_alpha, TintColor.R, TintColor.G, TintColor.B);
         }
 
-        public static void SetColorConfiguration(ColorConfiguration config)
+        public void SetColorConfiguration(ColorConfiguration config)
         {
             OutputColor = config.OutputColor;
             OutputGlowColor = config.OutputGlowColor;
@@ -205,12 +205,12 @@ namespace modterm
             _backgroundBrush.Color = GetBackgroundArgb();
         }
 
-        public static SolidColorBrush GetBackgroundBrush()
+        public SolidColorBrush GetBackgroundBrush()
         {
             return _backgroundBrush;
         }
 
-        public static void BeginEffectSequence(CanvasControl sender, CanvasDrawingSession ds, Effects effect)
+        public void BeginEffectSequence(CanvasControl sender, CanvasDrawingSession ds, Effects effect)
         {
             _sender = sender;
             _drawSession = ds;
@@ -226,7 +226,7 @@ namespace modterm
             }
         }
 
-        public static void EndEffectSequence()
+        public void EndEffectSequence()
         {
             if (_effectSequenceStarted)
             {
@@ -240,7 +240,7 @@ namespace modterm
             }
         }
 
-        public static void SetColorConfiguration(string configurationName)
+        public void SetColorConfiguration(string configurationName)
         {
             var config = _namedColorConfigurations.Find(c => c.Name == configurationName);
             CurrentConfigurationName = config.Name;
@@ -250,12 +250,12 @@ namespace modterm
             }
         }
 
-        public static void DrawText(string text, float x, float y, Color color, CanvasTextFormat textFormat)
+        public void DrawText(string text, float x, float y, Color color, CanvasTextFormat textFormat)
         {
             _effectSequence.Add(new DrawTextCall(text, x, y, color, textFormat));
         }
 
-        public static void DrawControlBox(CanvasControl sender, CanvasDrawingSession cds, Rect location)
+        public void DrawControlBox(CanvasControl sender, CanvasDrawingSession cds, Rect location)
         {
             var controlColor = OutputColor;
             var controlBlurColor = OutputGlowColor;
@@ -266,31 +266,31 @@ namespace modterm
                 {
                     // Draw a bordered rectangle
                     clds.DrawRoundedRectangle(
-                        location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius, controlBlurColor, ModtermDisplay.LineWidth);
+                        location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
 
                     // Draw background rectangle only in hover state
                     // (see below, do we want to bother with states for a box?)
                 }
 
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
                 cds.DrawImage(blurEffect);
             }
 
             // Draw a bordered rectangle
-            cds.DrawRoundedRectangle(location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-                Color.FromArgb(ModtermDisplay.SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), ModtermDisplay.LineWidth);
+            cds.DrawRoundedRectangle(location, CornerRadius, CornerRadius,
+                Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
 
             // Draw background rectangle
-            cds.FillRoundedRectangle(location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-                Color.FromArgb(ModtermDisplay.SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
+            cds.FillRoundedRectangle(location, CornerRadius, CornerRadius,
+                Color.FromArgb(SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
         }
 
-        public static void DrawTextDisplayControl(CanvasControl sender, CanvasDrawingSession cds, TextDisplayControl control)
+        public void DrawTextDisplayControl(CanvasControl sender, CanvasDrawingSession cds, TextDisplayControl control)
         {
             Color controlColor = GetControlColor(control);
             Color controlBlurColor = GetControlGlowColor(control);
 
-            CanvasTextFormat textFormat = ModtermDisplay.GetControlTextFormat();
+            CanvasTextFormat textFormat = GetControlTextFormat();
 
             //
             //
@@ -301,19 +301,19 @@ namespace modterm
                 {
                     // Draw a bordered rectangle
                     //clds.DrawRoundedRectangle(
-                    //    control.Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius, controlBlurColor, ModtermDisplay.LineWidth);
+                    //    control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
 
                     //// Draw background rectangle except when in hover state
                     //if (!control.IsHovered)
-                    //    clds.FillRoundedRectangle(control.Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-                    //        Color.FromArgb(ModtermDisplay.BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
+                    //    clds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
+                    //        Color.FromArgb(BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
 
                     // Draw TextContent
-                    clds.DrawText(control.TextContent, (float)control.Location.X + ModtermDisplay.ControlPadding,
-                        (float)control.Location.Y + ModtermDisplay.ControlPadding / 2, controlBlurColor, textFormat);
+                    clds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
+                        (float)control.Location.Y + ControlPadding / 2, controlBlurColor, textFormat);
                 }
 
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
                 cds.DrawImage(blurEffect);
             }
 
@@ -322,19 +322,19 @@ namespace modterm
             // sharp layer
 
             // Draw a bordered rectangle
-            //cds.DrawRoundedRectangle(control.Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-            //    Color.FromArgb(ModtermDisplay.SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), ModtermDisplay.LineWidth);
+            //cds.DrawRoundedRectangle(control.Location, CornerRadius, CornerRadius,
+            //    Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
 
             // Draw background rectangle
-            cds.FillRoundedRectangle(control.Location, ModtermDisplay.CornerRadius, ModtermDisplay.CornerRadius,
-                Color.FromArgb(ModtermDisplay.SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
+            cds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
+                Color.FromArgb(SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
 
             // Draw TextContent
-            cds.DrawText(control.TextContent, (float)control.Location.X + ModtermDisplay.ControlPadding,
-                (float)control.Location.Y + ModtermDisplay.ControlPadding / 2, controlColor, textFormat);
+            cds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
+                (float)control.Location.Y + ControlPadding / 2, controlColor, textFormat);
         }
 
-        public static List<Color> GetColorWheelProgression(double StepDegrees, double Saturation, int NumColors)
+        public List<Color> GetColorWheelProgression(double StepDegrees, double Saturation, int NumColors)
         {
             List<Color> colors = new List<Color>();
             var rand = new Random();
@@ -350,7 +350,7 @@ namespace modterm
             return colors;
         }
 
-        public static Color HslToColor(double h, double s, double l)
+        public Color HslToColor(double h, double s, double l)
         {
             h = h / 360.0;
             double r = l, g = l, b = l;
@@ -365,7 +365,7 @@ namespace modterm
             return Color.FromArgb(255, (byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
         }
 
-        public static double HueToRgb(double p, double q, double t)
+        public double HueToRgb(double p, double q, double t)
         {
             if (t < 0) t += 1;
             if (t > 1) t -= 1;
@@ -375,7 +375,7 @@ namespace modterm
             return p;
         }
 
-        private static void DrawEffectSequence()
+        private void DrawEffectSequence()
         {
             // Blurred glow layer
             using (var commandList = new CanvasCommandList(_sender))
@@ -394,7 +394,7 @@ namespace modterm
                         }
                     }
                 }
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
                 _drawSession.DrawImage(blurEffect);
             }
 
@@ -405,36 +405,36 @@ namespace modterm
             }
         }
 
-        public static void CycleColorConfiguration()
+        public void CycleColorConfiguration()
         {
             _namedColorConfigIndex = (_namedColorConfigIndex + 1) % _namedColorConfigurations.Count;
             SetColorConfiguration(_namedColorConfigurations[_namedColorConfigIndex]);
         }
 
-        public static CanvasTextFormat GetControlTextFormat()
+        public CanvasTextFormat GetControlTextFormat()
         {
             return new CanvasTextFormat
             {
-                FontFamily = ModtermDisplay.CurrentControlFont.Source,
-                FontSize = ModtermDisplay.CurrentControlFontSize
+                FontFamily = CurrentControlFont.Source,
+                FontSize = CurrentControlFontSize
             };
         }
 
-        public static CanvasTextFormat GetTextFormat()
+        public CanvasTextFormat GetTextFormat()
         {
             return new CanvasTextFormat
             {
-                FontFamily = ModtermDisplay.CurrentFont.Source,
-                FontSize = ModtermDisplay.CurrentFontSize
+                FontFamily = CurrentFont.Source,
+                FontSize = CurrentFontSize
             };
         }
 
-        public static string GetHexStringFromColor(Color color)
+        public string GetHexStringFromColor(Color color)
         {
             return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
         }
 
-        public static Color GetColorFromHexString(string hex)
+        public Color GetColorFromHexString(string hex)
         {
             if (hex.StartsWith("#")) hex = hex.Substring(1);
             byte a = 255, r = 0, g = 0, b = 0;
@@ -454,10 +454,10 @@ namespace modterm
             return Color.FromArgb(a, r, g, b);
         }
 
-        public static string GetAppearanceInfo(int lines, int columns)
+        public string GetAppearanceInfo(int lines, int columns)
         {
             string info =
-                $"\"{ModtermDisplay.CurrentConfigurationName}\" Tint: {ModtermDisplay.GetHexStringFromColor(ModtermDisplay.GetBackgroundBrush().Color)} " +
+                $"\"{CurrentConfigurationName}\" Tint: {GetHexStringFromColor(GetBackgroundBrush().Color)} " +
                 $" Lines: {lines} Cols: {columns}";
             return info.Replace(" ", "\u00A0"); // replace spaces with non-breaking spaces to prevent collapsing in the UI
         }

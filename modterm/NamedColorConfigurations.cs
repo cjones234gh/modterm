@@ -11,9 +11,9 @@ using Windows.UI;
 
 namespace modterm
 {
-    public static partial class ModtermDisplay
+    public partial class ModtermDisplay
     {
-        private static List<ColorConfiguration> CreateColorConfigurations()
+        private List<ColorConfiguration> CreateColorConfigurations()
         {
 
             return new List<ColorConfiguration>()

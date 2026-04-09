@@ -33,18 +33,18 @@ namespace modterm
             Dock = dock;
         }
 
-        public void DrawControls(CanvasControl sender, CanvasDrawingSession cds)
+        public void DrawControls(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd)
         {
-            ArrangeControls(sender, cds);
+            ArrangeControls(sender, cds, mtd);
             foreach (var control in Controls)
             {
-                control.Draw(sender, cds);
+                control.Draw(sender, cds, mtd);
             }
         }
 
-        private void ArrangeControls(CanvasControl sender, CanvasDrawingSession cds)
+        private void ArrangeControls(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd)
         {
-            float padding = ModtermDisplay.ControlPadding;
+            float padding = mtd.ControlPadding;
             float canvasWidth = (float)sender.ActualWidth;
             float canvasHeight = (float)sender.ActualHeight;
 
@@ -55,21 +55,21 @@ namespace modterm
                 case CornerGroupDock.FullCanvas:
                     // testing a fully anchored text panel.
                     Controls[0].Location = new Windows.Foundation.Rect
-                        (ModtermDisplay.ControlMargin,
-                         ModtermDisplay.ControlMargin,
-                         sender.ActualWidth - ModtermDisplay.ControlMargin - ModtermDisplay.ControlMargin,
-                         sender.ActualHeight - ModtermDisplay.ControlMargin - ModtermDisplay.ControlMargin);
+                        (mtd.ControlMargin,
+                         mtd.ControlMargin,
+                         sender.ActualWidth - mtd.ControlMargin - mtd.ControlMargin,
+                         sender.ActualHeight - mtd.ControlMargin - mtd.ControlMargin);
                     break;
                 case CornerGroupDock.UpperRightHorizontal:
-                    x = canvasWidth - ModtermDisplay.ControlMargin;
-                    y = ModtermDisplay.ControlMargin;
+                    x = canvasWidth - mtd.ControlMargin;
+                    y = mtd.ControlMargin;
                     for (int i = 0; i < Controls.Count; i++)
                     {
                         var control = Controls[i];
 
                         if (control.ContentSizing)
                         {
-                            var textFormat = ModtermDisplay.GetControlTextFormat();
+                            var textFormat = mtd.GetControlTextFormat();
                             var textLayout = new CanvasTextLayout(sender, control.TextContent, textFormat, 9999, 9999);
                             float width = (float)textLayout.DrawBounds.Width + padding * 2;
                             float height = (float)textLayout.DrawBounds.Height + padding * 1.4f;
@@ -93,18 +93,18 @@ namespace modterm
                     foreach (var control in Controls)
                     { 
                         totalWidth += control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, ModtermDisplay.GetControlTextFormat(), 9999, 9999).DrawBounds.Width + padding * 2)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.GetControlTextFormat(), 9999, 9999).DrawBounds.Width + padding * 2)
                             : (float)control.Location.Width + padding;
                     }
                     float startX = (canvasWidth - totalWidth) / 2;
-                    float yy = ModtermDisplay.ControlMargin;
+                    float yy = mtd.ControlMargin;
                     foreach (var control in Controls)
                     {
                         float width = control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, ModtermDisplay.GetControlTextFormat(), 9999, 9999).DrawBounds.Width + padding * 2)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.GetControlTextFormat(), 9999, 9999).DrawBounds.Width + padding * 2)
                             : (float)control.Location.Width;
                         float height = control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, ModtermDisplay.GetControlTextFormat(), 9999, 9999).DrawBounds.Height + padding * 1.4f)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.GetControlTextFormat(), 9999, 9999).DrawBounds.Height + padding * 1.4f)
                             : (float)control.Location.Height;
                         control.Location = new Windows.Foundation.Rect(startX, yy, width, height);
                         startX += width + padding;
@@ -129,14 +129,14 @@ namespace modterm
                     throw new NotImplementedException();
                     break;
                 case CornerGroupDock.LowerRightVertical:
-                    y = canvasHeight - ModtermDisplay.ControlMargin;
+                    y = canvasHeight - mtd.ControlMargin;
                     for (int i = 0; i < Controls.Count; i++)
                     {
                         var control = Controls[i];
                         float width, height;
                         if (control.ContentSizing)
                         {
-                            var textFormat = ModtermDisplay.GetControlTextFormat();
+                            var textFormat = mtd.GetControlTextFormat();
                             var textLayout = new CanvasTextLayout(sender, control.TextContent, textFormat, 9999, 9999);
                             width = (float)textLayout.DrawBounds.Width + 2 * padding;
                             height = (float)textLayout.DrawBounds.Height + 2 * padding;
@@ -147,7 +147,7 @@ namespace modterm
                             height = (float)control.Location.Height;
                         }
                         y -= height;
-                        float xRight = canvasWidth - ModtermDisplay.ControlMargin - width;
+                        float xRight = canvasWidth - mtd.ControlMargin - width;
                         control.Location = new Windows.Foundation.Rect(xRight, y, width, height);
                         y -= padding;
                     }

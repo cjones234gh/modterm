@@ -30,10 +30,13 @@ namespace modterm
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
         private bool _resizeNeeded = false;
 
-        // modglass UI controls
+        // modterm UI controls
         private ModtermControlGroup    _titleBarControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
+
+        // modterm display
+        private ModtermDisplay _mtd = new ModtermDisplay();
 
         // background tint drift state
         private bool            _bgTintDriftEnabled = false;
@@ -82,21 +85,21 @@ namespace modterm
             _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
 
             // todo: load/create user config here
-            ModtermDisplay.Initialize();
+            _mtd.Initialize();
 
             // set fonts until we have a config system in place
-            ModtermDisplay.CurrentFont = new FontFamily("Consolas");
-            ModtermDisplay.CurrentFontSize = 12f;
-            ModtermDisplay.CurrentControlFont = new FontFamily("Cascadia Mono");
-            ModtermDisplay.CurrentControlFontSize = 9.5f;
+            _mtd.CurrentFont = new FontFamily("Consolas");
+            _mtd.CurrentFontSize = 12f;
+            _mtd.CurrentControlFont = new FontFamily("Cascadia Mono");
+            _mtd.CurrentControlFontSize = 9.5f;
 
 
             // set the color config to a preset on startup
-            ModtermDisplay.SetColorConfiguration("Neuromancer");
+            _mtd.SetColorConfiguration("Neuromancer");
             ControlCanvas.Invalidate();
 
-            _vtController.SetRgbForegroundColor(ModtermDisplay.OutputColor.R, 
-                ModtermDisplay.OutputColor.G, ModtermDisplay.OutputColor.B);
+            _vtController.SetRgbForegroundColor(_mtd.OutputColor.R, 
+                _mtd.OutputColor.G, _mtd.OutputColor.B);
 
             // ui controls and dock groups
             _titleBarControls = new ModtermControlGroup(
@@ -105,7 +108,7 @@ namespace modterm
             _pathControl = new TextDisplayControl(
                 new Rect(0, 0, 0, 0), _currentShell.Path);   
 
-            _appearanceInfoControl = new TextDisplayControl(new Rect(), "");
+            _appearanceInfoControl = new TextDisplayControl(new Rect(), _mtd.GetAppearanceInfo(_lines, _columns));
 
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _appearanceInfoControl]);
@@ -119,7 +122,7 @@ namespace modterm
             this.SizeChanged += MainWindow_SizeChanged;
             this.Closed += (s, e) => _terminal?.Dispose();
 
-            RootGrid.Background = ModtermDisplay.GetBackgroundBrush();
+            RootGrid.Background = _mtd.GetBackgroundBrush();
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
             ControlCanvas.Draw += this.ControlCanvas_Draw;
@@ -149,8 +152,8 @@ namespace modterm
             _bgTintDriftTimer.Tick += (s, e) =>
             {
                 _bgTintDriftColorOffset = (_bgTintDriftColorOffset + 1) % _bgTintDriftColors.Count;
-                ModtermDisplay.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
-                _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
+                _mtd.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
+                _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                 ControlCanvas.Invalidate();
             };
 
@@ -208,9 +211,9 @@ namespace modterm
         private void OnOutputReceived(object? sender, string line)
         {
             //Debug.WriteLine($"Unescaped (raw) output: [{line}] ");
-            // for now, replace ANSI 0m, default color, with ANSI version of ModtermDisplay.OutputColor in this line
+            // for now, replace ANSI 0m, default color, with ANSI version of _mtd.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
-            line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModtermDisplay.OutputColor.R};{ModtermDisplay.OutputColor.G};{ModtermDisplay.OutputColor.B}m");
+            line = line.Replace("\x1B[0m", $"\x1B[38;2;{_mtd.OutputColor.R};{_mtd.OutputColor.G};{_mtd.OutputColor.B}m");
             //Debug.WriteLine($"After default color   : [{line.Replace("\r\n", "ENDL")}] ");
 
             // Feed all output directly to the VT parser
@@ -252,14 +255,14 @@ namespace modterm
 
             // theme
             var themeSub = new MenuFlyoutSubItem { Text = "Theme" };
-            foreach (var preset in ModtermDisplay.GetConfigurationNames())
+            foreach (var preset in _mtd.GetConfigurationNames())
             {
                 var item = new MenuFlyoutItem { Text = preset };
                 item.Click += (_, __) => { 
-                    ModtermDisplay.SetColorConfiguration(preset); 
+                    _mtd.SetColorConfiguration(preset); 
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
-                    _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
+                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate();
                     ControlCanvas.Invalidate();
                 };
@@ -274,8 +277,8 @@ namespace modterm
                 byte pct = (byte)(i * 10);
                 var item = new MenuFlyoutItem { Text = i == 0 ? "Transparent (0%)" : $"{pct}%" };
                 item.Click += (_, __) => { 
-                    ModtermDisplay.TransparencyPct = pct;
-                    _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
+                    _mtd.TransparencyPct = pct;
+                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate(); };
                 transSub.Items.Add(item);
             }
@@ -305,10 +308,10 @@ namespace modterm
             {
                 var item = new MenuFlyoutItem { Text = label };
                 item.Click += (_, __) => { 
-                    ModtermDisplay.TintColor = tint; 
+                    _mtd.TintColor = tint; 
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
-                    _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
+                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate(); };
                 tintSub.Items.Add(item);
             }
@@ -323,7 +326,7 @@ namespace modterm
                     _bgTintDriftEnabled = true;
                     _bgTintDriftSaturation = (float)sat / 100f;
                     _bgTintDriftColors.Clear();
-                    _bgTintDriftColors = ModtermDisplay.GetColorWheelProgression(0.5, _bgTintDriftSaturation, 720);
+                    _bgTintDriftColors = _mtd.GetColorWheelProgression(0.5, _bgTintDriftSaturation, 720);
                     _bgTintDriftColorOffset = 0;
                     _bgTintDriftTimer.Start();
                     ModtermCanvas.Invalidate();
@@ -341,7 +344,7 @@ namespace modterm
             foreach (var f in fonts)
             {
                 var item = new MenuFlyoutItem { Text = f };
-                item.Click += (_, __) => { ModtermDisplay.CurrentFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.CurrentFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
                 fontSub.Items.Add(item);
             }
             _flyout.Items.Add(fontSub);
@@ -353,7 +356,7 @@ namespace modterm
             {
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
                 item.Click += (_, __) => { 
-                    ModtermDisplay.CurrentFontSize = (float)s;
+                    _mtd.CurrentFontSize = (float)s;
                     ModtermCanvas.Invalidate(); };
                 sizeSub.Items.Add(item);
             }
@@ -365,7 +368,7 @@ namespace modterm
             foreach (var f in controlFonts)
             {
                 var item = new MenuFlyoutItem { Text = f };
-                item.Click += (_, __) => { ModtermDisplay.CurrentControlFont = new FontFamily(f); ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.CurrentControlFont = new FontFamily(f); ControlCanvas.Invalidate(); };
                 controlFontSub.Items.Add(item);
             }
             _flyout.Items.Add(controlFontSub);
@@ -376,7 +379,7 @@ namespace modterm
             foreach (var s in controlSizes)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
-                item.Click += (_, __) => { ModtermDisplay.CurrentControlFontSize = (float)s; ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.CurrentControlFontSize = (float)s; ControlCanvas.Invalidate(); };
                 controlSizeSub.Items.Add(item);
             }
             _flyout.Items.Add(controlSizeSub);
@@ -387,7 +390,7 @@ namespace modterm
             foreach (var s in glowSubAmts)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} radius" };
-                item.Click += (_, __) => { ModtermDisplay.BlurAmount = s; ModtermCanvas.Invalidate(); ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.BlurAmount = s; ModtermCanvas.Invalidate(); ControlCanvas.Invalidate(); };
                 glowSub.Items.Add(item);
             }
             _flyout.Items.Add(glowSub);
@@ -397,7 +400,7 @@ namespace modterm
             foreach (var (name, col) in _colorOptions)
             {
                 var item = new MenuFlyoutItem { Text = name };
-                item.Click += (_, __) => { ModtermDisplay.InputColor = col; ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.InputColor = col; ModtermCanvas.Invalidate(); };
                 inputColorSub.Items.Add(item);
             }
             _flyout.Items.Add(inputColorSub);
@@ -407,7 +410,7 @@ namespace modterm
             foreach (var (name, col) in _colorOptions)
             {
                 var item = new MenuFlyoutItem { Text = name };
-                item.Click += (_, __) => { ModtermDisplay.OutputColor = col; ModtermCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.OutputColor = col; ModtermCanvas.Invalidate(); };
                 outputColorSub.Items.Add(item);
             }
             _flyout.Items.Add(outputColorSub);

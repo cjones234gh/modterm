@@ -20,9 +20,9 @@ namespace modterm
             TextContent = textContent;
         }
 
-        public void Draw(CanvasControl sender, CanvasDrawingSession cds)
+        public void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay modtermDisplay)
         {
-            ModtermDisplay.DrawTextDisplayControl(sender, cds, this);
+            modtermDisplay.DrawTextDisplayControl(sender, cds, this);
         }
     }
 }
