@@ -92,7 +92,7 @@ namespace modterm
 
 
             // set the color config to a preset on startup
-            ModtermDisplay.SetColorConfiguration("Cyberpunk");
+            ModtermDisplay.SetColorConfiguration("Neuromancer");
             ControlCanvas.Invalidate();
 
             _vtController.SetRgbForegroundColor(ModtermDisplay.OutputColor.R, 
@@ -165,9 +165,8 @@ namespace modterm
         
         private void UpdateSelectedText()
         {
-            // TODO: this is broke af - also, we should just copy when the rectangle is drawn (mouse button up),
+            // TODO: this is no longer complete and broke af - also, we should just copy when the rectangle is drawn (mouse button up),
             // not wait for a ctrl-c or context copy selection.
-            // Selection logic should be updated to use VT buffer if selection is needed
             _selectedText = string.Empty;
         }
 
@@ -209,12 +208,9 @@ namespace modterm
 
         private void OnOutputReceived(object? sender, string line)
         {
-
             //Debug.WriteLine($"Unescaped (raw) output: [{line}] ");
-
             // for now, replace ANSI 0m, default color, with ANSI version of ModtermDisplay.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
-
             line = line.Replace("\x1B[0m", $"\x1B[38;2;{ModtermDisplay.OutputColor.R};{ModtermDisplay.OutputColor.G};{ModtermDisplay.OutputColor.B}m");
             //Debug.WriteLine($"After default color   : [{line.Replace("\r\n", "ENDL")}] ");
 
@@ -443,15 +439,10 @@ namespace modterm
             _flyout.Items.Add(shellSub);
         }
 
-        private string GetColorHexString(Color color) 
-        {
-            return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
-        }
-
         private string GetAppearanceInfo()
         {
             string info = 
-                $"\"{ModtermDisplay.CurrentConfigurationName}\" Tint: {GetColorHexString(ModtermDisplay.GetBackgroundBrush().Color)} " +
+                $"\"{ModtermDisplay.CurrentConfigurationName}\" Tint: {ModtermDisplay.GetHexStringFromColor(ModtermDisplay.GetBackgroundBrush().Color)} " +
                 $" Lines: {_lines} Cols: {_columns}";
             return info.Replace(" ", "\u00A0"); // replace spaces with non-breaking spaces to prevent collapsing in the UI
         }

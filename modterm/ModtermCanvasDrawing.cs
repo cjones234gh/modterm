@@ -47,31 +47,18 @@ namespace modterm
             int topRow = _vtController.ViewPort.TopRow;
             var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, rows, cols);
             double y = 0;
-            //if (_debugSpanning) Debug.WriteLine("Drawing page spans for topRow " + topRow + " with " + pageSpans.Count + " rows.");
             foreach (var row in pageSpans)
             {
                 float x = _leftTextPadding;
                 int col = 0; // Reset column at the start of each row
-                //if (_debugSpanning) Debug.WriteLine("Reseting col to 0, start of a new row, x = " + x + ".");
                 foreach (var span in row.Spans)
                 {
-                    //if (_debugSpanning) Debug.WriteLine("span: [" + (span.Text ?? "null") + "]");
-                    //if (_debugSpanning) Debug.WriteLine("span length: " + (span.Text?.Length ?? 0));
-
                     // Convert VT color string to Windows.UI.Color
                     Color fg = ModtermDisplay.OutputColor;
                     try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
-
-                    //if (_debugSpanning) Debug.WriteLine("span fg color: " + fg.ToString());
                     
                     string textToDraw = span.Text ?? "";
 
-                    // if the span is only white space, nullify it for now
-                    //if (string.IsNullOrWhiteSpace(textToDraw))
-                    //{
-                    //    textToDraw = "";
-                    //}
-                    
                     // replace tabs with spaces (assuming tab stops every 4 columns)
                     //textToDraw = span.Text?.Replace("\t", "    ") ?? "";
 
@@ -81,7 +68,6 @@ namespace modterm
                     // Draw the text span at the correct column position
                     x = _leftTextPadding + (col * measuredCharWidth);
                     ModtermDisplay.DrawText(textToDraw, x, (float)y, fg, ModtermDisplay.GetTextFormat());
-                    //if (_debugSpanning) Debug.WriteLine("Drawing span: at col " + col + " (x=" + x + ")");
                     
                     // Advance col by the number of characters in the span
                     col += textToDraw?.Length ?? 0;
@@ -153,8 +139,6 @@ namespace modterm
                         Color.FromArgb(80, 0, 120, 255));
                 }
             }
-
-            
 
             // draw all UI controls
             //_titleBarControls?.DrawControls(sender, args.DrawingSession);

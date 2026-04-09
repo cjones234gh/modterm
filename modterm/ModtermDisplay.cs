@@ -193,8 +193,6 @@ namespace modterm
 
         public static void SetColorConfiguration(ColorConfiguration config)
         {
-            InputColor = config.InputColor;
-            InputGlowColor = config.InputGlowColor;
             OutputColor = config.OutputColor;
             OutputGlowColor = config.OutputGlowColor;
             ControlColor = config.ControlColor;
@@ -311,12 +309,12 @@ namespace modterm
                     //        Color.FromArgb(ModtermDisplay.BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
 
                     // Draw TextContent
-                    //clds.DrawText(control.TextContent, (float)control.Location.X + ModtermDisplay.ControlPadding,
-                    //    (float)control.Location.Y + ModtermDisplay.ControlPadding / 2, controlBlurColor, textFormat);
+                    clds.DrawText(control.TextContent, (float)control.Location.X + ModtermDisplay.ControlPadding,
+                        (float)control.Location.Y + ModtermDisplay.ControlPadding / 2, controlBlurColor, textFormat);
                 }
 
-                //var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
-                //cds.DrawImage(blurEffect);
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = ModtermDisplay.BlurAmount };
+                cds.DrawImage(blurEffect);
             }
 
             //
@@ -429,6 +427,31 @@ namespace modterm
                 FontFamily = ModtermDisplay.CurrentFont.Source,
                 FontSize = ModtermDisplay.CurrentFontSize
             };
+        }
+
+        public static string GetHexStringFromColor(Color color)
+        {
+            return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
+        }
+
+        public static Color GetColorFromHexString(string hex)
+        {
+            if (hex.StartsWith("#")) hex = hex.Substring(1);
+            byte a = 255, r = 0, g = 0, b = 0;
+            if (hex.Length == 8)
+            {
+                a = Convert.ToByte(hex.Substring(0, 2), 16);
+                r = Convert.ToByte(hex.Substring(2, 2), 16);
+                g = Convert.ToByte(hex.Substring(4, 2), 16);
+                b = Convert.ToByte(hex.Substring(6, 2), 16);
+            }
+            else if (hex.Length == 6)
+            {
+                r = Convert.ToByte(hex.Substring(0, 2), 16);
+                g = Convert.ToByte(hex.Substring(2, 2), 16);
+                b = Convert.ToByte(hex.Substring(4, 2), 16);
+            }
+            return Color.FromArgb(a, r, g, b);
         }
     }
 }
