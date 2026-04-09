@@ -453,6 +453,14 @@ namespace modterm
             }
             return Color.FromArgb(a, r, g, b);
         }
+
+        public static string GetAppearanceInfo(int lines, int columns)
+        {
+            string info =
+                $"\"{ModtermDisplay.CurrentConfigurationName}\" Tint: {ModtermDisplay.GetHexStringFromColor(ModtermDisplay.GetBackgroundBrush().Color)} " +
+                $" Lines: {lines} Cols: {columns}";
+            return info.Replace(" ", "\u00A0"); // replace spaces with non-breaking spaces to prevent collapsing in the UI
+        }
     }
 }
 

@@ -38,7 +38,7 @@ namespace modterm
                 Debug.WriteLine($"Resize Needed. Resizing _vtCon and _terminal with {_lines} lines and {_columns} columns calc'd from drawing and measuring.");
                 _vtController.ResizeView(_columns, _lines);
                 _terminal?.Resize((short)_columns, (short)_lines);
-                _appearanceInfoControl.TextContent = GetAppearanceInfo();
+                _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
                 ControlCanvas.Invalidate();
                 _resizeNeeded = false;
             }

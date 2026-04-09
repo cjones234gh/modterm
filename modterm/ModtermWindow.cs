@@ -105,8 +105,7 @@ namespace modterm
             _pathControl = new TextDisplayControl(
                 new Rect(0, 0, 0, 0), _currentShell.Path);   
 
-            _appearanceInfoControl = new TextDisplayControl(
-                new Rect(0, 0, 0, 0), GetAppearanceInfo());
+            _appearanceInfoControl = new TextDisplayControl(new Rect(), "");
 
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _appearanceInfoControl]);
@@ -151,7 +150,7 @@ namespace modterm
             {
                 _bgTintDriftColorOffset = (_bgTintDriftColorOffset + 1) % _bgTintDriftColors.Count;
                 ModtermDisplay.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
-                _appearanceInfoControl.TextContent = GetAppearanceInfo();
+                _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
                 ControlCanvas.Invalidate();
             };
 
@@ -260,7 +259,7 @@ namespace modterm
                     ModtermDisplay.SetColorConfiguration(preset); 
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
-                    _appearanceInfoControl.TextContent = GetAppearanceInfo();
+                    _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate();
                     ControlCanvas.Invalidate();
                 };
@@ -276,7 +275,7 @@ namespace modterm
                 var item = new MenuFlyoutItem { Text = i == 0 ? "Transparent (0%)" : $"{pct}%" };
                 item.Click += (_, __) => { 
                     ModtermDisplay.TransparencyPct = pct;
-                    _appearanceInfoControl.TextContent = GetAppearanceInfo();
+                    _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate(); };
                 transSub.Items.Add(item);
             }
@@ -309,7 +308,7 @@ namespace modterm
                     ModtermDisplay.TintColor = tint; 
                     _bgTintDriftEnabled = false; 
                     _bgTintDriftTimer.Stop();
-                    _appearanceInfoControl.TextContent = GetAppearanceInfo();
+                    _appearanceInfoControl.TextContent = ModtermDisplay.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate(); };
                 tintSub.Items.Add(item);
             }
@@ -437,14 +436,6 @@ namespace modterm
                 shellSub.Items.Add(item);
             }
             _flyout.Items.Add(shellSub);
-        }
-
-        private string GetAppearanceInfo()
-        {
-            string info = 
-                $"\"{ModtermDisplay.CurrentConfigurationName}\" Tint: {ModtermDisplay.GetHexStringFromColor(ModtermDisplay.GetBackgroundBrush().Color)} " +
-                $" Lines: {_lines} Cols: {_columns}";
-            return info.Replace(" ", "\u00A0"); // replace spaces with non-breaking spaces to prevent collapsing in the UI
         }
 
         private readonly (string Name, Color Color)[] _colorOptions = new[]
