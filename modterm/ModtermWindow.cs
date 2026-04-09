@@ -22,11 +22,13 @@ namespace modterm
         // VtNetCore terminal state
         private VtNetCore.VirtualTerminal.VirtualTerminalController _vtController;
         private VtNetCore.XTermParser.DataConsumer _vtDataConsumer;
+
         // main terminal logic and state
         private ConPTYTerminal  _terminal;
-        private Shell _currentShell = new Shell();
+        private Shell           _currentShell = new Shell();
         private int             _scrollOffset = 0;
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
+        private bool _resizeNeeded = false;
 
         // modglass UI controls
         private ModtermControlGroup    _titleBarControls;
@@ -44,8 +46,6 @@ namespace modterm
         // VT mode: cursor visibility only
         private bool            _cursorVisible = true;
         private int             _cursorSpeed = 500;
-
-
 
         // context menu flyout for right-click and shell definitions
         private MenuFlyout _flyout;
@@ -185,37 +185,15 @@ namespace modterm
             }
         }
 
-        private void DetermineRowsAndColumns()
-        {
-            var canvas = ModtermCanvas;
-            float fontHeight = ModtermDisplay.CurrentFontSize + 2f;
-            float charWidth = 10f;
-            // Use the same char width measurement as rendering
-            if (canvas != null && canvas.ActualWidth > 0 && canvas.ActualHeight > 0)
-            {
-                try
-                {
-                    // Use CanvasTextLayout to measure 'W' width
-                    using (var ds = new Microsoft.Graphics.Canvas.CanvasRenderTarget(canvas, 10, 10))
-                    using (var layout = new Microsoft.Graphics.Canvas.Text.CanvasTextLayout(ds, "W", ModtermDisplay.GetTextFormat(), 9999, 9999))
-                    {
-                        charWidth = (float)layout.DrawBounds.Width;
-                    }
-                } catch (Exception ex)
-                {
-                    Debug.WriteLine($"Exception during measurement of character width: {ex.Message}");
-                }
-            }
-            int cols = (int)(canvas.ActualWidth / charWidth);
-            int rows = (int)(canvas.ActualHeight / fontHeight);
-            _lines = rows;
-            _columns = cols;
-            _appearanceInfoControl.TextContent = GetAppearanceInfo();
-        }
-
         private void StartConPTY()
         {
-            DetermineRowsAndColumns();
+            if (_lines == 0 || _columns == 0)
+            {
+                // Set a default size if not already set by a drawing event
+                _lines = 24;
+                _columns = 80;
+                _resizeNeeded = true;
+            }
             _terminal.OutputReceived += OnOutputReceived;
             _terminal.Start(_currentShell, _lines, _columns);
 
@@ -226,12 +204,7 @@ namespace modterm
         // Ensure ConPTY and VT buffer are resized with accurate values after window/canvas resize
         public void ResizeTerminal()
         {
-            DetermineRowsAndColumns();
-            Debug.WriteLine($"ModtermWindow::ResizeTerminal() called. Resizing _vtCon and _terminal with {_lines} lines and {_columns} columns.");
-            _vtController.ResizeView(_columns, _lines);
-            _terminal?.Resize((short)_columns, (short)_lines);
-            ControlCanvas.Invalidate();
-            
+            _resizeNeeded = true;            
         }
 
         private void OnOutputReceived(object? sender, string line)
@@ -456,7 +429,13 @@ namespace modterm
                     await Task.Delay(1000); // Pauses for 1 second without blocking the UI thread
                     _terminal = new ConPTYTerminal();
                     _terminal.OutputReceived += OnOutputReceived;
-                    DetermineRowsAndColumns();
+                    if (_lines == 0 || _columns == 0)
+                    {
+                        // Set default size if not already set by a drawing event
+                        _lines = 24;
+                        _columns = 80;
+                        _resizeNeeded = true;
+                    }
                     _terminal.Start(sh, _lines, _columns);
                 };
                 shellSub.Items.Add(item);
@@ -466,13 +445,13 @@ namespace modterm
 
         private string GetColorHexString(Color color) 
         {
-            return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+            return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
         }
 
         private string GetAppearanceInfo()
         {
             string info = 
-                $"\"{ModtermDisplay.CurrentConfigurationName}\" Tint: {GetColorHexString(ModtermDisplay.TintColor)} Transparency: {ModtermDisplay.TransparencyPct}%" +
+                $"\"{ModtermDisplay.CurrentConfigurationName}\" Tint: {GetColorHexString(ModtermDisplay.GetBackgroundBrush().Color)} " +
                 $" Lines: {_lines} Cols: {_columns}";
             return info.Replace(" ", "\u00A0"); // replace spaces with non-breaking spaces to prevent collapsing in the UI
         }

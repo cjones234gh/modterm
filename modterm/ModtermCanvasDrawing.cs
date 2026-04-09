@@ -6,15 +6,16 @@ using Microsoft.UI.Xaml;
 using System.Diagnostics;
 using System;
 using Windows.UI;
+using Microsoft.UI;
 
 namespace modterm
 {
     public sealed partial class  ModtermWindow : Window
     {
-        private int _lines;
-        private int _columns;
+        private int _lines = 0;
+        private int _columns = 0;
 
-        private int _leftTextPadding = 10;
+        private int _leftTextPadding = 5;
 
         // Offset for banner color cycling effect
         private int _bannerColorOffset = 0;
@@ -32,37 +33,79 @@ namespace modterm
             _lines = rows;
             _columns = cols;
 
+            if (_resizeNeeded)
+            {
+                Debug.WriteLine($"Resize Needed. Resizing _vtCon and _terminal with {_lines} lines and {_columns} columns calc'd from drawing and measuring.");
+                _vtController.ResizeView(_columns, _lines);
+                _terminal?.Resize((short)_columns, (short)_lines);
+                _appearanceInfoControl.TextContent = GetAppearanceInfo();
+                ControlCanvas.Invalidate();
+                _resizeNeeded = false;
+            }
+
             // use toprow to calculate visible area
             int topRow = _vtController.ViewPort.TopRow;
             var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, rows, cols);
             double y = 0;
+            //if (_debugSpanning) Debug.WriteLine("Drawing page spans for topRow " + topRow + " with " + pageSpans.Count + " rows.");
             foreach (var row in pageSpans)
             {
                 float x = _leftTextPadding;
                 int col = 0; // Reset column at the start of each row
+                //if (_debugSpanning) Debug.WriteLine("Reseting col to 0, start of a new row, x = " + x + ".");
                 foreach (var span in row.Spans)
                 {
+                    //if (_debugSpanning) Debug.WriteLine("span: [" + (span.Text ?? "null") + "]");
+                    //if (_debugSpanning) Debug.WriteLine("span length: " + (span.Text?.Length ?? 0));
+
                     // Convert VT color string to Windows.UI.Color
                     Color fg = ModtermDisplay.OutputColor;
                     try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
+
+                    //if (_debugSpanning) Debug.WriteLine("span fg color: " + fg.ToString());
+                    
+                    string textToDraw = span.Text ?? "";
+
+                    // if the span is only white space, nullify it for now
+                    //if (string.IsNullOrWhiteSpace(textToDraw))
+                    //{
+                    //    textToDraw = "";
+                    //}
+                    
                     // replace tabs with spaces (assuming tab stops every 4 columns)
-                    //string textToDraw = span.Text?.Replace("\t", "    ") ?? "";
-                    string textToDraw = (string)span.Text.TrimStart(' ');
+                    //textToDraw = span.Text?.Replace("\t", "    ") ?? "";
+
                     // replace spaces with non-breaking spaces to prevent collapsing
                     //textToDraw = textToDraw.Replace(" ", "\u00A0");
 
                     // Draw the text span at the correct column position
-                    if (!string.IsNullOrEmpty(textToDraw))
-                    {
-                        x = _leftTextPadding + (col * measuredCharWidth);
-                        ModtermDisplay.DrawText(textToDraw, x, (float)y, fg, ModtermDisplay.GetTextFormat());
-                        //Debug.WriteLine("Drawing span: '" + textToDraw + "' at col " + col + " (x=" + x + ")");
-                    }
+                    x = _leftTextPadding + (col * measuredCharWidth);
+                    ModtermDisplay.DrawText(textToDraw, x, (float)y, fg, ModtermDisplay.GetTextFormat());
+                    //if (_debugSpanning) Debug.WriteLine("Drawing span: at col " + col + " (x=" + x + ")");
+                    
                     // Advance col by the number of characters in the span
                     col += textToDraw?.Length ?? 0;
                 }
                 y += ModtermDisplay.CurrentFontSize + 2;
             }
+
+
+            // Draw debug grid lines for columns
+            //for (int c = 0; c < cols; c++)
+            //{
+            //    float x = _leftTextPadding + (c * measuredCharWidth);
+            //    args.DrawingSession.DrawLine(x, 0, x, (float)sender.ActualHeight, Colors.Red, 0.5f);
+            //    if (x > sender.ActualWidth)
+            //    {   Debug.WriteLine("Column " + c + " x=" + x + " exceeds canvas width " + sender.ActualWidth); break; }
+            //}
+            //// Draw debug grid lines for rows
+            //for (int r = 0; r < rows; r++)
+            //{
+            //    float yLine = r * (ModtermDisplay.CurrentFontSize + 2);
+            //    args.DrawingSession.DrawLine(0, yLine, (float)sender.ActualWidth, yLine, Colors.Blue, 0.5f);
+            //    if (yLine > sender.ActualHeight)
+            //    {   Debug.WriteLine("Row " + r + " y=" + yLine + " exceeds canvas height " + sender.ActualHeight); break; }
+            //}
 
             // Draw blinking cursor if visible
             if (_cursorVisible)
