@@ -124,11 +124,13 @@ namespace modterm
                 Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>().ToDictionary(
                     e => (string)e.Key, e => (string?)e.Value ?? ""));
 
-            bool linux = targetShell.Name == "bash" || targetShell.Name == "wsl";
-
+            envVars["TERM"] = "xterm-256color";
+            envVars["COLORTERM"] = "truecolor";
+            envVars["FORCE_COLOR"] = "true";
+            bool linux = targetShell.Name == "bash";
             if (linux)
             {
-                envVars["TERM"] = "xterm-256color";
+                
                 envVars["LINES"] = lines.ToString();
                 envVars["COLUMNS"] = columns.ToString(); // Environment block must be a null-terminated sequence of null-terminated "key=value" strings
             }
