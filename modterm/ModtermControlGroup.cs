@@ -26,7 +26,7 @@ namespace modterm
         }
         public CornerGroupDock Dock { get; set; }
 
-        public List<IModtermControl> Controls { get; set; } = new List<IModtermControl>();
+        public List<ModtermControl> Controls { get; set; } = new List<ModtermControl>();
 
         public ModtermControlGroup(CornerGroupDock dock)
         {

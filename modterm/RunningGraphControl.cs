@@ -17,14 +17,8 @@ using Windows.UI;
 
 namespace modterm
 {
-    public class RunningGraphControl : IModtermControl
+    public class RunningGraphControl : ModtermControl
     {
-        public bool IsEngaged { get; set; }
-        public bool IsHovered { get; set; }
-        public bool IsPressed { get; set; }
-        public Rect Location { get; set; }
-        public string TextContent { get; set; }
-        public bool ContentSizing { get; set; } = false; // graph has fixed size, not based on text content
         public int IntervalMs { get; set; } // how often to the data is updated
         public float DataPointMaxValue { get; set; } // max value for scaling the graph
         public float DataPointMinValue { get; set; } // min value for scaling the graph
@@ -38,7 +32,7 @@ namespace modterm
             DataPointMaxValue = dataPointMaxValue;
         }
 
-        public void Draw(CanvasControl sender, CanvasDrawingSession cds,
+        public override void Draw(CanvasControl sender, CanvasDrawingSession cds,
             ModtermDisplay modtermDisplay)
         {
             Color controlColor = modtermDisplay.GetControlColor(this);

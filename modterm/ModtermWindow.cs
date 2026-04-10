@@ -34,6 +34,8 @@ namespace modterm
         private ModtermControlGroup    _titleBarControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
+        private TextDisplayControl      _autoThemeButton;
+        private int                     _autoThemeIndex = 0;
 
         // modterm display
         private ModtermDisplay _mtd = new ModtermDisplay();
@@ -85,6 +87,8 @@ namespace modterm
             _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
 
             // todo: load/create user config here
+
+            // init modterm display and set default appearance config
             _mtd.Initialize();
 
             // set fonts until we have a config system in place
@@ -105,13 +109,15 @@ namespace modterm
             _titleBarControls = new ModtermControlGroup(
                 ModtermControlGroup.CornerGroupDock.UpperCenterHorizontal);
 
-            _pathControl = new TextDisplayControl(
-                new Rect(0, 0, 0, 0), _currentShell.Path);   
+            _pathControl = new TextDisplayControl(_currentShell.Path, false);   
 
-            _appearanceInfoControl = new TextDisplayControl(new Rect(), _mtd.GetAppearanceInfo(_lines, _columns));
+            _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
+
+            _autoThemeButton = new TextDisplayControl("T H E M E ->", true);
+            _autoThemeButton.Clicked += AutoThemeButton_Click;
 
             _titleBarControls.Controls.AddRange(
-                [_pathControl, _appearanceInfoControl]);
+                [_pathControl, _appearanceInfoControl, _autoThemeButton]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
@@ -136,6 +142,8 @@ namespace modterm
             ModtermCanvas.PointerMoved += this.ModtermCanvas_PointerMoved;
             ModtermCanvas.PointerReleased += this.ModtermCanvas_PointerReleased;
 
+            ControlCanvas.PointerPressed += this.ControlCanvas_PointerPressed;
+            ControlCanvas.PointerReleased += this.ControlCanvas_PointerReleased;
             ControlCanvas.PointerMoved += this.ControlCanvas_PointerMoved;
 
             // Blinking cursor
@@ -164,7 +172,17 @@ namespace modterm
         {
             ResizeTerminal();
         }
-        
+
+        private void AutoThemeButton_Click(object sender, EventArgs e)
+        {
+            // cycle through color presets for fun
+            var presets = _mtd.GetConfigurationNames();
+            _autoThemeIndex = (_autoThemeIndex + 1) % presets.Count;
+            _mtd.SetColorConfiguration(presets[_autoThemeIndex]);
+            _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+            ModtermCanvas.Invalidate();
+        }   
+
         private void UpdateSelectedText()
         {
             // TODO: this is no longer complete and broke af - also, we should just copy when the rectangle is drawn (mouse button up),

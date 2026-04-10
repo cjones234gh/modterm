@@ -9,15 +9,26 @@ using System.Threading.Tasks;
 
 namespace modterm
 {
-    public interface IModtermControl
+    public abstract class ModtermControl
     {
         public bool IsEngaged { get; set; }
         public bool IsHovered { get; set; }
         public bool IsPressed { get; set; }
+        public bool Interactive { get; set; }        
         public Rect Location { get; set; }
         public string TextContent { get; set; }
         public bool ContentSizing { get; set; }
 
-        public void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd);
+        public EventHandler Clicked { get; set; }
+
+        public abstract void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd);
+
+        public void HandleClick()
+        {
+            if (Interactive)
+            {
+                Clicked?.Invoke(this, EventArgs.Empty);
+            }
+        }
     }
 }

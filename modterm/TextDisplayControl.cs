@@ -5,24 +5,21 @@ using Windows.Foundation;
 
 namespace modterm
 {
-    public class TextDisplayControl : IModtermControl
+    public class TextDisplayControl : ModtermControl
     {
-        public bool IsEngaged { get; set; }
-        public bool IsHovered { get; set; }
-        public bool IsPressed { get; set; }
-        public Rect Location { get; set; }
-        public string TextContent { get; set; }
-        public bool ContentSizing { get; set; } = true; // control size is based on TextContent
-
-        public TextDisplayControl(Rect location, string textContent)
+        public TextDisplayControl(string textContent, bool interactive, bool contentSizing = true, Rect location = new Rect())
         {
             Location = location;
             TextContent = textContent;
+            Interactive = interactive;
+            ContentSizing = contentSizing;
         }
 
-        public void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay modtermDisplay)
+        public override void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay modtermDisplay)
         {
             modtermDisplay.DrawTextDisplayControl(sender, cds, this);
         }
+
+        
     }
 }
