@@ -144,12 +144,6 @@ namespace modterm
             //_titleBarControls?.DrawControls(sender, args.DrawingSession);
 		}
 
-        public void ControlCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
-
-        {             // draw all UI controls
-            _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
-        }
-
         // Measure the width of a typical monospace character for accurate column calculation
         private float MeasureCharWidth(CanvasControl sender, CanvasDrawEventArgs args)
         {
