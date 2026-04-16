@@ -127,7 +127,7 @@ namespace modterm
             envVars["TERM"] = "xterm-256color";
             envVars["COLORTERM"] = "truecolor";
             envVars["FORCE_COLOR"] = "true";
-            bool linux = targetShell.Name == "bash";
+            bool linux = targetShell.Name == "bash" || targetShell.Name == "wsl";
             if (linux)
             {
                 
