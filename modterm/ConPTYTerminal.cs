@@ -95,13 +95,7 @@ namespace modterm
             var startupInfo = default(STARTUPINFOEX);
             startupInfo.StartupInfo.cb = Marshal.SizeOf<STARTUPINFOEX>();
             startupInfo.lpAttributeList = _attrListPtr;
-            startupInfo.StartupInfo.dwFlags = 0;
-            // use the configured handles for the child process so it connects
-            // to the ConPTY pipes; this is required for the ConPTY to work
-            startupInfo.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
-            startupInfo.StartupInfo.hStdInput = _inputRead.DangerousGetHandle();
-            startupInfo.StartupInfo.hStdOutput = _outputWrite.DangerousGetHandle();
-            startupInfo.StartupInfo.hStdError = _outputWrite.DangerousGetHandle();
+            startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
 
             if (!InitializeProcThreadAttributeList(startupInfo.lpAttributeList, 1, 0, ref attrListSize))
                 throw new Exception("InitializeProcThreadAttributeList failed");
@@ -119,14 +113,23 @@ namespace modterm
 
             Debug.WriteLine($"Starting process with command line: {commandLine}");
 
-            // Build environment block with TERM, LINES, and COLUMNS
-            var envVars = new Dictionary<string, string>(
-                Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>().ToDictionary(
-                    e => (string)e.Key, e => (string?)e.Value ?? ""));
+            // Build environment block with TERM, LINES, and COLUMNS.
+            // Keep key handling case-insensitive like Windows and avoid duplicate keys.
+            var envVars = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (System.Collections.DictionaryEntry entry in Environment.GetEnvironmentVariables())
+            {
+                string key = (string)entry.Key;
+                string value = (string?)entry.Value ?? string.Empty;
+                if (!envVars.ContainsKey(key))
+                {
+                    envVars[key] = value;
+                }
+            }
 
             envVars["TERM"] = "xterm-256color";
             envVars["COLORTERM"] = "truecolor";
             envVars["FORCE_COLOR"] = "true";
+            envVars["TERM_PROGRAM"] = "modterm";
             bool linux = targetShell.Name == "bash" || targetShell.Name == "wsl";
             if (linux)
             {
@@ -134,34 +137,33 @@ namespace modterm
                 envVars["LINES"] = lines.ToString();
                 envVars["COLUMNS"] = columns.ToString(); // Environment block must be a null-terminated sequence of null-terminated "key=value" strings
             }
-            
+
             string envBlockStr = string.Join("\0", envVars.Select(kv => $"{kv.Key}={kv.Value}")) + "\0\0";
             IntPtr envBlockPtr = Marshal.StringToHGlobalUni(envBlockStr);
+            IntPtr commandLinePtr = Marshal.StringToHGlobalUni(commandLine);
 
+            uint creationFlags = EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT;
+            IntPtr envPtrForCreateProcess = envBlockPtr;
+            IntPtr currentDirectory = IntPtr.Zero;
 
             // P/Invoke requires a null in this call, not a null string, so we have to disable nullable warnings for this section
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-            // Create the process with the extended startup info
-            if (linux)
+            // Create the process with the extended startup info.
+            try
             {
-                if (!CreateProcess(null, commandLine, (nint)null, (nint)null, true,
-                        EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT,
-                        (nint)envBlockPtr, null, ref startupInfo, out pi))
+                if (!CreateProcessW(IntPtr.Zero, commandLinePtr, IntPtr.Zero, IntPtr.Zero, false,
+                        creationFlags, envPtrForCreateProcess, currentDirectory, ref startupInfo, out pi))
                 {
                     int error = Marshal.GetLastWin32Error();
                     throw new Exception($"CreateProcess failed with error code: {error}");
                 }
             }
-            else
+            finally
             {
-                if (!CreateProcess(null, commandLine, (nint)null, (nint)null, true,
-                        EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW, (nint)null, null, ref startupInfo, out pi))
-                {
-                    int error = Marshal.GetLastWin32Error();
-                    throw new Exception($"CreateProcess failed with error code: {error}");
-                }
+                Marshal.FreeHGlobal(envBlockPtr);
+                Marshal.FreeHGlobal(commandLinePtr);
             }
-            
+
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
             // get the process by PID so we can monitor/end it later;
@@ -291,7 +293,7 @@ namespace modterm
         [StructLayout(LayoutKind.Sequential)] private struct COORD { public short X; public short Y; }
         [StructLayout(LayoutKind.Sequential)] private struct PROCESS_INFORMATION { public IntPtr hProcess; public IntPtr hThread; public int dwProcessId; public int dwThreadId; }
         [StructLayout(LayoutKind.Sequential)] private struct STARTUPINFOEX { public STARTUPINFO StartupInfo; public IntPtr lpAttributeList; }
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct STARTUPINFO { public int cb; public string lpReserved; public string lpDesktop; public string lpTitle; public uint dwX; public uint dwY; public uint dwXSize; public uint dwYSize; public uint dwXCountChars; public uint dwYCountChars; public uint dwFillAttribute; public uint dwFlags; public short wShowWindow; public short cbReserved2; public IntPtr lpReserved2; public IntPtr hStdInput; public IntPtr hStdOutput; public IntPtr hStdError; }
+        [StructLayout(LayoutKind.Sequential)] private struct STARTUPINFO { public int cb; public IntPtr lpReserved; public IntPtr lpDesktop; public IntPtr lpTitle; public uint dwX; public uint dwY; public uint dwXSize; public uint dwYSize; public uint dwXCountChars; public uint dwYCountChars; public uint dwFillAttribute; public uint dwFlags; public short wShowWindow; public short cbReserved2; public IntPtr lpReserved2; public IntPtr hStdInput; public IntPtr hStdOutput; public IntPtr hStdError; }
         [StructLayout(LayoutKind.Sequential)] public struct SECURITY_ATTRIBUTES { public int nLength; public IntPtr lpSecurityDescriptor; public bool bInheritHandle; }
 
         // Windows API functions for ConPTY and process/thread management; see Windows API docs for details
@@ -300,7 +302,8 @@ namespace modterm
         [DllImport("kernel32.dll", SetLastError = true)] private static extern int CreatePseudoConsole(COORD size, SafeFileHandle hInput, SafeFileHandle hOutput, uint dwFlags, out IntPtr phPC);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern int ResizePseudoConsole(IntPtr hPC, COORD size);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool ClosePseudoConsole(IntPtr hPC);
-        [DllImport("kernel32.dll", SetLastError = true)] private static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFOEX lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+        [DllImport("kernel32.dll", EntryPoint = "CreateProcessW", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool CreateProcessW(IntPtr lpApplicationName, IntPtr lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, IntPtr lpCurrentDirectory, ref STARTUPINFOEX lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool InitializeProcThreadAttributeList(IntPtr lpAttributeList, int dwAttributeCount, uint dwFlags, ref IntPtr lpSize);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool UpdateProcThreadAttribute(IntPtr lpAttributeList, uint dwFlags, IntPtr Attribute, IntPtr lpValue, IntPtr cbSize, IntPtr lpPreviousValue, IntPtr lpReturnSize);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool ReadFile(SafeFileHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
