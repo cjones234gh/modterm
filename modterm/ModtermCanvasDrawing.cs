@@ -25,27 +25,48 @@ namespace modterm
             _mtd.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
             // Calculate rows/columns based on measured character width and font size
-            int rows = (int)(sender.ActualHeight / (_mtd.CurrentFontSize + 2));
+            int measuredRows = (int)(sender.ActualHeight / (_mtd.CurrentFontSize + 2));
             float measuredCharWidth = MeasureCharWidth(sender, args);
-            int cols = (int)(sender.ActualWidth / measuredCharWidth);
-            _vtController.VisibleRows = rows;
-            _vtController.VisibleColumns = cols;
-            _lines = rows;
-            _columns = cols;
+            int measuredCols = (int)(sender.ActualWidth / measuredCharWidth);
 
-            if (_resizeNeeded)
+            _vtController.VisibleRows = measuredRows;
+            _vtController.VisibleColumns = measuredCols;
+
+            // Size we sync to ConPTY / env (never below Min* — avoids 1×1 winsize in WSL when the first layout pass is tiny).
+            int syncRows = measuredRows;
+            int syncCols = measuredCols;
+            ConPTYTerminal.ClampTerminalDimensions(ref syncRows, ref syncCols);
+
+            // Do not spawn the child until the canvas has real DIP size; low-priority ctor callbacks used to run too early.
+            if (!_terminal.Started
+                && sender.ActualWidth >= ConPTYTerminal.DeferredPtyMinCanvasWidth
+                && sender.ActualHeight >= ConPTYTerminal.DeferredPtyMinCanvasHeight)
             {
-                Debug.WriteLine($"Resize Needed. Resizing _vtCon and _terminal with {_lines} lines and {_columns} columns calc'd from drawing and measuring.");
-                _vtController.ResizeView(_columns, _lines);
-                _terminal?.Resize((short)_columns, (short)_lines);
+                _lines = syncRows;
+                _columns = syncCols;
+                StartConPTY();
+            }
+
+            if (_resizeNeeded && _terminal.Started)
+            {
+                Debug.WriteLine($"Resize Needed. Resizing _vtCon and _terminal with {syncRows} lines and {syncCols} columns (measured {measuredRows}×{measuredCols}).");
+                _vtController.ResizeView(syncCols, syncRows);
+                _terminal?.Resize((short)syncCols, (short)syncRows);
+                _lines = syncRows;
+                _columns = syncCols;
                 _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                 ControlCanvas.Invalidate();
                 _resizeNeeded = false;
             }
+            else if (_terminal.Started)
+            {
+                _lines = syncRows;
+                _columns = syncCols;
+            }
 
             // use toprow to calculate visible area
             int topRow = _vtController.ViewPort.TopRow;
-            var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, rows, cols);
+            var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, measuredRows, measuredCols);
             double y = 0;
             foreach (var row in pageSpans)
             {

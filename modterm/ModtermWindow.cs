@@ -61,6 +61,13 @@ namespace modterm
             new Shell { Name = "pwsh", Path = "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
             new Shell { Name = "bash", Path = "C:\\Program Files\\Git\\bin\\bash.exe", Arguments = "-i -l" },
             new Shell { Name = "wsl", Path = "wsl.exe", Arguments = "-e bash -i" }, 
+            new Shell
+            {
+                Name = "wsl (pty-only debug)",
+                Path = "wsl.exe",
+                Arguments = "-e bash -i",
+                LaunchMode = ConPtyLaunchMode.PseudoConsoleOnly
+            },
             //new Shell { Name = "git-bash", Path = "C:\\Program Files\\Git\\git-bash.exe", Arguments = "-i -l" },
         };
 
@@ -79,7 +86,7 @@ namespace modterm
             _terminal = new ConPTYTerminal();
             _flyout = new MenuFlyout();
 
-            // default shell is wsl
+            // default shell
             _currentShell = _shellEnv.First(item => item.Name == "wsl");
 
             // Initialize VtNetCore terminal controller and data consumer
@@ -166,6 +173,9 @@ namespace modterm
             };
 
             this.InitializeFlyouts();
+
+            // Ensure a draw pass runs so deferred ConPTY start can measure the canvas.
+            ModtermCanvas.Invalidate();
         }
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
@@ -206,13 +216,20 @@ namespace modterm
 
         private void StartConPTY()
         {
+            if (_terminal.Started)
+                return;
+
             if (_lines == 0 || _columns == 0)
             {
                 // Set a default size if not already set by a drawing event
                 _lines = 24;
                 _columns = 80;
-                _resizeNeeded = true;
             }
+
+            ConPTYTerminal.ClampTerminalDimensions(ref _lines, ref _columns);
+            // First layout sync after start (Resize clamps sub-minimum requests).
+            _resizeNeeded = true;
+
             _terminal.OutputReceived += OnOutputReceived;
             _terminal.Start(_currentShell, _lines, _columns);
 
@@ -231,8 +248,9 @@ namespace modterm
             //Debug.WriteLine($"Unescaped (raw) output: [{line}] ");
             // for now, replace ANSI 0m, default color, with ANSI version of _mtd.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
-            line = line.Replace("\x1B[0m", $"\x1B[38;2;{_mtd.OutputColor.R};{_mtd.OutputColor.G};{_mtd.OutputColor.B}m");
+            //line = line.Replace("\x1B[0m", $"\x1B[38;2;{_mtd.OutputColor.R};{_mtd.OutputColor.G};{_mtd.OutputColor.B}m");
             //Debug.WriteLine($"After default color   : [{line.Replace("\r\n", "ENDL")}] ");
+            Debug.WriteLine("Output received: " + line);
 
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;
@@ -450,8 +468,9 @@ namespace modterm
                         // Set default size if not already set by a drawing event
                         _lines = 24;
                         _columns = 80;
-                        _resizeNeeded = true;
                     }
+                    ConPTYTerminal.ClampTerminalDimensions(ref _lines, ref _columns);
+                    _resizeNeeded = true;
                     _terminal.Start(sh, _lines, _columns);
                 };
                 shellSub.Items.Add(item);

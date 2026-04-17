@@ -68,7 +68,10 @@ namespace modterm
                 default:
                     var keyChar = GetCharFromVirtualKey(e.Key, e);
                     if (keyChar != null)
+                    {
                         vtSeq = keyChar.ToString();
+                    }
+                    Debug.WriteLine($"Key: {e.Key}, Char: {keyChar}, Ctrl: {isCtrlPressed}");
                     break;
             }
             if (!string.IsNullOrEmpty(vtSeq))

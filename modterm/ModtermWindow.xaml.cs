@@ -29,10 +29,11 @@ namespace modterm
             this.InitializeComponent();
             this.InitializeApplication();
 
+            // ConPTY is started from the first ModtermCanvas_Draw once layout size is real (see ModtermCanvasDrawing).
             this.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
                 () =>
                 {
-                    StartConPTY();
+                    ModtermCanvas.Invalidate();
                     ControlCanvas.Invalidate();
                 });
         }

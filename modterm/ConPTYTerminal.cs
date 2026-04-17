@@ -15,6 +15,31 @@ namespace modterm
 {
     public partial class ConPTYTerminal : IDisposable
     {
+        /// <summary>Minimum grid size for CreatePseudoConsole / ResizePseudoConsole.</summary>
+        public const int MinTerminalRows = 6;
+        public const int MinTerminalColumns = 11;
+
+        /// <summary>Defer <see cref="Start"/> until the host canvas has at least this layout size (DIP).</summary>
+        public const double DeferredPtyMinCanvasWidth = 64;
+        public const double DeferredPtyMinCanvasHeight = 64;
+
+        /// <summary>
+        /// ConPTY must not be created at 1×1 or other pre-layout sizes: a low-priority startup callback can run
+        /// before the canvas has a real layout size, which bakes bad LINES/COLUMNS and breaks WSL/readline prompts.
+        /// </summary>
+        public static void ClampTerminalDimensions(ref int lines, ref int columns)
+        {
+            if (lines <= 0 || columns <= 0)
+            {
+                lines = 24;
+                columns = 80;
+                return;
+            }
+
+            lines = Math.Max(lines, MinTerminalRows);
+            columns = Math.Max(columns, MinTerminalColumns);
+        }
+
         public string ShellPath { get; private set; } = string.Empty;
         public bool Started { get; set; } = false;
 
@@ -47,6 +72,10 @@ namespace modterm
 
         public void Start(Shell targetShell, int lines, int columns)
         {
+            int rows = lines;
+            int cols = columns;
+            ClampTerminalDimensions(ref rows, ref cols);
+
             // security attributes for the pipes: must allow handle inheritance for ConPTY to use them
             var sa = new SECURITY_ATTRIBUTES();
             sa.nLength = Marshal.SizeOf<SECURITY_ATTRIBUTES>();
@@ -72,8 +101,8 @@ namespace modterm
             // Free the security attributes struct
             Marshal.FreeHGlobal(saPtr);
 
-            // Create pseudo console (initial 120x40); 
-            var coord = new COORD { X = (short)columns, Y = (short)lines };
+            // Create pseudo console at clamped size (caller may pass pre-layout 1×1 from canvas math).
+            var coord = new COORD { X = (short)cols, Y = (short)rows };
             if (CreatePseudoConsole(coord, _inputRead, _outputWrite, 0, out _hPC) != 0)
                 throw new Exception("CreatePseudoConsole failed");
 
@@ -91,11 +120,25 @@ namespace modterm
             // zero out the PI
             var pi = default(PROCESS_INFORMATION);
 
+            bool usePtyOnlyLaunch = targetShell.LaunchMode == ConPtyLaunchMode.PseudoConsoleOnly;
+
             // zero out and then set STARTUPINFOEX fields;
             var startupInfo = default(STARTUPINFOEX);
             startupInfo.StartupInfo.cb = Marshal.SizeOf<STARTUPINFOEX>();
             startupInfo.lpAttributeList = _attrListPtr;
-            startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+            if (usePtyOnlyLaunch)
+            {
+                // Debug mode for A/B testing with Alacritty-like process attach semantics.
+                startupInfo.StartupInfo.dwFlags = 0;
+            }
+            else
+            {
+                // Compatible mode: explicit std handle wiring with inherited pipe handles.
+                startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+                startupInfo.StartupInfo.hStdInput = _inputRead.DangerousGetHandle();
+                startupInfo.StartupInfo.hStdOutput = _outputWrite.DangerousGetHandle();
+                startupInfo.StartupInfo.hStdError = _outputWrite.DangerousGetHandle();
+            }
 
             if (!InitializeProcThreadAttributeList(startupInfo.lpAttributeList, 1, 0, ref attrListSize))
                 throw new Exception("InitializeProcThreadAttributeList failed");
@@ -130,28 +173,31 @@ namespace modterm
             envVars["COLORTERM"] = "truecolor";
             envVars["FORCE_COLOR"] = "true";
             envVars["TERM_PROGRAM"] = "modterm";
-            bool linux = targetShell.Name == "bash" || targetShell.Name == "wsl";
-            if (linux)
-            {
-                
-                envVars["LINES"] = lines.ToString();
-                envVars["COLUMNS"] = columns.ToString(); // Environment block must be a null-terminated sequence of null-terminated "key=value" strings
-            }
+            envVars["LINES"] = rows.ToString();
+            envVars["COLUMNS"] = cols.ToString();
+
+            // wsl.exe → Linux: only vars listed in WSLENV are forwarded; merge so TERM_PROGRAM / dimensions reach bash.
+            if (string.Equals(targetShell.Name, "wsl", StringComparison.OrdinalIgnoreCase)
+                || targetShell.Path.EndsWith("wsl.exe", StringComparison.OrdinalIgnoreCase))
+                MergeWslInteropEnv(envVars);
 
             string envBlockStr = string.Join("\0", envVars.Select(kv => $"{kv.Key}={kv.Value}")) + "\0\0";
             IntPtr envBlockPtr = Marshal.StringToHGlobalUni(envBlockStr);
             IntPtr commandLinePtr = Marshal.StringToHGlobalUni(commandLine);
 
-            uint creationFlags = EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT;
+            uint creationFlags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
+            if (!usePtyOnlyLaunch)
+                creationFlags |= CREATE_NO_WINDOW;
             IntPtr envPtrForCreateProcess = envBlockPtr;
             IntPtr currentDirectory = IntPtr.Zero;
+            bool inheritHandles = !usePtyOnlyLaunch;
 
             // P/Invoke requires a null in this call, not a null string, so we have to disable nullable warnings for this section
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             // Create the process with the extended startup info.
             try
             {
-                if (!CreateProcessW(IntPtr.Zero, commandLinePtr, IntPtr.Zero, IntPtr.Zero, false,
+                if (!CreateProcessW(IntPtr.Zero, commandLinePtr, IntPtr.Zero, IntPtr.Zero, inheritHandles,
                         creationFlags, envPtrForCreateProcess, currentDirectory, ref startupInfo, out pi))
                 {
                     int error = Marshal.GetLastWin32Error();
@@ -187,6 +233,25 @@ namespace modterm
             //OutputReceived?.Invoke(this, "\x1B[0m\n\x1B[0m\n\x1B[0m\n");
         }
 
+        /// <summary>
+        /// Append <c>WSLENV</c> entries so the Linux side of WSL sees the same terminal-related vars as Windows.
+        /// </summary>
+        private static void MergeWslInteropEnv(Dictionary<string, string> envVars)
+        {
+            // /u = available in WSL (Unix-style). Colon-delimited list.
+            // https://learn.microsoft.com/en-us/windows/wsl/interop#share-environment-variables-between-windows-and-wsl-with-wslenv
+            const string block = "TERM/u:COLORTERM/u:TERM_PROGRAM/u:FORCE_COLOR/u:LINES/u:COLUMNS/u";
+            if (envVars.TryGetValue("WSLENV", out var existing) && !string.IsNullOrWhiteSpace(existing))
+            {
+                string trimmed = existing.TrimEnd(':', ';');
+                envVars["WSLENV"] = string.IsNullOrEmpty(trimmed) ? block : $"{trimmed}:{block}";
+            }
+            else
+            {
+                envVars["WSLENV"] = block;
+            }
+        }
+
         private string GetAnsiRGB(Color c)
         {
             //  \x1B[38;2;+GetAnsiRGB(<color>)
@@ -205,14 +270,16 @@ namespace modterm
 
         public void Resize(short cols, short rows)
         {
-            Debug.WriteLine($"Resizing ConPTY to {cols} cols x {rows} rows");
-            if (_hPC != IntPtr.Zero && cols > 10 && rows > 5)
+            int r = rows;
+            int c = cols;
+            ClampTerminalDimensions(ref r, ref c);
+            Debug.WriteLine($"Resizing ConPTY to {c} cols x {r} rows (requested {cols}×{rows})");
+            if (_hPC == IntPtr.Zero)
+                return;
+            int hr = ResizePseudoConsole(_hPC, new COORD { X = (short)c, Y = (short)r });
+            if (hr != 0)
             {
-                int hr = ResizePseudoConsole(_hPC, new COORD { X = cols, Y = rows });
-                if (hr != 0)
-                {
-                    Debug.WriteLine($"ResizePseudoConsole failed with HRESULT: 0x{hr:X8}");
-                }
+                Debug.WriteLine($"ResizePseudoConsole failed with HRESULT: 0x{hr:X8}");
             }
         }
 
