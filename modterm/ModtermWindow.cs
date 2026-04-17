@@ -54,21 +54,21 @@ namespace modterm
 
         // context menu flyout for right-click and shell definitions
         private MenuFlyout _flyout;
+        private static string _conargs = "--headless --width [W] --height [H] -- "; // <-- TODO move into config and add more options like env vars, starting dir, etc.
         private List<Shell> _shellEnv = new List<Shell>()
         {
             new Shell { Name = "cmd", Path = "C:\\Windows\\System32\\cmd.exe" },
-            new Shell { Name = "powershell", Path = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
-            new Shell { Name = "pwsh", Path = "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
-            new Shell { Name = "bash", Path = "conhost", Arguments = "C:\\Program Files\\Git\\bin\\bash.exe" },
-            new Shell { Name = "wsl", Path = "conhost", Arguments = "wsl.exe" }, 
-            new Shell
-            {
-                Name = "wsl (pty-only debug)",
-                Path = "wsl.exe",
-                Arguments = "-e bash -i",
-                LaunchMode = ConPtyLaunchMode.PseudoConsoleOnly
-            },
-            //new Shell { Name = "git-bash", Path = "C:\\Program Files\\Git\\git-bash.exe", Arguments = "-i -l" },
+            new Shell { Name = "powershell", Path = "conhost", Arguments = _conargs + "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
+            new Shell { Name = "pwsh core", Path = "conhost", Arguments = _conargs + "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
+            new Shell { Name = "bash", Path = "conhost", Arguments = _conargs + "C:\\Program Files\\Git\\bin\\bash.exe" },
+            new Shell { Name = "wsl", Path = "conhost", Arguments = _conargs + "wsl.exe" }, 
+            //new Shell
+            //{
+            //    Name = "wsl (pty-only debug)",
+            //    Path = "wsl.exe",
+            //    Arguments = "-e bash -i",
+            //    LaunchMode = ConPtyLaunchMode.PseudoConsoleOnly
+            //},
         };
 
         // mouse selection state
@@ -248,7 +248,7 @@ namespace modterm
             //Debug.WriteLine($"Unescaped (raw) output: [{line}] ");
             // for now, replace ANSI 0m, default color, with ANSI version of _mtd.OutputColor in this line
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
-            //line = line.Replace("\x1B[0m", $"\x1B[38;2;{_mtd.OutputColor.R};{_mtd.OutputColor.G};{_mtd.OutputColor.B}m");
+            line = line.Replace("\x1B[0m", $"\x1B[38;2;{_mtd.OutputColor.R};{_mtd.OutputColor.G};{_mtd.OutputColor.B}m");
             //Debug.WriteLine($"After default color   : [{line.Replace("\r\n", "ENDL")}] ");
             Debug.WriteLine("Output received: " + line);
 

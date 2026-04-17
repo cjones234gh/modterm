@@ -120,25 +120,16 @@ namespace modterm
             // zero out the PI
             var pi = default(PROCESS_INFORMATION);
 
-            bool usePtyOnlyLaunch = targetShell.LaunchMode == ConPtyLaunchMode.PseudoConsoleOnly;
-
             // zero out and then set STARTUPINFOEX fields;
             var startupInfo = default(STARTUPINFOEX);
             startupInfo.StartupInfo.cb = Marshal.SizeOf<STARTUPINFOEX>();
             startupInfo.lpAttributeList = _attrListPtr;
-            if (usePtyOnlyLaunch)
-            {
-                // Debug mode for A/B testing with Alacritty-like process attach semantics.
-                startupInfo.StartupInfo.dwFlags = 0;
-            }
-            else
-            {
-                // Compatible mode: explicit std handle wiring with inherited pipe handles.
-                startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-                startupInfo.StartupInfo.hStdInput = _inputRead.DangerousGetHandle();
-                startupInfo.StartupInfo.hStdOutput = _outputWrite.DangerousGetHandle();
-                startupInfo.StartupInfo.hStdError = _outputWrite.DangerousGetHandle();
-            }
+            
+            // std handle wiring with inherited pipe handles.
+            startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+            startupInfo.StartupInfo.hStdInput = _inputRead.DangerousGetHandle();
+            startupInfo.StartupInfo.hStdOutput = _outputWrite.DangerousGetHandle();
+            startupInfo.StartupInfo.hStdError = _outputWrite.DangerousGetHandle();
 
             if (!InitializeProcThreadAttributeList(startupInfo.lpAttributeList, 1, 0, ref attrListSize))
                 throw new Exception("InitializeProcThreadAttributeList failed");
@@ -153,6 +144,8 @@ namespace modterm
                 : $"\"{targetShell.Path}\" {targetShell.Arguments}";
 
             ShellPath = commandLine;
+            // swap the width and height placeholders with _lines and _columns in the commandLine
+            commandLine = commandLine.Replace("[W]", cols.ToString()).Replace("[H]", rows.ToString());
 
             Debug.WriteLine($"Starting process with command line: {commandLine}");
 
@@ -187,11 +180,9 @@ namespace modterm
             IntPtr commandLinePtr = Marshal.StringToHGlobalUni(commandLine);
 
             uint creationFlags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
-            if (!usePtyOnlyLaunch)
-                creationFlags |= CREATE_NO_WINDOW;
             IntPtr envPtrForCreateProcess = envBlockPtr;
             IntPtr currentDirectory = IntPtr.Zero;
-            bool inheritHandles = !usePtyOnlyLaunch;
+            bool inheritHandles = true;
 
             // P/Invoke requires a null in this call, not a null string, so we have to disable nullable warnings for this section
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
