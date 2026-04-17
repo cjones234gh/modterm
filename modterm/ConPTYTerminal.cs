@@ -173,6 +173,7 @@ namespace modterm
             envVars["COLORTERM"] = "truecolor";
             envVars["FORCE_COLOR"] = "true";
             envVars["TERM_PROGRAM"] = "modterm";
+            //envVars["MSYS"] = "enable_pcon"; //MSYS=enable_pcon --> testing for bash only.
             envVars["LINES"] = rows.ToString();
             envVars["COLUMNS"] = cols.ToString();
 
