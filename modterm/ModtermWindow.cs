@@ -250,7 +250,7 @@ namespace modterm
             // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
             line = line.Replace("\x1B[0m", $"\x1B[38;2;{_mtd.OutputColor.R};{_mtd.OutputColor.G};{_mtd.OutputColor.B}m");
             //Debug.WriteLine($"After default color   : [{line.Replace("\r\n", "ENDL")}] ");
-            Debug.WriteLine("Output received: " + line);
+            //Debug.WriteLine("Output received: " + line);
 
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;
