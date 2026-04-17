@@ -59,8 +59,8 @@ namespace modterm
             new Shell { Name = "cmd", Path = "C:\\Windows\\System32\\cmd.exe" },
             new Shell { Name = "powershell", Path = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
             new Shell { Name = "pwsh", Path = "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
-            new Shell { Name = "bash", Path = "C:\\Program Files\\Git\\bin\\bash.exe", Arguments = "-i -l" },
-            new Shell { Name = "wsl", Path = "wsl.exe", Arguments = "-e bash -i" }, 
+            new Shell { Name = "bash", Path = "conhost", Arguments = "C:\\Program Files\\Git\\bin\\bash.exe" },
+            new Shell { Name = "wsl", Path = "conhost", Arguments = "wsl.exe" }, 
             new Shell
             {
                 Name = "wsl (pty-only debug)",
@@ -87,7 +87,7 @@ namespace modterm
             _flyout = new MenuFlyout();
 
             // default shell
-            _currentShell = _shellEnv.First(item => item.Name == "wsl");
+            _currentShell = _shellEnv.First(item => item.Name == "bash");
 
             // Initialize VtNetCore terminal controller and data consumer
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
