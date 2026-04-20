@@ -124,7 +124,7 @@ namespace modterm
             var startupInfo = default(STARTUPINFOEX);
             startupInfo.StartupInfo.cb = Marshal.SizeOf<STARTUPINFOEX>();
             startupInfo.lpAttributeList = _attrListPtr;
-            
+
             // std handle wiring with inherited pipe handles.
             startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
             startupInfo.StartupInfo.wShowWindow = (short)SW_HIDE; 
@@ -167,9 +167,6 @@ namespace modterm
             envVars["COLORTERM"] = "truecolor";
             envVars["FORCE_COLOR"] = "true";
             envVars["TERM_PROGRAM"] = "modterm";
-            //envVars["MSYS"] = "enable_pcon"; //MSYS=enable_pcon --> testing for bash only.
-            //envVars["LINES"] = rows.ToString();
-            //envVars["COLUMNS"] = cols.ToString();
 
             // wsl.exe → Linux: only vars listed in WSLENV are forwarded; merge so TERM_PROGRAM / dimensions reach bash.
             if (string.Equals(targetShell.Name, "wsl", StringComparison.OrdinalIgnoreCase)
