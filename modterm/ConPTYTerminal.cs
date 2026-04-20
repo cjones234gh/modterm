@@ -126,7 +126,8 @@ namespace modterm
             startupInfo.lpAttributeList = _attrListPtr;
             
             // std handle wiring with inherited pipe handles.
-            startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+            startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+            startupInfo.StartupInfo.wShowWindow = (short)SW_HIDE; 
             startupInfo.StartupInfo.hStdInput = _inputRead.DangerousGetHandle();
             startupInfo.StartupInfo.hStdOutput = _outputWrite.DangerousGetHandle();
             startupInfo.StartupInfo.hStdError = _outputWrite.DangerousGetHandle();
@@ -348,6 +349,8 @@ namespace modterm
         private const uint CREATE_NO_WINDOW = 0x08000000;
         private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
         private const uint STARTF_USESTDHANDLES = 0x00000100;
+        private const uint STARTF_USESHOWWINDOW = 0x00000001;
+        private const uint SW_HIDE = 0;
         private const uint HANDLE_FLAG_INHERIT = 0x00000001;
         [StructLayout(LayoutKind.Sequential)] private struct COORD { public short X; public short Y; }
         [StructLayout(LayoutKind.Sequential)] private struct PROCESS_INFORMATION { public IntPtr hProcess; public IntPtr hThread; public int dwProcessId; public int dwThreadId; }
