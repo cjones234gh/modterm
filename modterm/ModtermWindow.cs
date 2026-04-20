@@ -54,7 +54,7 @@ namespace modterm
 
         // context menu flyout for right-click and shell definitions
         private MenuFlyout _flyout;
-        private static string _conargs = "--headless --width [W] --height [H] -- "; // <-- TODO move into config and add more options like env vars, starting dir, etc.
+        private static string _conargs = " --width [W] --height [H] -- "; // <-- TODO move into config and add more options like env vars, starting dir, etc.
         private List<Shell> _shellEnv = new List<Shell>()
         {
             new Shell { Name = "cmd", Path = "C:\\Windows\\System32\\cmd.exe" },
