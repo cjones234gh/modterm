@@ -62,6 +62,7 @@ namespace modterm
         private short           _conhostBaseCols = 0;
         private short           _conhostBaseRows = 0;
         private bool            _useConhostWindowResize = false;
+        private int             _conhostWindowProcessId = -1;
 
         public event EventHandler<string>? OutputReceived;
 
@@ -319,7 +320,7 @@ namespace modterm
 
             _ = Task.Run(() =>
             {
-                IntPtr window = WaitForTopLevelWindow(processId, 7000);
+                IntPtr window = WaitForTopLevelWindow(processId, 7000, out int matchedWindowPid);
                 if (window == IntPtr.Zero)
                 {
                     Debug.WriteLine($"Could not find conhost window for PID {processId}.");
@@ -327,11 +328,12 @@ namespace modterm
                 }
 
                 _conhostWindow = window;
+                _conhostWindowProcessId = matchedWindowPid;
                 if (GetWindowRect(window, out RECT rect))
                 {
                     _conhostBaseWindowWidth = Math.Max(1, rect.Right - rect.Left);
                     _conhostBaseWindowHeight = Math.Max(1, rect.Bottom - rect.Top);
-                    Debug.WriteLine($"Bound conhost hwnd 0x{window.ToInt64():X} ({_conhostBaseWindowWidth}x{_conhostBaseWindowHeight}) for PID {processId}.");
+                    Debug.WriteLine($"Bound conhost hwnd 0x{window.ToInt64():X} ({_conhostBaseWindowWidth}x{_conhostBaseWindowHeight}) from PID {matchedWindowPid} (root PID {processId}).");
                 }
             });
         }
@@ -343,7 +345,8 @@ namespace modterm
 
             if (_conhostWindow == IntPtr.Zero || !IsWindow(_conhostWindow))
             {
-                _conhostWindow = WaitForTopLevelWindow(_conhostProcessId, 250);
+                _conhostWindow = WaitForTopLevelWindow(_conhostProcessId, 250, out int matchedWindowPid);
+                _conhostWindowProcessId = matchedWindowPid;
                 if (_conhostWindow == IntPtr.Zero)
                     return false;
             }
@@ -365,7 +368,7 @@ namespace modterm
 
             int targetWidth = Math.Max(100, (int)Math.Round(_conhostBaseWindowWidth * xScale));
             int targetHeight = Math.Max(100, (int)Math.Round(_conhostBaseWindowHeight * yScale));
-            Debug.WriteLine($"Conhost resize request hwnd=0x{_conhostWindow.ToInt64():X} pid={_conhostProcessId} current={currentRect.Right - currentRect.Left}x{currentRect.Bottom - currentRect.Top} target={targetWidth}x{targetHeight} grid={cols}x{rows}.");
+            Debug.WriteLine($"Conhost resize request hwnd=0x{_conhostWindow.ToInt64():X} ownerPid={_conhostWindowProcessId} rootPid={_conhostProcessId} current={currentRect.Right - currentRect.Left}x{currentRect.Bottom - currentRect.Top} target={targetWidth}x{targetHeight} grid={cols}x{rows}.");
 
             var moveSw = Stopwatch.StartNew();
             bool moved = SetWindowPos(_conhostWindow, IntPtr.Zero, currentRect.Left, currentRect.Top, targetWidth, targetHeight,
@@ -394,83 +397,164 @@ namespace modterm
             return true;
         }
 
-        private static IntPtr WaitForTopLevelWindow(int processId, int timeoutMs)
+        private static IntPtr WaitForTopLevelWindow(int rootProcessId, int timeoutMs, out int matchedPid)
         {
             var sw = Stopwatch.StartNew();
             long lastProgressLogMs = -1000;
+            matchedPid = -1;
             while (sw.ElapsedMilliseconds < timeoutMs)
             {
-                IntPtr window = FindTopLevelWindowForProcess(processId);
+                IntPtr window = FindTopLevelWindowForProcessTree(rootProcessId, out matchedPid);
                 if (window != IntPtr.Zero)
                 {
-                    LogTopLevelWindowsForProcess(processId, "window matched");
+                    LogTopLevelWindowsForProcessTree(rootProcessId, "window matched");
                     return window;
                 }
 
                 if (sw.ElapsedMilliseconds - lastProgressLogMs >= 1000)
                 {
                     lastProgressLogMs = sw.ElapsedMilliseconds;
-                    LogTopLevelWindowsForProcess(processId, $"waiting ({sw.ElapsedMilliseconds}ms)");
+                    LogTopLevelWindowsForProcessTree(rootProcessId, $"waiting ({sw.ElapsedMilliseconds}ms)");
                 }
 
                 Thread.Sleep(50);
             }
 
-            LogTopLevelWindowsForProcess(processId, $"timeout after {timeoutMs}ms");
+            LogTopLevelWindowsForProcessTree(rootProcessId, $"timeout after {timeoutMs}ms");
             return IntPtr.Zero;
         }
 
-        private static IntPtr FindTopLevelWindowForProcess(int processId)
+        private static IntPtr FindTopLevelWindowForProcessTree(int rootProcessId, out int matchedPid)
         {
-            IntPtr candidate = IntPtr.Zero;
-            EnumWindows((hWnd, _) =>
-            {
-                GetWindowThreadProcessId(hWnd, out uint windowPid);
-                if (windowPid != processId)
-                    return true;
-
-                if (candidate == IntPtr.Zero)
-                    candidate = hWnd;
-
-                if (IsWindowVisible(hWnd))
-                {
-                    candidate = hWnd;
-                    return false;
-                }
-
-                return true;
-            }, IntPtr.Zero);
-
-            return candidate;
+            var processTree = GetProcessTreeProcessIds(rootProcessId);
+            return FindTopLevelWindowForProcessSet(processTree, rootProcessId, out matchedPid);
         }
 
-        private static void LogTopLevelWindowsForProcess(int processId, string phase)
+        private static IntPtr FindTopLevelWindowForProcessSet(HashSet<int> processIds, int rootProcessId, out int matchedPid)
         {
-            List<string> matches = new List<string>();
+            IntPtr bestWindow = IntPtr.Zero;
+            int bestScore = int.MinValue;
+            int bestPid = -1;
             EnumWindows((hWnd, _) =>
             {
                 GetWindowThreadProcessId(hWnd, out uint windowPid);
-                if (windowPid != processId)
+                int pid = unchecked((int)windowPid);
+                if (!processIds.Contains(pid))
                     return true;
 
                 bool visible = IsWindowVisible(hWnd);
                 string className = GetWindowClassName(hWnd);
                 string title = GetWindowTitle(hWnd);
-                matches.Add($"0x{hWnd.ToInt64():X} visible={visible} class='{className}' title='{title}'");
+                int score = ScoreWindowCandidate(pid, rootProcessId, visible, className, title);
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestWindow = hWnd;
+                    bestPid = pid;
+                }
+
+                return true;
+            }, IntPtr.Zero);
+
+            matchedPid = bestPid;
+            return bestWindow;
+        }
+
+        private static void LogTopLevelWindowsForProcessTree(int rootProcessId, string phase)
+        {
+            var processTree = GetProcessTreeProcessIds(rootProcessId);
+            List<string> matches = new List<string>();
+            EnumWindows((hWnd, _) =>
+            {
+                GetWindowThreadProcessId(hWnd, out uint windowPid);
+                int pid = unchecked((int)windowPid);
+                if (!processTree.Contains(pid))
+                    return true;
+
+                bool visible = IsWindowVisible(hWnd);
+                string className = GetWindowClassName(hWnd);
+                string title = GetWindowTitle(hWnd);
+                int score = ScoreWindowCandidate(pid, rootProcessId, visible, className, title);
+                matches.Add($"0x{hWnd.ToInt64():X} pid={pid} visible={visible} score={score} class='{className}' title='{title}'");
                 return true;
             }, IntPtr.Zero);
 
             if (matches.Count == 0)
             {
-                Debug.WriteLine($"Conhost window probe [{phase}] pid={processId}: no top-level windows found.");
+                Debug.WriteLine($"Conhost window probe [{phase}] rootPid={rootProcessId} tree=[{string.Join(", ", processTree.OrderBy(x => x))}]: no top-level windows found.");
                 return;
             }
 
-            Debug.WriteLine($"Conhost window probe [{phase}] pid={processId}: {matches.Count} candidate(s).");
+            Debug.WriteLine($"Conhost window probe [{phase}] rootPid={rootProcessId} tree=[{string.Join(", ", processTree.OrderBy(x => x))}]: {matches.Count} candidate(s).");
             foreach (string entry in matches)
             {
                 Debug.WriteLine($"  {entry}");
             }
+        }
+
+        private static int ScoreWindowCandidate(int ownerPid, int rootProcessId, bool visible, string className, string title)
+        {
+            int score = 0;
+            if (visible) score += 100;
+            if (ownerPid != rootProcessId) score += 20;
+            if (!string.IsNullOrWhiteSpace(title)) score += 10;
+            if (className.Equals("ConsoleWindowClass", StringComparison.OrdinalIgnoreCase)) score += 40;
+            if (className.Equals("CASCADIA_HOSTING_WINDOW_CLASS", StringComparison.OrdinalIgnoreCase)) score += 40;
+            if (className.Equals("PseudoConsoleWindow", StringComparison.OrdinalIgnoreCase)) score -= 200;
+            if (className.Equals("IME", StringComparison.OrdinalIgnoreCase)) score -= 120;
+            if (className.Contains("MSCTFIME", StringComparison.OrdinalIgnoreCase)) score -= 120;
+            if (!visible) score -= 20;
+            return score;
+        }
+
+        private static HashSet<int> GetProcessTreeProcessIds(int rootProcessId)
+        {
+            var result = new HashSet<int> { rootProcessId };
+            var childrenByParent = new Dictionary<int, List<int>>();
+            IntPtr snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+            if (snapshot == INVALID_HANDLE_VALUE || snapshot == IntPtr.Zero)
+                return result;
+
+            try
+            {
+                PROCESSENTRY32 pe32 = new PROCESSENTRY32 { dwSize = (uint)Marshal.SizeOf<PROCESSENTRY32>() };
+                bool ok = Process32FirstW(snapshot, ref pe32);
+                while (ok)
+                {
+                    int parent = unchecked((int)pe32.th32ParentProcessID);
+                    int pid = unchecked((int)pe32.th32ProcessID);
+                    if (!childrenByParent.TryGetValue(parent, out List<int>? children))
+                    {
+                        children = new List<int>();
+                        childrenByParent[parent] = children;
+                    }
+                    children.Add(pid);
+                    ok = Process32NextW(snapshot, ref pe32);
+                }
+            }
+            finally
+            {
+                CloseHandle(snapshot);
+            }
+
+            var queue = new Queue<int>();
+            queue.Enqueue(rootProcessId);
+            while (queue.Count > 0)
+            {
+                int current = queue.Dequeue();
+                if (!childrenByParent.TryGetValue(current, out List<int>? children))
+                    continue;
+
+                foreach (int childPid in children)
+                {
+                    if (!result.Add(childPid))
+                        continue;
+                    queue.Enqueue(childPid);
+                }
+            }
+
+            return result;
         }
 
         private static string GetWindowClassName(IntPtr hWnd)
@@ -560,6 +644,7 @@ namespace modterm
             _conhostBaseCols = 0;
             _conhostBaseRows = 0;
             _useConhostWindowResize = false;
+            _conhostWindowProcessId = -1;
         }
 
         // P/Invoke for Windows API access
@@ -576,9 +661,25 @@ namespace modterm
         private const uint SWP_NOACTIVATE = 0x0010;
         private const uint SWP_ASYNCWINDOWPOS = 0x4000;
         private const uint HANDLE_FLAG_INHERIT = 0x00000001;
+        private const uint TH32CS_SNAPPROCESS = 0x00000002;
+        private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
         [StructLayout(LayoutKind.Sequential)] private struct COORD { public short X; public short Y; }
         [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct PROCESSENTRY32
+        {
+            public uint dwSize;
+            public uint cntUsage;
+            public uint th32ProcessID;
+            public IntPtr th32DefaultHeapID;
+            public uint th32ModuleID;
+            public uint cntThreads;
+            public uint th32ParentProcessID;
+            public int pcPriClassBase;
+            public uint dwFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szExeFile;
+        }
         [StructLayout(LayoutKind.Sequential)] private struct PROCESS_INFORMATION { public IntPtr hProcess; public IntPtr hThread; public int dwProcessId; public int dwThreadId; }
         [StructLayout(LayoutKind.Sequential)] private struct STARTUPINFOEX { public STARTUPINFO StartupInfo; public IntPtr lpAttributeList; }
         [StructLayout(LayoutKind.Sequential)] private struct STARTUPINFO { public int cb; public IntPtr lpReserved; public IntPtr lpDesktop; public IntPtr lpTitle; public uint dwX; public uint dwY; public uint dwXSize; public uint dwYSize; public uint dwXCountChars; public uint dwYCountChars; public uint dwFillAttribute; public uint dwFlags; public short wShowWindow; public short cbReserved2; public IntPtr lpReserved2; public IntPtr hStdInput; public IntPtr hStdOutput; public IntPtr hStdError; }
@@ -597,6 +698,10 @@ namespace modterm
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool ReadFile(SafeFileHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool SetHandleInformation(SafeFileHandle hObject, uint dwMask, uint dwFlags);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool WriteFile(SafeHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
+        [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern bool Process32FirstW(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern bool Process32NextW(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+        [DllImport("kernel32.dll", SetLastError = true)] private static extern bool CloseHandle(IntPtr hObject);
         [DllImport("user32.dll", SetLastError = true)] private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
         [DllImport("user32.dll", SetLastError = true)] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
         [DllImport("user32.dll", SetLastError = true)] private static extern bool IsWindowVisible(IntPtr hWnd);
