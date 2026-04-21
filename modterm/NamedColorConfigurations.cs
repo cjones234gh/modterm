@@ -88,12 +88,12 @@ namespace modterm
             new ColorConfiguration
             {
                 Name = "Aqua",
-                OutputColor = Colors.LightBlue,
-                OutputGlowColor = Colors.Magenta,
+                OutputColor = GetColorFromHexString("#50ff8c"),
+                OutputGlowColor = GetColorFromHexString("#00eeff"),
                 ControlColor = Colors.Cyan,
                 ControlGlowColor = Colors.Magenta,
-                BlurAmount = 2.0f,
-                TransparencyPct = 15,
+                BlurAmount = 8.0f,
+                TransparencyPct = 10,
                 TintColor = Colors.Aqua,
                 ControlEngagedColor = Colors.Red,
                 ControlEngagedHoverColor = Colors.Red

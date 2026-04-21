@@ -106,7 +106,7 @@ namespace modterm
 
 
             // set the color config to a preset on startup
-            _mtd.SetColorConfiguration("Neuromancer");
+            _mtd.SetColorConfiguration("Aqua");
             ControlCanvas.Invalidate();
 
             _vtController.SetRgbForegroundColor(_mtd.OutputColor.R, 

@@ -77,7 +77,10 @@ namespace modterm
                     // Convert VT color string to Windows.UI.Color
                     Color fg = _mtd.OutputColor;
                     try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
-                    
+                    // temp override until we work out the color overrides
+                    if (span.ForgroundColor == "#CDCDCD")
+                        fg = _mtd.OutputColor;
+
                     string textToDraw = span.Text ?? "";
 
                     // replace tabs with spaces (assuming tab stops every 4 columns)
