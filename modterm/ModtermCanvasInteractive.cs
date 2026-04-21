@@ -71,7 +71,7 @@ namespace modterm
                     {
                         vtSeq = keyChar.ToString();
                     }
-                    Debug.WriteLine($"Key: {e.Key}, Char: {keyChar}, Ctrl: {isCtrlPressed}");
+                    //Debug.WriteLine($"Key: {e.Key}, Char: {keyChar}, Ctrl: {isCtrlPressed}");
                     break;
             }
             if (!string.IsNullOrEmpty(vtSeq))

@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Windows.UI;
@@ -54,6 +55,13 @@ namespace modterm
         private bool            _disposed;
         private IntPtr          _attrListPtr = IntPtr.Zero;
         private List<Color>     _bannerColors;
+        private IntPtr          _conhostWindow = IntPtr.Zero;
+        private int             _conhostProcessId = -1;
+        private int             _conhostBaseWindowWidth = 0;
+        private int             _conhostBaseWindowHeight = 0;
+        private short           _conhostBaseCols = 0;
+        private short           _conhostBaseRows = 0;
+        private bool            _useConhostWindowResize = false;
 
         public event EventHandler<string>? OutputReceived;
 
@@ -75,6 +83,7 @@ namespace modterm
             int rows = lines;
             int cols = columns;
             ClampTerminalDimensions(ref rows, ref cols);
+            bool launchViaConhost = IsConhostShell(targetShell);
 
             // security attributes for the pipes: must allow handle inheritance for ConPTY to use them
             var sa = new SECURITY_ATTRIBUTES();
@@ -127,7 +136,7 @@ namespace modterm
 
             // std handle wiring with inherited pipe handles.
             startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-            startupInfo.StartupInfo.wShowWindow = (short)SW_HIDE; 
+            startupInfo.StartupInfo.wShowWindow = (short)(launchViaConhost ? SW_SHOWNORMAL : SW_HIDE);
             startupInfo.StartupInfo.hStdInput = _inputRead.DangerousGetHandle();
             startupInfo.StartupInfo.hStdOutput = _outputWrite.DangerousGetHandle();
             startupInfo.StartupInfo.hStdError = _outputWrite.DangerousGetHandle();
@@ -206,6 +215,7 @@ namespace modterm
             _process = Process.GetProcessById(pi.dwProcessId);
             Started = true;
             Debug.WriteLine($"Started process with PID: {pi.dwProcessId}");
+            ConfigureConhostWindowResizeIfNeeded(pi.dwProcessId, (short)cols, (short)rows, launchViaConhost);
 
             // Start async reader
             _readTask = Task.Run(ReadOutputLoop);
@@ -263,6 +273,11 @@ namespace modterm
             int r = rows;
             int c = cols;
             ClampTerminalDimensions(ref r, ref c);
+            if (TryResizeConhostWindow((short)c, (short)r))
+            {
+                return;
+            }
+
             Debug.WriteLine($"Resizing ConPTY to {c} cols x {r} rows (requested {cols}×{rows})");
             if (_hPC == IntPtr.Zero)
                 return;
@@ -271,6 +286,207 @@ namespace modterm
             {
                 Debug.WriteLine($"ResizePseudoConsole failed with HRESULT: 0x{hr:X8}");
             }
+        }
+
+        private static bool IsConhostShell(Shell targetShell)
+        {
+            if (string.IsNullOrWhiteSpace(targetShell.Path))
+                return false;
+            string path = targetShell.Path.Trim().Trim('"');
+            return path.Equals("conhost", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("conhost.exe", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith("\\conhost.exe", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith("/conhost.exe", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ConfigureConhostWindowResizeIfNeeded(int processId, short cols, short rows, bool launchViaConhost)
+        {
+            _useConhostWindowResize = launchViaConhost;
+            if (!launchViaConhost)
+            {
+                _conhostProcessId = -1;
+                _conhostWindow = IntPtr.Zero;
+                _conhostBaseWindowWidth = 0;
+                _conhostBaseWindowHeight = 0;
+                _conhostBaseCols = 0;
+                _conhostBaseRows = 0;
+                return;
+            }
+
+            _conhostProcessId = processId;
+            _conhostBaseCols = cols;
+            _conhostBaseRows = rows;
+
+            _ = Task.Run(() =>
+            {
+                IntPtr window = WaitForTopLevelWindow(processId, 7000);
+                if (window == IntPtr.Zero)
+                {
+                    Debug.WriteLine($"Could not find conhost window for PID {processId}.");
+                    return;
+                }
+
+                _conhostWindow = window;
+                if (GetWindowRect(window, out RECT rect))
+                {
+                    _conhostBaseWindowWidth = Math.Max(1, rect.Right - rect.Left);
+                    _conhostBaseWindowHeight = Math.Max(1, rect.Bottom - rect.Top);
+                    Debug.WriteLine($"Bound conhost hwnd 0x{window.ToInt64():X} ({_conhostBaseWindowWidth}x{_conhostBaseWindowHeight}) for PID {processId}.");
+                }
+            });
+        }
+
+        private bool TryResizeConhostWindow(short cols, short rows)
+        {
+            if (!_useConhostWindowResize || _conhostProcessId <= 0)
+                return false;
+
+            if (_conhostWindow == IntPtr.Zero || !IsWindow(_conhostWindow))
+            {
+                _conhostWindow = WaitForTopLevelWindow(_conhostProcessId, 250);
+                if (_conhostWindow == IntPtr.Zero)
+                    return false;
+            }
+
+            if ((_conhostBaseWindowWidth <= 0 || _conhostBaseWindowHeight <= 0) && GetWindowRect(_conhostWindow, out RECT initialRect))
+            {
+                _conhostBaseWindowWidth = Math.Max(1, initialRect.Right - initialRect.Left);
+                _conhostBaseWindowHeight = Math.Max(1, initialRect.Bottom - initialRect.Top);
+            }
+
+            if (_conhostBaseWindowWidth <= 0 || _conhostBaseWindowHeight <= 0 || _conhostBaseCols <= 0 || _conhostBaseRows <= 0)
+                return false;
+
+            if (!GetWindowRect(_conhostWindow, out RECT currentRect))
+                return false;
+
+            double xScale = (double)cols / _conhostBaseCols;
+            double yScale = (double)rows / _conhostBaseRows;
+
+            int targetWidth = Math.Max(100, (int)Math.Round(_conhostBaseWindowWidth * xScale));
+            int targetHeight = Math.Max(100, (int)Math.Round(_conhostBaseWindowHeight * yScale));
+            Debug.WriteLine($"Conhost resize request hwnd=0x{_conhostWindow.ToInt64():X} pid={_conhostProcessId} current={currentRect.Right - currentRect.Left}x{currentRect.Bottom - currentRect.Top} target={targetWidth}x{targetHeight} grid={cols}x{rows}.");
+
+            var moveSw = Stopwatch.StartNew();
+            bool moved = SetWindowPos(_conhostWindow, IntPtr.Zero, currentRect.Left, currentRect.Top, targetWidth, targetHeight,
+                SWP_NOZORDER | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS);
+            moveSw.Stop();
+            if (moveSw.ElapsedMilliseconds > 100)
+            {
+                Debug.WriteLine($"Conhost SetWindowPos elapsed {moveSw.ElapsedMilliseconds}ms for hwnd 0x{_conhostWindow.ToInt64():X}.");
+            }
+
+            if (!moved)
+            {
+                int error = Marshal.GetLastWin32Error();
+                Debug.WriteLine($"SetWindowPos failed for conhost hwnd 0x{_conhostWindow.ToInt64():X} with Win32 error {error}; falling back to MoveWindow.");
+                moved = MoveWindow(_conhostWindow, currentRect.Left, currentRect.Top, targetWidth, targetHeight, false);
+            }
+
+            if (!moved)
+            {
+                int error = Marshal.GetLastWin32Error();
+                Debug.WriteLine($"MoveWindow fallback failed for conhost hwnd 0x{_conhostWindow.ToInt64():X} with Win32 error {error}.");
+                return false;
+            }
+
+            Debug.WriteLine($"Resized conhost hwnd 0x{_conhostWindow.ToInt64():X} to {targetWidth}x{targetHeight} for grid {cols}x{rows}.");
+            return true;
+        }
+
+        private static IntPtr WaitForTopLevelWindow(int processId, int timeoutMs)
+        {
+            var sw = Stopwatch.StartNew();
+            long lastProgressLogMs = -1000;
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                IntPtr window = FindTopLevelWindowForProcess(processId);
+                if (window != IntPtr.Zero)
+                {
+                    LogTopLevelWindowsForProcess(processId, "window matched");
+                    return window;
+                }
+
+                if (sw.ElapsedMilliseconds - lastProgressLogMs >= 1000)
+                {
+                    lastProgressLogMs = sw.ElapsedMilliseconds;
+                    LogTopLevelWindowsForProcess(processId, $"waiting ({sw.ElapsedMilliseconds}ms)");
+                }
+
+                Thread.Sleep(50);
+            }
+
+            LogTopLevelWindowsForProcess(processId, $"timeout after {timeoutMs}ms");
+            return IntPtr.Zero;
+        }
+
+        private static IntPtr FindTopLevelWindowForProcess(int processId)
+        {
+            IntPtr candidate = IntPtr.Zero;
+            EnumWindows((hWnd, _) =>
+            {
+                GetWindowThreadProcessId(hWnd, out uint windowPid);
+                if (windowPid != processId)
+                    return true;
+
+                if (candidate == IntPtr.Zero)
+                    candidate = hWnd;
+
+                if (IsWindowVisible(hWnd))
+                {
+                    candidate = hWnd;
+                    return false;
+                }
+
+                return true;
+            }, IntPtr.Zero);
+
+            return candidate;
+        }
+
+        private static void LogTopLevelWindowsForProcess(int processId, string phase)
+        {
+            List<string> matches = new List<string>();
+            EnumWindows((hWnd, _) =>
+            {
+                GetWindowThreadProcessId(hWnd, out uint windowPid);
+                if (windowPid != processId)
+                    return true;
+
+                bool visible = IsWindowVisible(hWnd);
+                string className = GetWindowClassName(hWnd);
+                string title = GetWindowTitle(hWnd);
+                matches.Add($"0x{hWnd.ToInt64():X} visible={visible} class='{className}' title='{title}'");
+                return true;
+            }, IntPtr.Zero);
+
+            if (matches.Count == 0)
+            {
+                Debug.WriteLine($"Conhost window probe [{phase}] pid={processId}: no top-level windows found.");
+                return;
+            }
+
+            Debug.WriteLine($"Conhost window probe [{phase}] pid={processId}: {matches.Count} candidate(s).");
+            foreach (string entry in matches)
+            {
+                Debug.WriteLine($"  {entry}");
+            }
+        }
+
+        private static string GetWindowClassName(IntPtr hWnd)
+        {
+            var sb = new StringBuilder(256);
+            int len = GetClassName(hWnd, sb, sb.Capacity);
+            return len > 0 ? sb.ToString() : string.Empty;
+        }
+
+        private static string GetWindowTitle(IntPtr hWnd)
+        {
+            int len = GetWindowTextLength(hWnd);
+            if (len <= 0)
+                return string.Empty;
+            var sb = new StringBuilder(len + 1);
+            return GetWindowText(hWnd, sb, sb.Capacity) > 0 ? sb.ToString() : string.Empty;
         }
 
         // Use UTF-8 decoder that replaces invalid bytes instead of throwing (ConPTY may send OEM/code-page or binary)
@@ -337,6 +553,13 @@ namespace modterm
                 Marshal.FreeHGlobal(_hPCPtr);
                 _hPCPtr = IntPtr.Zero;
             }
+            _conhostWindow = IntPtr.Zero;
+            _conhostProcessId = -1;
+            _conhostBaseWindowWidth = 0;
+            _conhostBaseWindowHeight = 0;
+            _conhostBaseCols = 0;
+            _conhostBaseRows = 0;
+            _useConhostWindowResize = false;
         }
 
         // P/Invoke for Windows API access
@@ -348,8 +571,14 @@ namespace modterm
         private const uint STARTF_USESTDHANDLES = 0x00000100;
         private const uint STARTF_USESHOWWINDOW = 0x00000001;
         private const uint SW_HIDE = 0;
+        private const uint SW_SHOWNORMAL = 1;
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_ASYNCWINDOWPOS = 0x4000;
         private const uint HANDLE_FLAG_INHERIT = 0x00000001;
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
         [StructLayout(LayoutKind.Sequential)] private struct COORD { public short X; public short Y; }
+        [StructLayout(LayoutKind.Sequential)] private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
         [StructLayout(LayoutKind.Sequential)] private struct PROCESS_INFORMATION { public IntPtr hProcess; public IntPtr hThread; public int dwProcessId; public int dwThreadId; }
         [StructLayout(LayoutKind.Sequential)] private struct STARTUPINFOEX { public STARTUPINFO StartupInfo; public IntPtr lpAttributeList; }
         [StructLayout(LayoutKind.Sequential)] private struct STARTUPINFO { public int cb; public IntPtr lpReserved; public IntPtr lpDesktop; public IntPtr lpTitle; public uint dwX; public uint dwY; public uint dwXSize; public uint dwYSize; public uint dwXCountChars; public uint dwYCountChars; public uint dwFillAttribute; public uint dwFlags; public short wShowWindow; public short cbReserved2; public IntPtr lpReserved2; public IntPtr hStdInput; public IntPtr hStdOutput; public IntPtr hStdError; }
@@ -368,5 +597,15 @@ namespace modterm
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool ReadFile(SafeFileHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool SetHandleInformation(SafeFileHandle hObject, uint dwMask, uint dwFlags);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool WriteFile(SafeHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        [DllImport("user32.dll", SetLastError = true)] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool IsWindowVisible(IntPtr hWnd);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool IsWindow(IntPtr hWnd);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+        [DllImport("user32.dll", SetLastError = true)] private static extern int GetWindowTextLength(IntPtr hWnd);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
     }
 }
