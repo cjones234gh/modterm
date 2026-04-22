@@ -14,6 +14,7 @@ namespace modterm
     {
         private int _lines = 0;
         private int _columns = 0;
+        private float _measuredCharWidth;
 
         private int _leftTextPadding = 5;
 
@@ -21,30 +22,25 @@ namespace modterm
         private int _bannerColorOffset = 0;
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
-
-            _mtd.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
-
-            // TODO: We don't need to do this every Draw call, only when font or canvas size changes. We should also debounce it to avoid rapid resize loops.
-            // Calculate rows/columns based on measured character width and font size
-            int measuredRows = (int)(sender.ActualHeight / (_mtd.CurrentFontSize + 2));
-            float measuredCharWidth = MeasureCharWidth(sender, args);
-            int measuredCols = (int)(sender.ActualWidth / measuredCharWidth);
-
-            _vtController.VisibleRows = measuredRows;
-            _vtController.VisibleColumns = measuredCols;
-
-            // Do not spawn the child until the canvas has real DIP size; low-priority ctor callbacks used to run too early.
+            // Do not spawn the conhost until we can measure the canvas during drawing and determine how many rows/columns we can fit
             if (!_terminal.Started)
             {
+                int measuredRows = (int)(sender.ActualHeight / (_mtd.CurrentFontSize + 2));
+                float measuredCharWidth = MeasureCharWidth(sender, args);
+                int measuredCols = (int)(sender.ActualWidth / measuredCharWidth);
                 _lines = measuredRows;
                 _columns = measuredCols;
+                _measuredCharWidth = measuredCharWidth;
+                _vtController.VisibleRows = _lines;
+                _vtController.VisibleColumns = _columns;
                 StartConPTY();
             }
 
+            _mtd.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
             // use toprow to calculate visible area
             int topRow = _vtController.ViewPort.TopRow;
-            var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, measuredRows, measuredCols);
+            var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, _lines, _columns);
             double y = 0;
             foreach (var row in pageSpans)
             {
@@ -61,14 +57,11 @@ namespace modterm
 
                     string textToDraw = span.Text ?? "";
 
-                    // replace tabs with spaces (assuming tab stops every 4 columns)
-                    //textToDraw = span.Text?.Replace("\t", "    ") ?? "";
-
                     // replace spaces with non-breaking spaces to prevent collapsing
                     //textToDraw = textToDraw.Replace(" ", "\u00A0");
 
                     // Draw the text span at the correct column position
-                    x = _leftTextPadding + (col * measuredCharWidth);
+                    x = _leftTextPadding + (col * _measuredCharWidth);
                     _mtd.DrawText(textToDraw, x, (float)y, fg, _mtd.GetTextFormat());
                     
                     // Advance col by the number of characters in the span
@@ -99,7 +92,7 @@ namespace modterm
             if (_cursorVisible)
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
-                float cursorX = _leftTextPadding + (float)(cursor.Column * measuredCharWidth);
+                float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
                 float cursorY = (float)(cursor.Row * (_mtd.CurrentFontSize + 2));
                 args.DrawingSession.DrawText("|", cursorX, cursorY, _mtd.OutputColor, _mtd.GetTextFormat());
             }

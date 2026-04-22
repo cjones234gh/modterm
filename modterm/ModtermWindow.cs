@@ -364,7 +364,13 @@ namespace modterm
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
                 item.Click += (_, __) => { 
                     _mtd.CurrentFontSize = (float)s;
-                    ModtermCanvas.Invalidate(); };
+                    // TODO: we must relaunch the terminal to set lines/columns based on the new font size
+                    // need to refactor this to avoid restarting...
+                    _terminal.Dispose();
+                    _terminal = new ConPTYTerminal();
+                    // terminal start is deferred until the first draw pass so we can measure
+                    ModtermCanvas.Invalidate();
+                };
                 sizeSub.Items.Add(item);
             }
             _flyout.Items.Add(sizeSub);
