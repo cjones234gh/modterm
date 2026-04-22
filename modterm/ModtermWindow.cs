@@ -52,23 +52,17 @@ namespace modterm
         private bool            _cursorVisible = true;
         private int             _cursorSpeed = 500;
 
-        // context menu flyout for right-click and shell definitions
+        // context menu flyout for right-click
         private MenuFlyout _flyout;
-        private static string _conargs = " --width [W] --height [H] -- "; // <-- TODO move into config and add more options like env vars, starting dir, etc.
+
+        // shell definitions - TODO: move to config and add more options like env vars, starting dir, etc.
+        private static string _conargs = " --width [W] --height [H] -- "; 
         private List<Shell> _shellEnv = new List<Shell>()
         {
-            new Shell { Name = "cmd", Path = "C:\\Windows\\System32\\cmd.exe" },
+            new Shell { Name = "cmd", Path = "conhost", Arguments = _conargs + "C:\\Windows\\System32\\cmd.exe" },
             new Shell { Name = "powershell", Path = "conhost", Arguments = _conargs + "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
-            new Shell { Name = "pwsh core", Path = "conhost", Arguments = _conargs + "C:\\Program Files\\PowerShell\\7\\pwsh.exe" },
             new Shell { Name = "bash", Path = "conhost", Arguments = _conargs + "C:\\Program Files\\Git\\bin\\bash.exe" },
             new Shell { Name = "wsl", Path = "conhost", Arguments = _conargs + "wsl.exe" }, 
-            //new Shell
-            //{
-            //    Name = "wsl (pty-only debug)",
-            //    Path = "wsl.exe",
-            //    Arguments = "-e bash -i",
-            //    LaunchMode = ConPtyLaunchMode.PseudoConsoleOnly
-            //},
         };
 
         // mouse selection state
@@ -87,7 +81,7 @@ namespace modterm
             _flyout = new MenuFlyout();
 
             // default shell
-            _currentShell = _shellEnv.First(item => item.Name == "bash");
+            _currentShell = _shellEnv.First(item => item.Name == "wsl");
 
             // Initialize VtNetCore terminal controller and data consumer
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
@@ -100,7 +94,7 @@ namespace modterm
 
             // set fonts until we have a config system in place
             _mtd.CurrentFont = new FontFamily("Consolas");
-            _mtd.CurrentFontSize = 12f;
+            _mtd.CurrentFontSize = 10F;
             _mtd.CurrentControlFont = new FontFamily("Cascadia Mono");
             _mtd.CurrentControlFontSize = 9.5f;
 
@@ -120,7 +114,7 @@ namespace modterm
 
             _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
 
-            _autoThemeButton = new TextDisplayControl("T H E M E ->", true);
+            _autoThemeButton = new TextDisplayControl("T h e m e", true);
             _autoThemeButton.Clicked += AutoThemeButton_Click;
 
             _titleBarControls.Controls.AddRange(
@@ -245,13 +239,6 @@ namespace modterm
 
         private void OnOutputReceived(object? sender, string line)
         {
-            //Debug.WriteLine($"Unescaped (raw) output: [{line}] ");
-            // for now, replace ANSI 0m, default color, with ANSI version of _mtd.OutputColor in this line
-            // is there a way to set the default color in the VT parser so we don't have to do this replacement on every line?
-            //line = line.Replace("\x1B[0m", $"\x1B[38;2;{_mtd.OutputColor.R};{_mtd.OutputColor.G};{_mtd.OutputColor.B}m");
-            //Debug.WriteLine($"After default color   : [{line.Replace("\r\n", "ENDL")}] ");
-            //Debug.WriteLine("Output received: " + line);
-
             // Feed all output directly to the VT parser
             if (_scrollOffset > 0) _scrollOffset = 0;
             if (!string.IsNullOrEmpty(line))

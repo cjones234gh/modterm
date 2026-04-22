@@ -363,8 +363,13 @@ namespace modterm
             if (!GetWindowRect(_conhostWindow, out RECT currentRect))
                 return false;
 
-            double xScale = (double)cols / _conhostBaseCols;
-            double yScale = (double)rows / _conhostBaseRows;
+            // TESTING some adjustments: resize scale is a little off for now...the exact mapping of grid cell to pixels is complicated and can vary based on Windows theme, font, DPI,
+            // and other factors.
+            double adjCols = cols + .5;
+            double adjRows = rows + .5;
+            Debug.WriteLine($"Adjusted target grid size for non-client area is {adjCols}x{adjRows}.");
+            double xScale = adjCols / _conhostBaseCols;
+            double yScale = adjRows / _conhostBaseRows;
 
             int targetWidth = Math.Max(100, (int)Math.Round(_conhostBaseWindowWidth * xScale));
             int targetHeight = Math.Max(100, (int)Math.Round(_conhostBaseWindowHeight * yScale));
