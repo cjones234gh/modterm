@@ -28,7 +28,6 @@ namespace modterm
         private Shell           _currentShell = new Shell();
         private int             _scrollOffset = 0;
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
-        private bool _resizeNeeded = false;
 
         // modterm UI controls
         private ModtermControlGroup    _titleBarControls;
@@ -56,7 +55,7 @@ namespace modterm
         private MenuFlyout _flyout;
 
         // shell definitions - TODO: move to config and add more options like env vars, starting dir, etc.
-        private static string _conargs = " --width [W] --height [H] -- "; 
+        private static string _conargs = "--headless --width [W] --height [H] -- "; 
         private List<Shell> _shellEnv = new List<Shell>()
         {
             new Shell { Name = "cmd", Path = "conhost", Arguments = _conargs + "C:\\Windows\\System32\\cmd.exe" },
@@ -81,7 +80,7 @@ namespace modterm
             _flyout = new MenuFlyout();
 
             // default shell
-            _currentShell = _shellEnv.First(item => item.Name == "wsl");
+            _currentShell = _shellEnv.First(item => item.Name == "bash");
 
             // Initialize VtNetCore terminal controller and data consumer
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
@@ -94,7 +93,7 @@ namespace modterm
 
             // set fonts until we have a config system in place
             _mtd.CurrentFont = new FontFamily("Consolas");
-            _mtd.CurrentFontSize = 10F;
+            _mtd.CurrentFontSize = 12F;
             _mtd.CurrentControlFont = new FontFamily("Cascadia Mono");
             _mtd.CurrentControlFontSize = 9.5f;
 
@@ -174,7 +173,7 @@ namespace modterm
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
-            ResizeTerminal();
+            // not impl yet...
         }
 
         private void AutoThemeButton_Click(object sender, EventArgs e)
@@ -213,28 +212,13 @@ namespace modterm
             if (_terminal.Started)
                 return;
 
-            if (_lines == 0 || _columns == 0)
-            {
-                // Set a default size if not already set by a drawing event
-                _lines = 24;
-                _columns = 80;
-            }
-
-            ConPTYTerminal.ClampTerminalDimensions(ref _lines, ref _columns);
-            // First layout sync after start (Resize clamps sub-minimum requests).
-            _resizeNeeded = true;
+            _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
 
             _terminal.OutputReceived += OnOutputReceived;
             _terminal.Start(_currentShell, _lines, _columns);
 
             _vtController.ResizeView(_columns, _lines);
             _terminal?.Resize((short)_columns, (short)_lines);
-        }
-
-        // Ensure ConPTY and VT buffer are resized with accurate values after window/canvas resize
-        public void ResizeTerminal()
-        {
-            _resizeNeeded = true;            
         }
 
         private void OnOutputReceived(object? sender, string line)
@@ -450,14 +434,6 @@ namespace modterm
                     await Task.Delay(1000); // Pauses for 1 second without blocking the UI thread
                     _terminal = new ConPTYTerminal();
                     _terminal.OutputReceived += OnOutputReceived;
-                    if (_lines == 0 || _columns == 0)
-                    {
-                        // Set default size if not already set by a drawing event
-                        _lines = 24;
-                        _columns = 80;
-                    }
-                    ConPTYTerminal.ClampTerminalDimensions(ref _lines, ref _columns);
-                    _resizeNeeded = true;
                     _terminal.Start(sh, _lines, _columns);
                 };
                 shellSub.Items.Add(item);
