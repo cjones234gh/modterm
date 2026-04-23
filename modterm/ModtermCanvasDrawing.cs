@@ -48,9 +48,13 @@ namespace modterm
                 int col = 0; // Reset column at the start of each row
                 foreach (var span in row.Spans)
                 {
+                    //Debug.WriteLine($"span.BackgroundColor: {span.BackgroundColor}, span.ForgroundColor: {span.ForgroundColor}");
                     // Convert VT color string to Windows.UI.Color
                     Color fg = _mtd.OutputColor;
                     try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
+                    Color bg = Colors.Black;
+                    try { bg = ColorFromWeb(span.BackgroundColor); } catch { }
+
                     // temp override until we work out the color overrides
                     if (span.ForgroundColor == "#CDCDCD")
                         fg = _mtd.OutputColor;
@@ -62,7 +66,7 @@ namespace modterm
 
                     // Draw the text span at the correct column position
                     x = _leftTextPadding + (col * _measuredCharWidth);
-                    _mtd.DrawText(textToDraw, x, (float)y, fg, _mtd.GetTextFormat());
+                    _mtd.DrawText(textToDraw, x, (float)y, fg, bg, _mtd.GetTextFormat());
                     
                     // Advance col by the number of characters in the span
                     col += textToDraw?.Length ?? 0;

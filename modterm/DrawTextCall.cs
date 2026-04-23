@@ -18,16 +18,18 @@ namespace modterm
         public float Y;
         public string Text;
         public Color Color;
+        public Color BackgroundColor;
         public CanvasTextFormat TextFormat;
 
         public DrawTextCall() { }
 
-        public DrawTextCall(string text, float x, float y, Color color, CanvasTextFormat textFormat = null)
+        public DrawTextCall(string text, float x, float y, Color color, Color backgroundColor, CanvasTextFormat textFormat = null)
         {
             Text = text;
             X = x;
             Y = y;
             Color = color;
+            BackgroundColor = backgroundColor;
             TextFormat = textFormat;
         }
     }

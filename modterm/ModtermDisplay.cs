@@ -3,17 +3,10 @@ using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.Text;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.UI;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
-using Windows.Devices.Midi;
 using Windows.Foundation;
 using Windows.UI;
 
@@ -60,6 +53,7 @@ namespace modterm
 
         private float _currentFontSize;
         private float _currentControlFontSize;
+        private float _currentBgColorPadding; 
         private int _transparencyPct;
         private byte _alpha;
         private Color _tintColor;
@@ -82,6 +76,7 @@ namespace modterm
             set
             {
                 _currentFontSize = value;
+                _currentBgColorPadding = _currentFontSize / 1.25f; // adjust background rectangle padding based on font size for better fit
             }
         }
 
@@ -250,9 +245,9 @@ namespace modterm
             }
         }
 
-        public void DrawText(string text, float x, float y, Color color, CanvasTextFormat textFormat)
+        public void DrawText(string text, float x, float y, Color color, Color bgColor, CanvasTextFormat textFormat)
         {
-            _effectSequence.Add(new DrawTextCall(text, x, y, color, textFormat));
+            _effectSequence.Add(new DrawTextCall(text, x, y, color, bgColor, textFormat));
         }
 
         public void DrawControlBox(CanvasControl sender, CanvasDrawingSession cds, Rect location)
@@ -380,6 +375,15 @@ namespace modterm
             return p;
         }
 
+        private float MeasureTextWidth(CanvasDrawingSession ds, string text, CanvasTextFormat textFormat)
+        {
+            using (var layout = new CanvasTextLayout(ds, text.Replace(' ', '\u00A0'), textFormat, 9999, 9999))
+            {
+                float width = (float)layout.DrawBounds.Width;
+                return width;
+            }
+        }
+
         private void DrawEffectSequence()
         {
             // Blurred glow layer
@@ -389,6 +393,14 @@ namespace modterm
                 {
                     foreach (DrawTextCall call in _effectSequence)
                     {
+                        // draw a background rectangle for terminal text that overrides the default background
+                        if (call.BackgroundColor != Colors.Black)
+                        {
+                            var textSize = MeasureTextWidth(clds, call.Text, call.TextFormat);
+                            clds.FillRectangle(call.X, call.Y,
+                                textSize, call.TextFormat.FontSize * 1.1f,
+                                call.BackgroundColor);
+                        }
                         if (call.Color == OutputColor)
                         {
                             clds.DrawText(call.Text, call.X, call.Y, OutputGlowColor, call.TextFormat);
@@ -406,7 +418,15 @@ namespace modterm
             // Sharp layer
             foreach (DrawTextCall call in _effectSequence)
             {
-                _drawSession.DrawText(call.Text, call.X, call.Y, call.Color, call.TextFormat);
+                // draw a background rectangle for terminal text that overrides the default background
+                if (call.BackgroundColor != Colors.Black)
+                {
+                    var textSize = MeasureTextWidth(_drawSession, call.Text, call.TextFormat);
+                    _drawSession.FillRectangle(call.X, call.Y,
+                        textSize, call.TextFormat.FontSize * 1.1f,
+                        call.BackgroundColor);
+                }
+                _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);
             }
         }
 
