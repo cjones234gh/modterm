@@ -74,23 +74,8 @@ namespace modterm
                 y += _mtd.CurrentFontSize + 2;
             }
 
-
-            // Draw debug grid lines for columns
-            //for (int c = 0; c < cols; c++)
-            //{
-            //    float x = _leftTextPadding + (c * measuredCharWidth);
-            //    args.DrawingSession.DrawLine(x, 0, x, (float)sender.ActualHeight, Colors.Red, 0.5f);
-            //    if (x > sender.ActualWidth)
-            //    {   Debug.WriteLine("Column " + c + " x=" + x + " exceeds canvas width " + sender.ActualWidth); break; }
-            //}
-            //// Draw debug grid lines for rows
-            //for (int r = 0; r < rows; r++)
-            //{
-            //    float yLine = r * (_mtd.CurrentFontSize + 2);
-            //    args.DrawingSession.DrawLine(0, yLine, (float)sender.ActualWidth, yLine, Colors.Blue, 0.5f);
-            //    if (yLine > sender.ActualHeight)
-            //    {   Debug.WriteLine("Row " + r + " y=" + yLine + " exceeds canvas height " + sender.ActualHeight); break; }
-            //}
+            // Debug: Draw grid lines for columns and rows
+            //DrawDebugGrid(sender, args);
 
             // Draw blinking cursor if visible
             if (_cursorVisible)
@@ -132,6 +117,28 @@ namespace modterm
             }
         }
 
-        
+        // Debug method to draw grid lines for columns and rows
+        private void DrawDebugGrid(CanvasControl sender, CanvasDrawEventArgs args)
+        {
+            // Draw debug grid lines for columns
+            for (int c = 0; c < _columns; c++)
+            {
+                float x = _leftTextPadding + (c * _measuredCharWidth);
+                args.DrawingSession.DrawLine(x, 0, x, (float)sender.ActualHeight, Colors.Red, 0.5f);
+                if (x > sender.ActualWidth)
+                { Debug.WriteLine("Column " + c + " x=" + x + " exceeds canvas width " + sender.ActualWidth); break; }
+            }
+            // Draw debug grid lines for rows
+            for (int r = 0; r < _lines; r++)
+            {
+                float yLine = r * (_mtd.CurrentFontSize + 2);
+                args.DrawingSession.DrawLine(0, yLine, (float)sender.ActualWidth, yLine, Colors.Blue, 0.5f);
+                if (yLine > sender.ActualHeight)
+                { Debug.WriteLine("Row " + r + " y=" + yLine + " exceeds canvas height " + sender.ActualHeight); break; }
+            }
+        }
+
+
+
     }
 }
