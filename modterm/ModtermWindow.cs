@@ -12,6 +12,7 @@ using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 using Windows.UI;
 using Windows.Foundation;
+using Windows.Graphics;
 using System.Linq;
 using System.IO;
 
@@ -28,6 +29,7 @@ namespace modterm
         private Shell           _currentShell = new Shell();
         private int             _scrollOffset = 0;
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
+        private Microsoft.UI.Dispatching.DispatcherQueueTimer _resizeStopTimer;
 
         // modterm UI controls
         private ModtermControlGroup    _titleBarControls;
@@ -53,6 +55,12 @@ namespace modterm
 
         // context menu flyout for right-click
         private MenuFlyout _flyout;
+        private SizeInt32 _lastWindowSize;
+        private SizeInt32 _resizeStartSize;
+        private SizeInt32 _resizeEndSize;
+        private bool _isResizeSessionActive = false;
+        private bool _isResizeConfirmationInProgress = false;
+        private bool _suppressResizeHandling = false;
 
         // shell definitions - TODO: move to config and add more options like env vars, starting dir, etc.
         private static string _conargs = "--headless --width [W] --height [H] -- "; 
@@ -74,6 +82,7 @@ namespace modterm
         {
 
             _cursorTimer = DispatcherQueue.CreateTimer();
+            _resizeStopTimer = DispatcherQueue.CreateTimer();
             _bgTintDriftTimer = DispatcherQueue.CreateTimer();
 
             _terminal = new ConPTYTerminal();
@@ -155,6 +164,14 @@ namespace modterm
             };
             _cursorTimer.Start();
 
+            // Detect "resize finished" by waiting for a brief pause in size events.
+            _resizeStopTimer.Interval = TimeSpan.FromMilliseconds(350);
+            _resizeStopTimer.Tick += async (s, e) =>
+            {
+                _resizeStopTimer.Stop();
+                await ConfirmResizeRestartAsync();
+            };
+
             // Background tint drift timer
             _bgTintDriftTimer.Interval = TimeSpan.FromMilliseconds(_bgTintDriftIntervalMs);
             _bgTintDriftTimer.Tick += (s, e) =>
@@ -166,6 +183,7 @@ namespace modterm
             };
 
             this.InitializeFlyouts();
+            _lastWindowSize = this.AppWindow.Size;
 
             // Ensure a draw pass runs so deferred ConPTY start can measure the canvas.
             ModtermCanvas.Invalidate();
@@ -173,7 +191,70 @@ namespace modterm
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
-            // not impl yet...
+            if (_suppressResizeHandling || _isResizeConfirmationInProgress)
+            {
+                _lastWindowSize = this.AppWindow.Size;
+                return;
+            }
+
+            var currentSize = this.AppWindow.Size;
+            if (!_isResizeSessionActive)
+            {
+                _isResizeSessionActive = true;
+                _resizeStartSize = _lastWindowSize;
+            }
+
+            _resizeEndSize = currentSize;
+            _lastWindowSize = currentSize;
+
+            _resizeStopTimer.Stop();
+            _resizeStopTimer.Start();
+        }
+
+        private async Task ConfirmResizeRestartAsync()
+        {
+            if (!_isResizeSessionActive || _isResizeConfirmationInProgress)
+                return;
+
+            _isResizeConfirmationInProgress = true;
+            try
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "Restart shell to apply resize?",
+                    Content = "Resizing requires restarting the shell. Continue?",
+                    PrimaryButtonText = "OK",
+                    CloseButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Close,
+                    XamlRoot = RootGrid.XamlRoot
+                };
+
+                var result = await dialog.ShowAsync();
+                if (result == ContentDialogResult.Primary)
+                {
+                    RestartTerminalForLayoutChange();
+                }
+                else
+                {
+                    _suppressResizeHandling = true;
+                    this.AppWindow.Resize(_resizeStartSize);
+                    _lastWindowSize = _resizeStartSize;
+                    _suppressResizeHandling = false;
+                }
+            }
+            finally
+            {
+                _isResizeSessionActive = false;
+                _isResizeConfirmationInProgress = false;
+            }
+        }
+
+        private void RestartTerminalForLayoutChange()
+        {
+            _terminal.Dispose();
+            _terminal = new ConPTYTerminal();
+            // terminal start is deferred until the first draw pass so we can measure
+            ModtermCanvas.Invalidate();
         }
 
         private void AutoThemeButton_Click(object sender, EventArgs e)
@@ -364,12 +445,7 @@ namespace modterm
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
                 item.Click += (_, __) => { 
                     _mtd.CurrentFontSize = (float)s;
-                    // TODO: we must relaunch the terminal to set lines/columns based on the new font size
-                    // need to refactor this to avoid restarting...
-                    _terminal.Dispose();
-                    _terminal = new ConPTYTerminal();
-                    // terminal start is deferred until the first draw pass so we can measure
-                    ModtermCanvas.Invalidate();
+                    RestartTerminalForLayoutChange();
                 };
                 sizeSub.Items.Add(item);
             }
