@@ -446,6 +446,7 @@ namespace modterm
 
         public Color GetColorFromHexString(string hex)
         {
+            if (string.IsNullOrEmpty(hex)) return OutputColor;
             if (hex.StartsWith("#")) hex = hex.Substring(1);
             byte a = 255, r = 0, g = 0, b = 0;
             if (hex.Length == 8)

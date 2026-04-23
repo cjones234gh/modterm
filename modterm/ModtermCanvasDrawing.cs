@@ -51,9 +51,9 @@ namespace modterm
                     //Debug.WriteLine($"span.BackgroundColor: {span.BackgroundColor}, span.ForgroundColor: {span.ForgroundColor}");
                     // Convert VT color string to Windows.UI.Color
                     Color fg = _mtd.OutputColor;
-                    try { fg = ColorFromWeb(span.ForgroundColor); } catch { }
+                    try { fg = _mtd.GetColorFromHexString(span.ForgroundColor); } catch { }
                     Color bg = Colors.Black;
-                    try { bg = ColorFromWeb(span.BackgroundColor); } catch { }
+                    try { bg = _mtd.GetColorFromHexString(span.BackgroundColor); } catch { }
 
                     // temp override until we work out the color overrides
                     if (span.ForgroundColor == "#CDCDCD")
@@ -102,27 +102,6 @@ namespace modterm
             }
 
             _mtd.EndEffectSequence();
-
-            // Helper: Convert #RRGGBB or #AARRGGBB to Color
-            Color ColorFromWeb(string web)
-            {
-                if (string.IsNullOrEmpty(web)) return _mtd.OutputColor;
-                if (web.StartsWith("#"))
-                {
-                    if (web.Length == 7)
-                        return Color.FromArgb(255,
-                            Convert.ToByte(web.Substring(1, 2), 16),
-                            Convert.ToByte(web.Substring(3, 2), 16),
-                            Convert.ToByte(web.Substring(5, 2), 16));
-                    if (web.Length == 9)
-                        return Color.FromArgb(
-                            Convert.ToByte(web.Substring(1, 2), 16),
-                            Convert.ToByte(web.Substring(3, 2), 16),
-                            Convert.ToByte(web.Substring(5, 2), 16),
-                            Convert.ToByte(web.Substring(7, 2), 16));
-                }
-                return _mtd.OutputColor;
-            }
 
             // Visual selection highlight (simple semi-transparent overlay)
             if (!string.IsNullOrEmpty(_selectedText) && _isSelecting)
