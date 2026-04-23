@@ -245,9 +245,9 @@ namespace modterm
             }
         }
 
-        public void DrawText(string text, float x, float y, Color color, Color bgColor, CanvasTextFormat textFormat)
+        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat)
         {
-            _effectSequence.Add(new DrawTextCall(text, x, y, color, bgColor, textFormat));
+            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat));
         }
 
         public void DrawControlBox(CanvasControl sender, CanvasDrawingSession cds, Rect location)
@@ -375,15 +375,6 @@ namespace modterm
             return p;
         }
 
-        private float MeasureTextWidth(CanvasDrawingSession ds, string text, CanvasTextFormat textFormat)
-        {
-            using (var layout = new CanvasTextLayout(ds, text.Replace(' ', '\u00A0'), textFormat, 9999, 9999))
-            {
-                float width = (float)layout.DrawBounds.Width;
-                return width;
-            }
-        }
-
         private void DrawEffectSequence()
         {
             // Blurred glow layer
@@ -396,9 +387,8 @@ namespace modterm
                         // draw a background rectangle for terminal text that overrides the default background
                         if (call.BackgroundColor != Colors.Black)
                         {
-                            var textSize = MeasureTextWidth(clds, call.Text, call.TextFormat);
                             clds.FillRectangle(call.X, call.Y,
-                                textSize, call.TextFormat.FontSize * 1.1f,
+                                call.Width, call.TextFormat.FontSize * 1.1f,
                                 call.BackgroundColor);
                         }
                         if (call.Color == OutputColor)
@@ -421,9 +411,8 @@ namespace modterm
                 // draw a background rectangle for terminal text that overrides the default background
                 if (call.BackgroundColor != Colors.Black)
                 {
-                    var textSize = MeasureTextWidth(_drawSession, call.Text, call.TextFormat);
                     _drawSession.FillRectangle(call.X, call.Y,
-                        textSize, call.TextFormat.FontSize * 1.1f,
+                        call.Width, call.TextFormat.FontSize * 1.1f,
                         call.BackgroundColor);
                 }
                 _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);

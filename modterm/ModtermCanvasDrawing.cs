@@ -66,7 +66,7 @@ namespace modterm
 
                     // Draw the text span at the correct column position
                     x = _leftTextPadding + (col * _measuredCharWidth);
-                    _mtd.DrawText(textToDraw, x, (float)y, fg, bg, _mtd.GetTextFormat());
+                    _mtd.DrawText(textToDraw, x, (float)y, (float)(textToDraw.Length * _measuredCharWidth), fg, bg, _mtd.GetTextFormat());
                     
                     // Advance col by the number of characters in the span
                     col += textToDraw?.Length ?? 0;
