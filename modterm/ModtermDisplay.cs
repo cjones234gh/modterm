@@ -387,9 +387,7 @@ namespace modterm
                         // draw a background rectangle for terminal text that overrides the default background
                         if (call.BackgroundColor != Colors.Black)
                         {
-                            clds.FillRectangle(call.X, call.Y,
-                                call.Width, call.TextFormat.FontSize * 1.1f,
-                                call.BackgroundColor);
+                            clds.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
                         }
                         if (call.Color == OutputColor)
                         {
@@ -411,9 +409,7 @@ namespace modterm
                 // draw a background rectangle for terminal text that overrides the default background
                 if (call.BackgroundColor != Colors.Black)
                 {
-                    _drawSession.FillRectangle(call.X, call.Y,
-                        call.Width, call.TextFormat.FontSize * 1.1f,
-                        call.BackgroundColor);
+                    _drawSession.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
                 }
                 _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);
             }
