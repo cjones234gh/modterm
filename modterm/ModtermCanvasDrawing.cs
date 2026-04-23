@@ -59,17 +59,17 @@ namespace modterm
                     if (span.ForgroundColor == "#CDCDCD")
                         fg = _mtd.OutputColor;
 
-                    string textToDraw = span.Text ?? "";
-
-                    // replace spaces with non-breaking spaces to prevent collapsing
-                    //textToDraw = textToDraw.Replace(" ", "\u00A0");
+                    if (span.Hidden)
+                    {
+                        fg = bg; // Set foreground to background color to hide text
+                    }
 
                     // Draw the text span at the correct column position
                     x = _leftTextPadding + (col * _measuredCharWidth);
-                    _mtd.DrawText(textToDraw, x, (float)y, (float)(textToDraw.Length * _measuredCharWidth), fg, bg, _mtd.GetTextFormat());
+                    _mtd.DrawText(span.Text, x, (float)y, (float)(span.Text.Length * _measuredCharWidth), fg, bg, _mtd.GetTextFormat());
                     
                     // Advance col by the number of characters in the span
-                    col += textToDraw?.Length ?? 0;
+                    col += span.Text.Length;
                 }
                 y += _mtd.CurrentFontSize + 2;
             }
