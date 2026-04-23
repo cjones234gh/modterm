@@ -44,6 +44,19 @@ namespace modterm
                 ControlEngagedColor = Colors.Red,
                 ControlEngagedHoverColor = Colors.Red
             },
+            new ColorConfiguration
+            {
+                Name = "BluePunk",
+                OutputColor = GetColorFromHexString("#50ff8c"),
+                OutputGlowColor = GetColorFromHexString("#00eeff"),
+                ControlColor = Colors.Cyan,
+                ControlGlowColor = Colors.Magenta,
+                BlurAmount = 10.0f,
+                TransparencyPct = 8,
+                TintColor = Colors.DarkSlateBlue,
+                ControlEngagedColor = Colors.Red,
+                ControlEngagedHoverColor = Colors.DarkRed
+            },
             new ColorConfiguration()
             {
                 Name = "Neuromancer",

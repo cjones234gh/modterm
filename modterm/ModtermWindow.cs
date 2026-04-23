@@ -99,7 +99,7 @@ namespace modterm
 
 
             // set the color config to a preset on startup
-            _mtd.SetColorConfiguration("Aqua");
+            _mtd.SetColorConfiguration("BluePunk");
             ControlCanvas.Invalidate();
 
             _vtController.SetRgbForegroundColor(_mtd.OutputColor.R, 
