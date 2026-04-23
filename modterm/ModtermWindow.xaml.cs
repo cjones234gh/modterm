@@ -29,6 +29,8 @@ namespace modterm
             this.InitializeComponent();
             this.InitializeApplication();
 
+            AppWindow.SetIcon("modterm.ico");
+
             // ConPTY is started from the first ModtermCanvas_Draw once layout size is real (see ModtermCanvasDrawing).
             this.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
                 () =>
