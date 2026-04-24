@@ -245,9 +245,9 @@ namespace modterm
             }
         }
 
-        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat)
+        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false)
         {
-            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat));
+            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault));
         }
 
         public void DrawControlBox(CanvasControl sender, CanvasDrawingSession cds, Rect location)
@@ -384,12 +384,12 @@ namespace modterm
                 {
                     foreach (DrawTextCall call in _effectSequence)
                     {
-                        // draw a background rectangle for terminal text that overrides the default background
-                        if (call.BackgroundColor != Colors.Black)
+                        // draw a background rectangle only for explicit cell backgrounds (not SGR default / host fill)
+                        if (!call.BackgroundIsDefault)
                         {
                             clds.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
                         }
-                        if (call.Color == OutputColor)
+                        if (call.ForegroundIsDefault || call.Color == OutputColor)
                         {
                             clds.DrawText(call.Text, call.X, call.Y, OutputGlowColor, call.TextFormat);
                         }
@@ -406,8 +406,7 @@ namespace modterm
             // Sharp layer
             foreach (DrawTextCall call in _effectSequence)
             {
-                // draw a background rectangle for terminal text that overrides the default background
-                if (call.BackgroundColor != Colors.Black)
+                if (!call.BackgroundIsDefault)
                 {
                     _drawSession.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
                 }

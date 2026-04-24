@@ -22,11 +22,15 @@ namespace modterm
         public string Text;
         public Color Color;
         public Color BackgroundColor;
+        /// <summary>VT SGR default foreground (CSI 39); host theme should replace resolved color.</summary>
+        public bool ForegroundIsDefault;
+        /// <summary>VT SGR default background (CSI 49); skip cell background fill.</summary>
+        public bool BackgroundIsDefault;
         public CanvasTextFormat TextFormat;
 
         public DrawTextCall() { }
 
-        public DrawTextCall(string text, float x, float y, float width, Color color, Color backgroundColor, CanvasTextFormat textFormat)
+        public DrawTextCall(string text, float x, float y, float width, Color color, Color backgroundColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false)
         {
             Text = text;
             X = x;
@@ -35,6 +39,8 @@ namespace modterm
             Height = textFormat.FontSize * 1.1f;    // this can be overriden after construction if needed, but this is a good default height based on the font size.
             Color = color;
             BackgroundColor = backgroundColor;
+            ForegroundIsDefault = foregroundIsDefault;
+            BackgroundIsDefault = backgroundIsDefault;
             TextFormat = textFormat;
         }
     }

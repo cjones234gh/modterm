@@ -49,15 +49,17 @@ namespace modterm
                 foreach (var span in row.Spans)
                 {
                     //Debug.WriteLine($"span.BackgroundColor: {span.BackgroundColor}, span.ForgroundColor: {span.ForgroundColor}");
-                    // Convert VT color string to Windows.UI.Color
                     Color fg = _mtd.OutputColor;
-                    try { fg = _mtd.GetColorFromHexString(span.ForgroundColor); } catch { }
-                    Color bg = Colors.Black;
-                    try { bg = _mtd.GetColorFromHexString(span.BackgroundColor); } catch { }
+                    if (!span.ForegroundIsDefault)
+                    {
+                        try { fg = _mtd.GetColorFromHexString(span.ForgroundColor); } catch { }
+                    }
 
-                    // temp override until we work out the color overrides
-                    if (span.ForgroundColor == "#CDCDCD")
-                        fg = _mtd.OutputColor;
+                    Color bg = Colors.Black;
+                    if (!span.BackgroundIsDefault)
+                    {
+                        try { bg = _mtd.GetColorFromHexString(span.BackgroundColor); } catch { }
+                    }
 
                     if (span.Hidden)
                     {
@@ -66,7 +68,7 @@ namespace modterm
 
                     // Draw the text span at the correct column position
                     x = _leftTextPadding + (col * _measuredCharWidth);
-                    _mtd.DrawText(span.Text, x, (float)y, (float)(span.Text.Length * _measuredCharWidth), fg, bg, _mtd.GetTextFormat());
+                    _mtd.DrawText(span.Text, x, (float)y, (float)(span.Text.Length * _measuredCharWidth), fg, bg, _mtd.GetTextFormat(), span.ForegroundIsDefault, span.BackgroundIsDefault);
                     
                     // Advance col by the number of characters in the span
                     col += span.Text.Length;
