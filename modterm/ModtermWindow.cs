@@ -32,7 +32,7 @@ namespace modterm
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _resizeStopTimer;
 
         // modterm UI controls
-        private ModtermControlGroup    _titleBarControls;
+        private ControlGroup    _titleBarControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
         private TextDisplayControl      _autoThemeButton;
@@ -115,8 +115,8 @@ namespace modterm
                 _mtd.OutputColor.G, _mtd.OutputColor.B);
 
             // ui controls and dock groups
-            _titleBarControls = new ModtermControlGroup(
-                ModtermControlGroup.CornerGroupDock.UpperCenterHorizontal);
+            _titleBarControls = new ControlGroup(
+                ControlGroup.ControlDock.Top);
 
             _pathControl = new TextDisplayControl(_currentShell.Path, false);   
 

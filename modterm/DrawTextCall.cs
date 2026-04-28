@@ -30,7 +30,8 @@ namespace modterm
 
         public DrawTextCall() { }
 
-        public DrawTextCall(string text, float x, float y, float width, Color color, Color backgroundColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false)
+        public DrawTextCall(string text, float x, float y, float width, Color color, Color backgroundColor, 
+                    CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false)
         {
             Text = text;
             X = x;

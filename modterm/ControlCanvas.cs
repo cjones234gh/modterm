@@ -1,20 +1,23 @@
-﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-
-using System;
-using System.Collections.Generic;
+﻿using Microsoft.Graphics.Canvas;
+using Microsoft.Graphics.Canvas.Effects;
+using Microsoft.Graphics.Canvas.Text;
+using Microsoft.Graphics.Canvas.UI.Xaml;
+using Microsoft.UI.Xaml;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
+using Windows.UI;
+using Microsoft.UI;
 using Windows.Foundation;
-using Windows.System;
 
 namespace modterm
 {
     public sealed partial class ModtermWindow : Window
     {
+        public void ControlCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
+        {             // draw all UI controls
+            _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
+        }
+
         public void ControlCanvas_PointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
         {
             Point currentPoint = e.GetCurrentPoint(ControlCanvas).Position;
