@@ -10,6 +10,8 @@ using System.Diagnostics;
 using Windows.System;
 using Windows.UI;
 using Windows.Foundation;
+using System.Runtime.CompilerServices;
+using Microsoft.UI.Text;
 
 namespace modterm
 {
@@ -71,7 +73,11 @@ namespace modterm
 
                     // Draw the text span at the correct column position
                     x = _leftTextPadding + (col * _measuredCharWidth);
-                    _mtd.DrawText(span.Text, x, (float)y, (float)(span.Text.Length * _measuredCharWidth), fg, bg, _mtd.GetTextFormat(), span.ForegroundIsDefault, span.BackgroundIsDefault);
+                    CanvasTextFormat textFormat = _mtd.GetTextFormat();
+                    textFormat.FontWeight = span.Bold ? FontWeights.Bold : FontWeights.Normal;
+                    
+                    _mtd.DrawText(span.Text, x, (float)y, (float)(span.Text.Length * _measuredCharWidth), fg, bg, 
+                        textFormat, span.ForegroundIsDefault, span.BackgroundIsDefault);
                     
                     // Advance col by the number of characters in the span
                     col += span.Text.Length;
