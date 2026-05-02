@@ -138,7 +138,7 @@ namespace modterm
             SharpFillTransparency = 20;
             LineWidth = 0.5f;
 
-            SetColorConfiguration("Default");
+            SetColorConfiguration("Clear");
 
         }
 
@@ -193,7 +193,7 @@ namespace modterm
             ControlColor = config.ControlColor;
             ControlGlowColor = config.ControlGlowColor;
             BlurAmount = config.BlurAmount;
-            TransparencyPct = config.TransparencyPct;
+            TransparencyPct = config.OpacityPct;
             TintColor = config.TintColor;
             ControlEngagedColor = config.ControlEngagedColor;
             ControlEngagedHoverColor = config.ControlEngagedHoverColor;

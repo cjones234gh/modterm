@@ -10,7 +10,7 @@ namespace modterm
         public Color ControlColor { get; set; }
         public Color ControlGlowColor { get; set; }
         public float BlurAmount { get; set; }
-        public int TransparencyPct { get; set; }
+        public int OpacityPct { get; set; }
         public Color TintColor { get; set; }
         public Color ControlEngagedColor { get; set; }
         public Color ControlEngagedHoverColor { get; set; }

@@ -20,14 +20,14 @@ namespace modterm
             {
                 new ColorConfiguration()
                 {
-                    Name = "Default",
+                    Name = "Clear",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputGlowColor = GetColorFromHexString("#00eeff"),
                     ControlColor = GetColorFromHexString("#d77b27"),
                     ControlGlowColor = GetColorFromHexString("#c14fff"),
                     BlurAmount = 5.0f,
-                    TransparencyPct = 10,
-                    TintColor = GetColorFromHexString("#37096d"),
+                    OpacityPct = 0,
+                    TintColor = GetColorFromHexString("#000000"),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
@@ -39,7 +39,7 @@ namespace modterm
                     ControlColor = Color.FromArgb(255, 100, 255, 0),
                     ControlGlowColor = Color.FromArgb(255, 100, 255, 0),
                     BlurAmount = 7.0f,
-                    TransparencyPct = 80,
+                    OpacityPct = 80,
                     TintColor = Colors.Black,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
@@ -52,7 +52,7 @@ namespace modterm
                     ControlColor = Colors.Cyan,
                     ControlGlowColor = Colors.Magenta,
                     BlurAmount = 10.0f,
-                    TransparencyPct = 8,
+                    OpacityPct = 8,
                     TintColor = Colors.DarkSlateBlue,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.DarkRed
@@ -65,7 +65,7 @@ namespace modterm
                     ControlColor = GetColorFromHexString("#6e8ffa"), 
                     ControlGlowColor = GetColorFromHexString("#c14fff"),
                     BlurAmount = 5.0f,
-                    TransparencyPct = 30,
+                    OpacityPct = 30,
                     TintColor = Colors.DarkTurquoise,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
@@ -78,7 +78,7 @@ namespace modterm
                     ControlColor = Colors.Cyan,
                     ControlGlowColor = Colors.Magenta,
                     BlurAmount = 3.0f,
-                    TransparencyPct = 20,
+                    OpacityPct = 20,
                     TintColor = Color.FromArgb(255, 153, 0, 255),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.DarkRed
@@ -91,7 +91,7 @@ namespace modterm
                     ControlColor = GetColorFromHexString("#d77b27"),
                     ControlGlowColor = GetColorFromHexString("#c14fff"),
                     BlurAmount = 5.0f,
-                    TransparencyPct = 20,
+                    OpacityPct = 20,
                     TintColor = GetColorFromHexString("#b0ff19"),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
@@ -106,7 +106,7 @@ namespace modterm
                     ControlColor = Colors.Cyan,
                     ControlGlowColor = Colors.Magenta,
                     BlurAmount = 8.0f,
-                    TransparencyPct = 10,
+                    OpacityPct = 10,
                     TintColor = Colors.Aqua,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
@@ -119,7 +119,7 @@ namespace modterm
                     ControlColor = Colors.DarkGray,
                     ControlGlowColor = Colors.LightGray,
                     BlurAmount = 4.0f,
-                    TransparencyPct = 100,
+                    OpacityPct = 100,
                     TintColor = Colors.LightGoldenrodYellow,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red

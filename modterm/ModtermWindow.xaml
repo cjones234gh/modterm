@@ -12,6 +12,8 @@
 
     <Window.SystemBackdrop>
         <modterm:BlurredBackdrop/>
+        <!--<MicaBackdrop/>-->
+        <!--<DesktopAcrylicBackdrop/>-->
     </Window.SystemBackdrop>
 
     <Grid x:Name="RootGrid" Background="Transparent">
