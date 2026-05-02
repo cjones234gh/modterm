@@ -3,6 +3,7 @@ using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.Text;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.UI;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
@@ -140,6 +141,18 @@ namespace modterm
 
             SetColorConfiguration("Clear");
 
+        }
+
+        public void ApplySystemBackdrop(BackdropKind kind, Window wInstance)
+        {
+            SystemBackdrop backdrop = kind switch
+            {
+                BackdropKind.Blurred => new BlurredBackdrop(),
+                BackdropKind.Mica => new MicaBackdrop(),
+                BackdropKind.Acrylic => new DesktopAcrylicBackdrop(),
+                _ => new BlurredBackdrop()
+            };
+            wInstance.SystemBackdrop = backdrop;
         }
 
         public List<string> GetConfigurationNames()
