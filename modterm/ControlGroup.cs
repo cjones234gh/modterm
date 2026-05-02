@@ -72,7 +72,7 @@ namespace modterm
                     }
                     break;
                 case ControlDock.Right:
-                    y = canvasHeight - mtd.ControlMargin;
+                    y = mtd.ControlMargin + 45;
                     for (int i = 0; i < Controls.Count; i++)
                     {
                         var control = Controls[i];
@@ -89,10 +89,10 @@ namespace modterm
                             width = (float)control.Location.Width;
                             height = (float)control.Location.Height;
                         }
-                        y -= height;
+                        y += height;
                         float xRight = canvasWidth - mtd.ControlMargin - width;
                         control.Location = new Windows.Foundation.Rect(xRight, y, width, height);
-                        y -= padding;
+                        y += padding;
                     }
                     break;
                 case ControlDock.Bottom:

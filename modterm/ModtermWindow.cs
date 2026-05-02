@@ -32,12 +32,16 @@ namespace modterm
         private Microsoft.UI.Dispatching.DispatcherQueueTimer _resizeStopTimer;
 
         // modterm UI controls
-        private ControlGroup    _titleBarControls;
-        private ControlGroup _rightButtonControls;
+        private ControlGroup            _titleBarControls;
+        private ControlGroup            _rightButtonControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
         private TextDisplayControl      _autoThemeButton;
         private int                     _autoThemeIndex = 0;
+        private TextDisplayControl      _backdropButton;
+        private TextDisplayControl      _opacityButton;
+        private TextDisplayControl      _colorButton;
+        
 
         // modterm display
         private ModtermDisplay _mtd = new ModtermDisplay();
@@ -125,13 +129,16 @@ namespace modterm
 
             _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
 
-            _autoThemeButton = new TextDisplayControl("T h e m e", true);
+            _autoThemeButton = new TextDisplayControl("Theme", true);
             _autoThemeButton.Clicked += AutoThemeButton_Click;
+            _backdropButton = new TextDisplayControl("Backdrop", true);
+            _opacityButton = new TextDisplayControl("Opacity", true);
+            _colorButton = new TextDisplayControl("Color", true);
 
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _appearanceInfoControl]);
             _rightButtonControls.Controls.AddRange(
-                [_autoThemeButton]);
+                [_autoThemeButton, _backdropButton, _opacityButton, _colorButton]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
