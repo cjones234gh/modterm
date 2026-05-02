@@ -33,6 +33,7 @@ namespace modterm
 
         // modterm UI controls
         private ControlGroup    _titleBarControls;
+        private ControlGroup _rightButtonControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
         private TextDisplayControl      _autoThemeButton;
@@ -117,6 +118,8 @@ namespace modterm
             // ui controls and dock groups
             _titleBarControls = new ControlGroup(
                 ControlGroup.ControlDock.Top);
+            _rightButtonControls = new ControlGroup(
+                ControlGroup.ControlDock.Right);
 
             _pathControl = new TextDisplayControl(_currentShell.Path, false);   
 
@@ -126,7 +129,9 @@ namespace modterm
             _autoThemeButton.Clicked += AutoThemeButton_Click;
 
             _titleBarControls.Controls.AddRange(
-                [_pathControl, _appearanceInfoControl, _autoThemeButton]);
+                [_pathControl, _appearanceInfoControl]);
+            _rightButtonControls.Controls.AddRange(
+                [_autoThemeButton]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;

@@ -116,7 +116,8 @@ namespace modterm
 
             // draw all UI controls
             //_titleBarControls?.DrawControls(sender, args.DrawingSession);
-		}
+            _rightButtonControls?.DrawControls(sender, args.DrawingSession, _mtd);
+        }
 
         // Measure the width of a typical monospace character for accurate column calculation
         private float MeasureCharWidth(CanvasControl sender, CanvasDrawEventArgs args)
@@ -217,12 +218,28 @@ namespace modterm
 
         private void ModtermCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
+            Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
             if (e.GetCurrentPoint(ModtermCanvas).Properties.IsLeftButtonPressed)
             {
                 _isSelecting = true;
-                _selectionStart = e.GetCurrentPoint(ModtermCanvas).Position;
+                _selectionStart = currentPoint;
                 _selectionEnd = _selectionStart;
                 _selectedText = "";
+
+                foreach (var control in _rightButtonControls.Controls)
+                {
+                    if (control.Location.Contains(currentPoint) && control.Interactive)
+                    {
+                        control.IsPressed = true;
+                        control.IsEngaged = true;
+                    }
+                    else
+                    {
+                        control.IsPressed = false;
+                        control.IsEngaged = false;
+                    }
+                }
+
                 ModtermCanvas.Invalidate();
             }
         }
@@ -238,10 +255,10 @@ namespace modterm
                 ModtermCanvas.Invalidate();
             }
 
-            //foreach (var control in _lowerRightControls.Controls)
-            //{
-            //    control.IsHovered = control.Location.Contains(currentPoint);
-            //}
+            foreach (var control in _rightButtonControls.Controls)
+            {
+                control.IsHovered = control.Location.Contains(currentPoint);
+            }
 
             ModtermCanvas.Invalidate();
         }
@@ -250,6 +267,21 @@ namespace modterm
         {
             _isSelecting = false;
             UpdateSelectedText();
+
+            Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
+            foreach (var control in _rightButtonControls.Controls)
+            {
+                if (control.IsEngaged)
+                {
+                    control.IsPressed = false;
+                    control.IsEngaged = false;
+                    // Check if the pointer is still over the control on release to trigger click action
+                    if (control.Location.Contains(currentPoint))
+                    {
+                        control.HandleClick();
+                    }
+                }
+            }
             ModtermCanvas.Invalidate();
         }
 

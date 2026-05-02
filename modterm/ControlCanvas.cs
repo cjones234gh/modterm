@@ -14,7 +14,8 @@ namespace modterm
     public sealed partial class ModtermWindow : Window
     {
         public void ControlCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
-        {             // draw all UI controls
+        {      
+            // draw title bar controls
             _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
         }
 
