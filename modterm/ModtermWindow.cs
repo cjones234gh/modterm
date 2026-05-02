@@ -371,6 +371,19 @@ namespace modterm
                 transSub.Items.Add(item);
             }
             _flyout.Items.Add(transSub);
+
+            // system backdrop (Mica / Acrylic / custom blurred host backdrop)
+            var backdropSub = new MenuFlyoutSubItem { Text = "System Backdrop" };
+            var blurredBackdropItem = new MenuFlyoutItem { Text = "Blurred" };
+            blurredBackdropItem.Click += (_, __) => ApplySystemBackdrop(BackdropKind.Blurred);
+            backdropSub.Items.Add(blurredBackdropItem);
+            var micaBackdropItem = new MenuFlyoutItem { Text = "Mica" };
+            micaBackdropItem.Click += (_, __) => ApplySystemBackdrop(BackdropKind.Mica);
+            backdropSub.Items.Add(micaBackdropItem);
+            var acrylicBackdropItem = new MenuFlyoutItem { Text = "Acrylic" };
+            acrylicBackdropItem.Click += (_, __) => ApplySystemBackdrop(BackdropKind.Acrylic);
+            backdropSub.Items.Add(acrylicBackdropItem);
+            _flyout.Items.Add(backdropSub);
     
             // window tint
             var tintSub = new MenuFlyoutSubItem { Text = "Tint" };
@@ -521,6 +534,25 @@ namespace modterm
                 shellSub.Items.Add(item);
             }
             _flyout.Items.Add(shellSub);
+        }
+
+        private enum BackdropKind
+        {
+            Blurred,
+            Mica,
+            Acrylic
+        }
+
+        private void ApplySystemBackdrop(BackdropKind kind)
+        {
+            SystemBackdrop backdrop = kind switch
+            {
+                BackdropKind.Blurred => new BlurredBackdrop(),
+                BackdropKind.Mica => new MicaBackdrop(),
+                BackdropKind.Acrylic => new DesktopAcrylicBackdrop(),
+                _ => new BlurredBackdrop()
+            };
+            SystemBackdrop = backdrop;
         }
 
         private readonly (string Name, Color Color)[] _colorOptions = new[]
