@@ -36,7 +36,6 @@ namespace modterm
                 () =>
                 {
                     ModtermCanvas.Invalidate();
-                    ControlCanvas.Invalidate();
                 });
         }
     }

@@ -22,6 +22,7 @@ namespace modterm
         private float _measuredCharWidth;
 
         private int _leftTextPadding = 5;
+        private int _topTextPadding = 33;
 
         // Offset for banner color cycling effect
         private int _bannerColorOffset = 0;
@@ -30,7 +31,7 @@ namespace modterm
             // Do not spawn the conhost until we can measure the canvas during drawing and determine how many rows/columns we can fit
             if (!_terminal.Started)
             {
-                int measuredRows = (int)(sender.ActualHeight / (_mtd.CurrentFontSize + 2));
+                int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (_mtd.CurrentFontSize + 2));
                 float measuredCharWidth = MeasureCharWidth(sender, args);
                 int measuredCols = (int)(sender.ActualWidth / measuredCharWidth);
                 _lines = measuredRows;
@@ -46,7 +47,7 @@ namespace modterm
             // use toprow to calculate visible area
             int topRow = _vtController.ViewPort.TopRow;
             var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, _lines, _columns);
-            double y = 0;
+            double y = _topTextPadding;
             foreach (var row in pageSpans)
             {
                 float x = _leftTextPadding;
@@ -93,7 +94,7 @@ namespace modterm
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
                 float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
-                float cursorY = (float)(cursor.Row * (_mtd.CurrentFontSize + 2));
+                float cursorY = (float)(cursor.Row * (_mtd.CurrentFontSize + 2)) + _topTextPadding;
                 args.DrawingSession.DrawText("|", cursorX, cursorY, _mtd.OutputColor, _mtd.GetTextFormat());
             }
 
@@ -115,8 +116,8 @@ namespace modterm
             }
 
             // draw all UI controls
-            //_titleBarControls?.DrawControls(sender, args.DrawingSession);
             _rightButtonControls?.DrawControls(sender, args.DrawingSession, _mtd);
+            _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
         }
 
         // Measure the width of a typical monospace character for accurate column calculation

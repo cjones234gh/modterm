@@ -115,7 +115,6 @@ namespace modterm
 
             // set the color config to a preset on startup
             _mtd.SetColorConfiguration("BluePunk");
-            ControlCanvas.Invalidate();
 
             _vtController.SetRgbForegroundColor(_mtd.OutputColor.R, 
                 _mtd.OutputColor.G, _mtd.OutputColor.B);
@@ -154,8 +153,6 @@ namespace modterm
             RootGrid.Background = _mtd.GetBackgroundBrush();
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
-            ControlCanvas.Draw += this.ControlCanvas_Draw;
-
             ModtermCanvas.Draw += this.ModtermCanvas_Draw;
             ModtermCanvas.RightTapped += this.ModtermCanvas_RightTapped;
 
@@ -164,10 +161,6 @@ namespace modterm
             ModtermCanvas.PointerPressed += this.ModtermCanvas_PointerPressed;
             ModtermCanvas.PointerMoved += this.ModtermCanvas_PointerMoved;
             ModtermCanvas.PointerReleased += this.ModtermCanvas_PointerReleased;
-
-            ControlCanvas.PointerPressed += this.ControlCanvas_PointerPressed;
-            ControlCanvas.PointerReleased += this.ControlCanvas_PointerReleased;
-            ControlCanvas.PointerMoved += this.ControlCanvas_PointerMoved;
 
             // Blinking cursor
             _cursorTimer.Interval = TimeSpan.FromMilliseconds(_cursorSpeed);
@@ -193,7 +186,7 @@ namespace modterm
                 _bgTintDriftColorOffset = (_bgTintDriftColorOffset + 1) % _bgTintDriftColors.Count;
                 _mtd.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
                 _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
-                ControlCanvas.Invalidate();
+                ModtermCanvas.Invalidate();
             };
 
             this.InitializeFlyouts();
@@ -366,7 +359,6 @@ namespace modterm
                     _bgTintDriftTimer.Stop();
                     _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate();
-                    ControlCanvas.Invalidate();
                 };
                 themeSub.Items.Add(item);
             }
@@ -484,7 +476,7 @@ namespace modterm
             foreach (var f in controlFonts)
             {
                 var item = new MenuFlyoutItem { Text = f };
-                item.Click += (_, __) => { _mtd.CurrentControlFont = new FontFamily(f); ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.CurrentControlFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
                 controlFontSub.Items.Add(item);
             }
             _flyout.Items.Add(controlFontSub);
@@ -495,7 +487,7 @@ namespace modterm
             foreach (var s in controlSizes)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} pt" };
-                item.Click += (_, __) => { _mtd.CurrentControlFontSize = (float)s; ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.CurrentControlFontSize = (float)s; ModtermCanvas.Invalidate(); };
                 controlSizeSub.Items.Add(item);
             }
             _flyout.Items.Add(controlSizeSub);
@@ -506,7 +498,7 @@ namespace modterm
             foreach (var s in glowSubAmts)
             {
                 var item = new MenuFlyoutItem { Text = $"{s} radius" };
-                item.Click += (_, __) => { _mtd.BlurAmount = s; ModtermCanvas.Invalidate(); ControlCanvas.Invalidate(); };
+                item.Click += (_, __) => { _mtd.BlurAmount = s; ModtermCanvas.Invalidate(); };
                 glowSub.Items.Add(item);
             }
             _flyout.Items.Add(glowSub);

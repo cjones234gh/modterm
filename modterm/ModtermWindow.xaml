@@ -22,14 +22,9 @@
               Height="33"
               VerticalAlignment="Top"
               Background="Transparent" />
-        <!-- control pane -->
-        <win2dcanvas:CanvasControl x:Name="ControlCanvas" 
-                Height="33" VerticalAlignment="Top"
-                Margin="0,0,0,0"
-                Background="Transparent"/>
-        <!-- Single drawing pane -->
+        <!-- Single application pane -->
         <win2dcanvas:CanvasControl x:Name="ModtermCanvas"
-                Margin="0,33,0,0"
+                Margin="0,0,0,0"
                 Background="Transparent"/>
     </Grid>
 </Window>
