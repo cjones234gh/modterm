@@ -36,11 +36,12 @@ namespace modterm
         private ControlGroup            _rightButtonControls;
         private TextDisplayControl      _pathControl;
         private TextDisplayControl      _appearanceInfoControl;
-        private TextDisplayControl      _autoThemeButton;
+        private TextDisplayControl      _autoThemeBtn;
         private int                     _autoThemeIndex = 0;
-        private TextDisplayControl      _backdropButton;
-        private TextDisplayControl      _opacityButton;
-        private TextDisplayControl      _colorButton;
+        private TextDisplayControl      _sysbackdropBtn;
+        private TextDisplayControl      _backdropColorBtn;
+        private TextDisplayControl      _backdropOpacityBtn;
+        private TextDisplayControl      _glowBtn;
         
 
         // modterm display
@@ -129,16 +130,17 @@ namespace modterm
 
             _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
 
-            _autoThemeButton = new TextDisplayControl("THEME", true);
-            _autoThemeButton.Clicked += AutoThemeButton_Click;
-            _backdropButton = new TextDisplayControl("BACKDROP", true);
-            _opacityButton = new TextDisplayControl("OPACITY", true);
-            _colorButton = new TextDisplayControl("COLOR", true);
+            _autoThemeBtn = new TextDisplayControl("THEME", true);
+            _autoThemeBtn.Clicked += AutoThemeButton_Click;
+            _sysbackdropBtn = new TextDisplayControl("BACKDROP", true);
+            _backdropOpacityBtn = new TextDisplayControl("OPACITY", true);
+            _backdropColorBtn = new TextDisplayControl("BACKCOLOR", true);
+            _glowBtn = new TextDisplayControl("GLOW", true);
 
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _appearanceInfoControl]);
             _rightButtonControls.Controls.AddRange(
-                [_autoThemeButton, _backdropButton, _opacityButton, _colorButton]);
+                [_autoThemeBtn, _sysbackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn]);
 
             // modglass style window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
