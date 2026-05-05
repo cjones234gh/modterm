@@ -121,19 +121,19 @@ namespace modterm
 
             // ui controls and dock groups
             _titleBarControls = new ControlGroup(
-                ControlGroup.ControlDock.Top);
+                ControlGroup.ControlDock.Top, _mtd.ControlPadding);
             _rightButtonControls = new ControlGroup(
-                ControlGroup.ControlDock.Right);
+                ControlGroup.ControlDock.Right, _mtd.ControlPadding);
 
             _pathControl = new TextDisplayControl(_currentShell.Path, false);   
 
             _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
 
-            _autoThemeButton = new TextDisplayControl("Theme", true);
+            _autoThemeButton = new TextDisplayControl("THEME", true);
             _autoThemeButton.Clicked += AutoThemeButton_Click;
-            _backdropButton = new TextDisplayControl("Backdrop", true);
-            _opacityButton = new TextDisplayControl("Opacity", true);
-            _colorButton = new TextDisplayControl("Color", true);
+            _backdropButton = new TextDisplayControl("BACKDROP", true);
+            _opacityButton = new TextDisplayControl("OPACITY", true);
+            _colorButton = new TextDisplayControl("COLOR", true);
 
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _appearanceInfoControl]);

@@ -134,9 +134,9 @@ namespace modterm
 
             // internal control defaults
             CornerRadius = 2f;
-            BlurFillTransparency = 50;
+            BlurFillTransparency = 150;
             SharpBorderTransparency = 150;
-            SharpFillTransparency = 20;
+            SharpFillTransparency = 40;
             LineWidth = 0.5f;
 
             SetColorConfiguration("Clear");
@@ -307,17 +307,17 @@ namespace modterm
             {
                 using (var clds = commandList.CreateDrawingSession())
                 {
-                    if (control.Interactive)
-                    {
+                    //if (control.Interactive)
+                    //{
                         // Draw a bordered rectangle
-                        clds.DrawRoundedRectangle(
-                            control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
+                        //clds.DrawRoundedRectangle(
+                        //    control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
 
                         // Draw background rectangle except when in hover state
-                        if (!control.IsHovered)
+                        if (!control.IsHovered || !control.Interactive)
                             clds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
                                 Color.FromArgb(BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
-                    }
+                    //}
                     
                     // Draw TextContent
                     clds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
@@ -334,8 +334,8 @@ namespace modterm
             if (control.Interactive)
             {
                 // Draw a bordered rectangle
-                cds.DrawRoundedRectangle(control.Location, CornerRadius, CornerRadius,
-                    Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
+                //cds.DrawRoundedRectangle(control.Location, CornerRadius, CornerRadius,
+                //    Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
             }
 
             // Draw background rectangle
