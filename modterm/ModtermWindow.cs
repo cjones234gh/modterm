@@ -38,10 +38,14 @@ namespace modterm
         private TextDisplayControl      _appearanceInfoControl;
         private TextDisplayControl      _autoThemeBtn;
         private int                     _autoThemeIndex = 0;
-        private TextDisplayControl      _sysbackdropBtn;
+        private TextDisplayControl      _systemBackdropBtn;
         private TextDisplayControl      _backdropColorBtn;
         private TextDisplayControl      _backdropOpacityBtn;
+        private TextDisplayControl      _fontFamilyBtn;
+        private TextDisplayControl      _fontSizeBtn;
+        private TextDisplayControl      _themeSelectBtn;
         private TextDisplayControl      _glowBtn;
+        private TextDisplayControl      _shellSelBtn;
         
 
         // modterm display
@@ -109,9 +113,7 @@ namespace modterm
             // set fonts until we have a config system in place
             _mtd.CurrentFont = new FontFamily("Consolas");
             _mtd.CurrentFontSize = 12F;
-            _mtd.CurrentControlFont = new FontFamily("Cascadia Mono");
-            _mtd.CurrentControlFontSize = 9.5f;
-
+            _mtd.CurrentControlFont = new FontFamily("Consolas");
 
             // set the color config to a preset on startup
             _mtd.SetColorConfiguration("BluePunk");
@@ -119,41 +121,10 @@ namespace modterm
             _vtController.SetRgbForegroundColor(_mtd.OutputColor.R, 
                 _mtd.OutputColor.G, _mtd.OutputColor.B);
 
-            // ui controls and dock groups
-            _titleBarControls = new ControlGroup(
-                ControlGroup.ControlDock.Top, _mtd.ControlPadding);
-            _rightButtonControls = new ControlGroup(
-                ControlGroup.ControlDock.Right, _mtd.ControlPadding);
-
-            _pathControl = new TextDisplayControl(_currentShell.Path, false);   
-
-            _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
-
-            _autoThemeBtn = new TextDisplayControl("THEME", true);
-            _autoThemeBtn.Clicked += AutoThemeButton_Click;
-
-            _sysbackdropBtn = new TextDisplayControl("BACKDROP", true);
+            // all modterm-style labels and flyout controls
+            InitializeModtermControls();
             
-            _backdropOpacityBtn = new TextDisplayControl("OPACITY", true);
-            
-            _backdropColorBtn = new TextDisplayControl("BACKCOLOR", true);
-
-            // font glow
-            _glowBtn = new TextDisplayControl("GLOW", true);
-            var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
-            foreach (var s in glowSubAmts)
-            {
-                var item = new TextDisplayControl($"{s} radius", true);
-                item.Clicked += (_, __) => { _mtd.BlurAmount = s; ModtermCanvas.Invalidate(); };
-                _glowBtn.Children.Add(item);
-            }
-
-            _titleBarControls.Controls.AddRange(
-                [_pathControl, _appearanceInfoControl]);
-            _rightButtonControls.Controls.AddRange(
-                [_autoThemeBtn, _sysbackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn]);
-
-            // modglass style window setup
+            // window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
             this.AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
             this.AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
@@ -230,6 +201,149 @@ namespace modterm
 
             _resizeStopTimer.Stop();
             _resizeStopTimer.Start();
+        }
+
+        private void InitializeModtermControls()
+        {
+            // ui control groups
+            _titleBarControls = new ControlGroup(
+                ControlGroup.ControlDock.Top, _mtd.ControlPadding);
+            _rightButtonControls = new ControlGroup(
+                ControlGroup.ControlDock.Right, _mtd.ControlPadding);
+
+            // path and appearance info labels
+            _pathControl = new TextDisplayControl(_currentShell.Name, false);
+            _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
+
+            // next theme button for fun - cycles through color presets
+            _autoThemeBtn = new TextDisplayControl("THEME >", true);
+            _autoThemeBtn.Clicked += AutoThemeButton_Click;
+
+            // font glow
+            _glowBtn = new TextDisplayControl("GLOW", true);
+            var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
+            foreach (var s in glowSubAmts)
+            {
+                var item = new TextDisplayControl($"{s} radius", true);
+                item.Clicked += (_, __) => { _mtd.BlurAmount = s; ModtermCanvas.Invalidate(); };
+                _glowBtn.Children.Add(item);
+            }
+
+            // window transparency
+            _backdropOpacityBtn = new TextDisplayControl("WINDOW OPACITY", true);
+            for (int i = 0; i <= 10; i++)
+            {
+                byte pct = (byte)(i * 10);
+                var item = new TextDisplayControl(i == 0 ? "Transparent 0%" : $"{pct}%", true);
+                item.Clicked += (_, __) => {
+                    _mtd.TransparencyPct = pct;
+                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+                    ModtermCanvas.Invalidate();
+                };
+                _backdropOpacityBtn.Children.Add(item);
+            }
+
+            // system backdrop (Mica / Acrylic / custom blurred host backdrop)
+            _systemBackdropBtn = new TextDisplayControl("SYSTEM BACKDROP", true);
+            var blurredBackdropItem = new TextDisplayControl("BLURRED", true);
+            blurredBackdropItem.Clicked += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this);
+            _systemBackdropBtn.Children.Add(blurredBackdropItem);
+            var micaBackdropItem = new TextDisplayControl("MICA", true);
+            micaBackdropItem.Clicked += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Mica, this);
+            _systemBackdropBtn.Children.Add(micaBackdropItem);
+            var acrylicBackdropItem = new TextDisplayControl("ACRYLIC", true);
+            acrylicBackdropItem.Clicked += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this);
+            _systemBackdropBtn.Children.Add(acrylicBackdropItem);
+
+            // window tint
+            _backdropColorBtn = new TextDisplayControl("WINDOW COLOR", true);
+            var colorOptions = new (string, Color)[] {
+                ("Coral", Colors.Coral),
+                ("Sea Green", Colors.MediumSeaGreen),
+                ("Turquoise", Colors.DarkTurquoise),
+                ("Orange", Colors.DarkOrange),
+                ("Magenta", Colors.Magenta),
+                ("Violet", Colors.DarkViolet),
+                ("Cyan", Colors.DarkCyan),
+                ("Slate", Colors.DarkSlateBlue)
+            };
+            foreach (var (label, tint) in colorOptions)
+            {
+                var item = new TextDisplayControl(label, true);
+                item.Clicked += (_, __) => {
+                    _mtd.TintColor = tint;
+                    _bgTintDriftEnabled = false;
+                    _bgTintDriftTimer.Stop();
+                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+                    ModtermCanvas.Invalidate();
+                };
+                _backdropColorBtn.Children.Add(item);
+            }
+
+            // theme
+            _themeSelectBtn = new TextDisplayControl("SEL THEME", true);
+            foreach (var preset in _mtd.GetConfigurationNames())
+            {
+                var item = new TextDisplayControl(preset, true);
+                item.Clicked += (_, __) => {
+                    _mtd.SetColorConfiguration(preset);
+                    _bgTintDriftEnabled = false;
+                    _bgTintDriftTimer.Stop();
+                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+                    ModtermCanvas.Invalidate();
+                };
+                _themeSelectBtn.Children.Add(item);
+            }
+
+            // font family
+            _fontFamilyBtn = new TextDisplayControl("FONT", true);
+            var fonts = new[] { "CASCADIA MONO", "CONSOLAS", "COURIER NEW", "LUCIDA CONSOLE", "SIMSUN-EXTB" };
+            foreach (var f in fonts)
+            {
+                var item = new TextDisplayControl(f, true);
+                item.Clicked += (_, __) => {
+                    _mtd.CurrentFont = new FontFamily(f);
+                    _mtd.CurrentControlFont = new FontFamily(f);
+                    ModtermCanvas.Invalidate();
+                };
+                _fontFamilyBtn.Children.Add(item);
+            }
+
+            // font size
+            _fontSizeBtn = new TextDisplayControl("FONT SZ", true);
+            var sizes = new[] { 8, 10, 12, 13.5, 14.5, 15.5, 16.5, 17.5 };
+            foreach (var s in sizes)
+            {
+                var item = new TextDisplayControl($"{s} pt", true);
+                item.Clicked += (_, __) => {
+                    _mtd.CurrentFontSize = (float)s;
+                    RestartTerminalForLayoutChange();
+                };
+                _fontSizeBtn.Children.Add(item);
+            }
+
+            // shell selection
+            _shellSelBtn = new TextDisplayControl("SHELL", true);
+            foreach (Shell sh in _shellEnv)
+            {
+                var item = new TextDisplayControl(sh.Name.ToUpper(), true);
+                item.Clicked += async (_, __) =>
+                {
+                    _terminal.Started = false;
+                    _terminal.Dispose();
+                    await Task.Delay(1000); // Pauses for 1 second without blocking the UI thread
+                    _terminal = new ConPTYTerminal();
+                    _terminal.OutputReceived += OnOutputReceived;
+                    _terminal.Start(sh, _lines, _columns);
+                };
+                _shellSelBtn.Children.Add(item);
+            }
+
+            _titleBarControls.Controls.AddRange(
+                [_pathControl, _appearanceInfoControl]);
+            _rightButtonControls.Controls.AddRange(
+                [_autoThemeBtn, _themeSelectBtn, _fontFamilyBtn, _fontSizeBtn,
+                _systemBackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn, _shellSelBtn]);
         }
 
         private async Task ConfirmResizeRestartAsync()
@@ -361,199 +475,22 @@ namespace modterm
             pasteItem.Click += (_, __) => PasteFromClipboard();
             _flyout.Items.Add(pasteItem);
             _flyout.Items.Add(new MenuFlyoutSeparator());
-
-            // theme
-            var themeSub = new MenuFlyoutSubItem { Text = "Theme" };
-            foreach (var preset in _mtd.GetConfigurationNames())
-            {
-                var item = new MenuFlyoutItem { Text = preset };
-                item.Click += (_, __) => { 
-                    _mtd.SetColorConfiguration(preset); 
-                    _bgTintDriftEnabled = false; 
-                    _bgTintDriftTimer.Stop();
-                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
-                    ModtermCanvas.Invalidate();
-                };
-                themeSub.Items.Add(item);
-            }
-            _flyout.Items.Add(themeSub);
-
-            // window transparency
-            var transSub = new MenuFlyoutSubItem { Text = "Transparency" };
-            for (int i = 0; i <= 10; i++)
-            {
-                byte pct = (byte)(i * 10);
-                var item = new MenuFlyoutItem { Text = i == 0 ? "Transparent (0%)" : $"{pct}%" };
-                item.Click += (_, __) => { 
-                    _mtd.TransparencyPct = pct;
-                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
-                    ModtermCanvas.Invalidate(); };
-                transSub.Items.Add(item);
-            }
-            _flyout.Items.Add(transSub);
-
-            // system backdrop (Mica / Acrylic / custom blurred host backdrop)
-            var backdropSub = new MenuFlyoutSubItem { Text = "System Backdrop" };
-            var blurredBackdropItem = new MenuFlyoutItem { Text = "Blurred" };
-            blurredBackdropItem.Click += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this);
-            backdropSub.Items.Add(blurredBackdropItem);
-            var micaBackdropItem = new MenuFlyoutItem { Text = "Mica" };
-            micaBackdropItem.Click += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Mica, this);
-            backdropSub.Items.Add(micaBackdropItem);
-            var acrylicBackdropItem = new MenuFlyoutItem { Text = "Acrylic" };
-            acrylicBackdropItem.Click += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this);
-            backdropSub.Items.Add(acrylicBackdropItem);
-            _flyout.Items.Add(backdropSub);
-    
-            // window tint
-            var tintSub = new MenuFlyoutSubItem { Text = "Tint" };
-            var tintOptions = new (string, Color)[] {
-                ("Transparent", Colors.Transparent),
-                ("Snow White", Colors.White),
-                ("Pitch Black", Colors.Black),
-                ("Alice Blue", Colors.AliceBlue),
-                ("Coral", Colors.Coral),
-                ("Medium Purple", Colors.MediumPurple),
-                ("Medium Sea Green", Colors.MediumSeaGreen),
-                ("Gold", Colors.Gold),
-                ("Deep Pink", Colors.DeepPink),
-                ("Crimson", Colors.Crimson),
-                ("Dark Turquoise", Colors.DarkTurquoise),
-                ("Magenta", Colors.Magenta),
-                ("Dark Violet", Colors.DarkViolet),
-                ("Dark Cyan", Colors.DarkCyan),
-                ("Dark Goldenrod", Colors.DarkGoldenrod),
-                ("Dark Slate Blue", Colors.DarkSlateBlue)
-            };
-            foreach (var (label, tint) in tintOptions)
-            {
-                var item = new MenuFlyoutItem { Text = label };
-                item.Click += (_, __) => { 
-                    _mtd.TintColor = tint; 
-                    _bgTintDriftEnabled = false; 
-                    _bgTintDriftTimer.Stop();
-                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
-                    ModtermCanvas.Invalidate(); };
-                tintSub.Items.Add(item);
-            }
-
+                       
+                
             // Drift option with saturation sub-flyout
-            var driftSub = new MenuFlyoutSubItem { Text = "Drift" };
-            for (int i = 1; i <= 10; i++)
-            {
-                int sat = i * 10;
-                var item = new MenuFlyoutItem { Text = $"{sat}%" };
-                item.Click += (_, __) => {
+            var driftSub = new MenuFlyoutItem { Text = "Drifting Tint Color" };
+            driftSub.Click += (_, __) => {
                     _bgTintDriftEnabled = true;
-                    _bgTintDriftSaturation = (float)sat / 100f;
+                    _bgTintDriftSaturation = 0.5f;
                     _bgTintDriftColors.Clear();
                     _bgTintDriftColors = _mtd.GetColorWheelProgression(0.5, _bgTintDriftSaturation, 720);
                     _bgTintDriftColorOffset = 0;
                     _bgTintDriftTimer.Start();
                     ModtermCanvas.Invalidate();
                 };
-                driftSub.Items.Add(item);
-            }
-            tintSub.Items.Add(driftSub);
-            _flyout.Items.Add(tintSub);
+            _flyout.Items.Add(driftSub);
 
             _flyout.Items.Add(new MenuFlyoutSeparator());
-
-            // font family
-            var fontSub = new MenuFlyoutSubItem { Text = "Font Family" };
-            var fonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "Segoe UI Mono", "SimSun-ExtB" };
-            foreach (var f in fonts)
-            {
-                var item = new MenuFlyoutItem { Text = f };
-                item.Click += (_, __) => { _mtd.CurrentFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
-                fontSub.Items.Add(item);
-            }
-            _flyout.Items.Add(fontSub);
-
-            // font size
-            var sizeSub = new MenuFlyoutSubItem { Text = "Font Size" };
-            var sizes = new[] { 8, 10, 12, 13.5, 14.5, 15.5, 16.5, 17.5 };
-            foreach (var s in sizes)
-            {
-                var item = new MenuFlyoutItem { Text = $"{s} pt" };
-                item.Click += (_, __) => { 
-                    _mtd.CurrentFontSize = (float)s;
-                    RestartTerminalForLayoutChange();
-                };
-                sizeSub.Items.Add(item);
-            }
-            _flyout.Items.Add(sizeSub);
-
-            // control font family
-            var controlFontSub = new MenuFlyoutSubItem { Text = "Control Font Family" };
-            var controlFonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "Segoe UI Mono", "SimSun-ExtB" };
-            foreach (var f in controlFonts)
-            {
-                var item = new MenuFlyoutItem { Text = f };
-                item.Click += (_, __) => { _mtd.CurrentControlFont = new FontFamily(f); ModtermCanvas.Invalidate(); };
-                controlFontSub.Items.Add(item);
-            }
-            _flyout.Items.Add(controlFontSub);
-
-            // control font size
-            var controlSizeSub = new MenuFlyoutSubItem { Text = "Control Font Size" };
-            var controlSizes = new[] { 8, 9, 10, 10.5, 11, 11.5, 12, 12.5, 13, 14 };
-            foreach (var s in controlSizes)
-            {
-                var item = new MenuFlyoutItem { Text = $"{s} pt" };
-                item.Click += (_, __) => { _mtd.CurrentControlFontSize = (float)s; ModtermCanvas.Invalidate(); };
-                controlSizeSub.Items.Add(item);
-            }
-            _flyout.Items.Add(controlSizeSub);
-
-            // output color
-            var outputColorSub = new MenuFlyoutSubItem { Text = "Output Color" };
-            foreach (var (name, col) in _colorOptions)
-            {
-                var item = new MenuFlyoutItem { Text = name };
-                item.Click += (_, __) => { _mtd.OutputColor = col; ModtermCanvas.Invalidate(); };
-                outputColorSub.Items.Add(item);
-            }
-            _flyout.Items.Add(outputColorSub);
-
-            // shell selection
-            var shellSub = new MenuFlyoutSubItem { Text = "Shell" };
-            foreach (Shell sh in _shellEnv)
-            {
-                var item = new MenuFlyoutItem { Text = sh.Name };
-                item.Click += async (_, __) =>
-                {
-                    _terminal.Started = false;
-                    _terminal.Dispose();
-                    await Task.Delay(1000); // Pauses for 1 second without blocking the UI thread
-                    _terminal = new ConPTYTerminal();
-                    _terminal.OutputReceived += OnOutputReceived;
-                    _terminal.Start(sh, _lines, _columns);
-                };
-                shellSub.Items.Add(item);
-            }
-            _flyout.Items.Add(shellSub);
-        }
-
-        private readonly (string Name, Color Color)[] _colorOptions = new[]
-        {
-            ("White", Colors.White),
-            ("OG", Color.FromArgb(255, 0, 238, 255)),
-            ("Cyan", Colors.Cyan),
-            ("Bright Violet", Color.FromArgb(255, 187, 68, 255)),
-            ("Dim Violet", Color.FromArgb(255, 136, 0, 204)),
-            ("Bright Azure", Color.FromArgb(255, 68, 153, 255)),
-            ("Dim Azure", Color.FromArgb(255, 0, 102, 204)),
-            ("Bright Verdant", Color.FromArgb(255, 85, 255, 136)),
-            ("Dim Verdant", Color.FromArgb(255, 0, 170, 85)),
-            ("Bright Sunny", Color.FromArgb(255, 255, 255, 102)),
-            ("Dim Sunny", Color.FromArgb(255, 204, 204, 0)),
-            ("Bright Citrus", Color.FromArgb(255, 255, 187, 85)),
-            ("Dim Citrus", Color.FromArgb(255, 204, 136, 34)),
-            ("Bright Ember", Color.FromArgb(255, 255, 102, 102)),
-            ("Dim Ember", Color.FromArgb(255, 204, 51, 51))
-        };
-
-        
+        }        
     }
 }

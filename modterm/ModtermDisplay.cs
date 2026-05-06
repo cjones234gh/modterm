@@ -23,8 +23,6 @@ namespace modterm
     {
         public FontFamily CurrentFont = new FontFamily("SimSun-ExtB");
         public FontFamily CurrentControlFont = new FontFamily("Consolas");
-        public Color InputColor { get; set; }
-        public Color InputGlowColor { get; set; }
         public Color OutputGlowColor { get; set; }
         public Color OutputColor { get; set; }
         public Color ControlColor { get; set; }
@@ -55,6 +53,7 @@ namespace modterm
 
         private float _currentFontSize;
         private float _currentControlFontSize;
+        private float _controlFontScale = 0.8f;
         private float _currentBgColorPadding; 
         private int _transparencyPct;
         private byte _alpha;
@@ -78,22 +77,11 @@ namespace modterm
             set
             {
                 _currentFontSize = value;
-                _currentBgColorPadding = _currentFontSize / 1.25f; // adjust background rectangle padding based on font size for better fit
-            }
-        }
-
-        public float CurrentControlFontSize
-        {
-            get
-            {
-                return _currentControlFontSize;
-            }
-            set
-            {
-                _currentControlFontSize = value;
-                ControlPadding = _currentControlFontSize/1.5f;
+                _currentControlFontSize = _currentFontSize * _controlFontScale;
+                ControlPadding = _currentControlFontSize / 1.5f;
                 ControlMargin = 5;// + (_currentFontSize / 2);
                 ControlMarginRight = 10;
+                _currentBgColorPadding = _currentFontSize / 1.25f; // adjust background rectangle padding based on font size for better fit
             }
         }
 
@@ -128,8 +116,7 @@ namespace modterm
         {
             // set default values
             CurrentFontSize = 12f;
-            CurrentControlFontSize = 11f;
-
+            _currentControlFontSize = CurrentFontSize * _controlFontScale;
 
             _namedColorConfigurations = CreateColorConfigurations();
             _namedColorConfigIndex = 0;
@@ -446,7 +433,7 @@ namespace modterm
             return new CanvasTextFormat
             {
                 FontFamily = CurrentControlFont.Source,
-                FontSize = CurrentControlFontSize
+                FontSize = _currentControlFontSize
             };
         }
 
