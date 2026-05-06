@@ -85,7 +85,7 @@ namespace modterm
             }
         }
 
-        public int TransparencyPct
+        public int OpacityPct
         {
             get
             {
@@ -195,7 +195,7 @@ namespace modterm
             ControlColor = config.ControlColor;
             ControlGlowColor = config.ControlGlowColor;
             BlurAmount = config.BlurAmount;
-            TransparencyPct = config.OpacityPct;
+            OpacityPct = config.OpacityPct;
             TintColor = config.TintColor;
             ControlEngagedColor = config.ControlEngagedColor;
             ControlEngagedHoverColor = config.ControlEngagedHoverColor;

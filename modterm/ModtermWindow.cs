@@ -236,7 +236,7 @@ namespace modterm
                 byte pct = (byte)(i * 10);
                 var item = new TextDisplayControl(i == 0 ? "Transparent 0%" : $"{pct}%", true);
                 item.Clicked += (_, __) => {
-                    _mtd.TransparencyPct = pct;
+                    _mtd.OpacityPct = pct;
                     _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate();
                 };
@@ -246,13 +246,13 @@ namespace modterm
             // system backdrop (Mica / Acrylic / custom blurred host backdrop)
             _systemBackdropBtn = new TextDisplayControl("SYSTEM BACKDROP", true);
             var blurredBackdropItem = new TextDisplayControl("BLURRED", true);
-            blurredBackdropItem.Clicked += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this);
+            blurredBackdropItem.Clicked += (_, __) => { _mtd.OpacityPct = 0; _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this); };
             _systemBackdropBtn.Children.Add(blurredBackdropItem);
             var micaBackdropItem = new TextDisplayControl("MICA", true);
-            micaBackdropItem.Clicked += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Mica, this);
+            micaBackdropItem.Clicked += (_, __) => { _mtd.OpacityPct = 0; _mtd.ApplySystemBackdrop(BackdropKind.Mica, this); };
             _systemBackdropBtn.Children.Add(micaBackdropItem);
             var acrylicBackdropItem = new TextDisplayControl("ACRYLIC", true);
-            acrylicBackdropItem.Clicked += (_, __) => _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this);
+            acrylicBackdropItem.Clicked += (_, __) => { _mtd.OpacityPct = 0; _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this); };
             _systemBackdropBtn.Children.Add(acrylicBackdropItem);
 
             // window tint
