@@ -48,6 +48,7 @@ namespace modterm
 
         // space between controls and canvas edges/other controls
         public float ControlMargin { get; set; }
+        public float ControlMarginRight { get; set; }
 
         // control scale based on font size to maintain consistent proportions
         public float CurrentFontSizeControlScale { get; set; }
@@ -92,6 +93,7 @@ namespace modterm
                 _currentControlFontSize = value;
                 ControlPadding = _currentControlFontSize/1.5f;
                 ControlMargin = 5;// + (_currentFontSize / 2);
+                ControlMarginRight = 10;
             }
         }
 
@@ -345,6 +347,12 @@ namespace modterm
             // Draw TextContent
             cds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
                 (float)control.Location.Y + ControlPadding / 2, controlColor, textFormat);
+
+            if (control.IsEngaged && control.Children is { Count: > 0 })
+            {
+                foreach (var child in control.Children)
+                    child.Draw(sender, cds, this);
+            }
         }
 
         public List<Color> GetColorWheelProgression(double StepDegrees, double Saturation, int NumColors)

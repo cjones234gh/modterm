@@ -21,6 +21,8 @@ namespace modterm
 
         public EventHandler Clicked { get; set; }
 
+        public List<ModtermControl> Children { get; set; } = new List<ModtermControl>();
+
         public abstract void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd);
 
         public void HandleClick()

@@ -131,10 +131,22 @@ namespace modterm
 
             _autoThemeBtn = new TextDisplayControl("THEME", true);
             _autoThemeBtn.Clicked += AutoThemeButton_Click;
+
             _sysbackdropBtn = new TextDisplayControl("BACKDROP", true);
+            
             _backdropOpacityBtn = new TextDisplayControl("OPACITY", true);
+            
             _backdropColorBtn = new TextDisplayControl("BACKCOLOR", true);
+
+            // font glow
             _glowBtn = new TextDisplayControl("GLOW", true);
+            var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
+            foreach (var s in glowSubAmts)
+            {
+                var item = new TextDisplayControl($"{s} radius", true);
+                item.Clicked += (_, __) => { _mtd.BlurAmount = s; ModtermCanvas.Invalidate(); };
+                _glowBtn.Children.Add(item);
+            }
 
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _appearanceInfoControl]);
@@ -198,6 +210,8 @@ namespace modterm
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
+            _rightButtonControls?.InvalidateExpandableChildMeasureCache();
+
             if (_suppressResizeHandling || _isResizeConfirmationInProgress)
             {
                 _lastWindowSize = this.AppWindow.Size;
@@ -491,27 +505,6 @@ namespace modterm
                 controlSizeSub.Items.Add(item);
             }
             _flyout.Items.Add(controlSizeSub);
-
-            // font glow
-            var glowSub = new MenuFlyoutSubItem { Text = "UI Glow" };
-            var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
-            foreach (var s in glowSubAmts)
-            {
-                var item = new MenuFlyoutItem { Text = $"{s} radius" };
-                item.Click += (_, __) => { _mtd.BlurAmount = s; ModtermCanvas.Invalidate(); };
-                glowSub.Items.Add(item);
-            }
-            _flyout.Items.Add(glowSub);
-
-            // input color
-            var inputColorSub = new MenuFlyoutSubItem { Text = "Input Color" };
-            foreach (var (name, col) in _colorOptions)
-            {
-                var item = new MenuFlyoutItem { Text = name };
-                item.Click += (_, __) => { _mtd.InputColor = col; ModtermCanvas.Invalidate(); };
-                inputColorSub.Items.Add(item);
-            }
-            _flyout.Items.Add(inputColorSub);
 
             // output color
             var outputColorSub = new MenuFlyoutSubItem { Text = "Output Color" };

@@ -217,31 +217,118 @@ namespace modterm
             ModtermCanvas.Invalidate();
         }
 
+        private static bool HasExpandableFlyout(ModtermControl control)
+            => control.Children is { Count: > 0 };
+
         private void ModtermCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
-            if (e.GetCurrentPoint(ModtermCanvas).Properties.IsLeftButtonPressed)
-            {
-                _isSelecting = true;
-                _selectionStart = currentPoint;
-                _selectionEnd = _selectionStart;
-                _selectedText = "";
+            if (!e.GetCurrentPoint(ModtermCanvas).Properties.IsLeftButtonPressed)
+                return;
 
-                foreach (var control in _rightButtonControls.Controls)
+            _isSelecting = true;
+            _selectionStart = currentPoint;
+            _selectionEnd = _selectionStart;
+            _selectedText = "";
+
+            // Flyout child (expanded parent)
+            foreach (var control in _rightButtonControls.Controls)
+            {
+                if (!HasExpandableFlyout(control) || !control.IsEngaged)
+                    continue;
+                foreach (var child in control.Children)
                 {
-                    if (control.Location.Contains(currentPoint) && control.Interactive)
+                    if (!child.Location.Contains(currentPoint) || !child.Interactive)
+                        continue;
+
+                    ClearRightDockExceptFlyoutChild(control, child);
+                    child.IsPressed = true;
+                    ModtermCanvas.Invalidate();
+                    return;
+                }
+            }
+
+            // Top-level right-dock controls
+            foreach (var control in _rightButtonControls.Controls)
+            {
+                if (!control.Location.Contains(currentPoint) || !control.Interactive)
+                    continue;
+
+                foreach (var other in _rightButtonControls.Controls)
+                {
+                    if (other == control)
+                        continue;
+                    other.IsPressed = false;
+                    if (HasExpandableFlyout(other))
                     {
-                        control.IsPressed = true;
-                        control.IsEngaged = true;
+                        other.IsEngaged = false;
+                        foreach (var ch in other.Children)
+                        {
+                            ch.IsPressed = false;
+                            ch.IsEngaged = false;
+                        }
                     }
                     else
-                    {
-                        control.IsPressed = false;
-                        control.IsEngaged = false;
-                    }
+                        other.IsEngaged = false;
                 }
 
+                control.IsPressed = true;
+                if (!HasExpandableFlyout(control))
+                    control.IsEngaged = true;
+
                 ModtermCanvas.Invalidate();
+                return;
+            }
+
+            // Click outside controls: dismiss flyouts
+            foreach (var c in _rightButtonControls.Controls)
+            {
+                c.IsPressed = false;
+                if (HasExpandableFlyout(c))
+                {
+                    c.IsEngaged = false;
+                    foreach (var ch in c.Children)
+                    {
+                        ch.IsPressed = false;
+                        ch.IsEngaged = false;
+                    }
+                }
+                else
+                    c.IsEngaged = false;
+            }
+
+            ModtermCanvas.Invalidate();
+        }
+
+        private void ClearRightDockExceptFlyoutChild(ModtermControl flyoutParent, ModtermControl activeChild)
+        {
+            foreach (var c in _rightButtonControls.Controls)
+            {
+                if (c == flyoutParent)
+                {
+                    foreach (var ch in c.Children)
+                    {
+                        if (ch != activeChild)
+                        {
+                            ch.IsPressed = false;
+                            ch.IsEngaged = false;
+                        }
+                    }
+                    continue;
+                }
+
+                c.IsPressed = false;
+                if (HasExpandableFlyout(c))
+                {
+                    c.IsEngaged = false;
+                    foreach (var ch in c.Children)
+                    {
+                        ch.IsPressed = false;
+                        ch.IsEngaged = false;
+                    }
+                }
+                else
+                    c.IsEngaged = false;
             }
         }
 
@@ -259,6 +346,16 @@ namespace modterm
             foreach (var control in _rightButtonControls.Controls)
             {
                 control.IsHovered = control.Location.Contains(currentPoint);
+                if (HasExpandableFlyout(control) && control.IsEngaged)
+                {
+                    foreach (var child in control.Children)
+                        child.IsHovered = child.Location.Contains(currentPoint);
+                }
+                else if (HasExpandableFlyout(control))
+                {
+                    foreach (var child in control.Children)
+                        child.IsHovered = false;
+                }
             }
 
             ModtermCanvas.Invalidate();
@@ -270,17 +367,51 @@ namespace modterm
             UpdateSelectedText();
 
             Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
+
+            // Finish flyout child click
             foreach (var control in _rightButtonControls.Controls)
             {
+                if (!HasExpandableFlyout(control) || !control.IsEngaged)
+                    continue;
+                foreach (var child in control.Children)
+                {
+                    if (!child.IsPressed)
+                        continue;
+                    bool over = child.Location.Contains(currentPoint);
+                    child.IsPressed = false;
+                    child.IsEngaged = false;
+                    if (over)
+                        child.HandleClick();
+                    control.IsEngaged = false;
+                    ModtermCanvas.Invalidate();
+                    return;
+                }
+            }
+
+            // Expandable anchor: toggle flyout or cancel press outside own bounds
+            foreach (var control in _rightButtonControls.Controls)
+            {
+                if (!HasExpandableFlyout(control) || !control.IsPressed)
+                    continue;
+                control.IsPressed = false;
+                if (control.Location.Contains(currentPoint))
+                    control.IsEngaged = !control.IsEngaged;
+                else
+                    control.IsEngaged = false;
+                ModtermCanvas.Invalidate();
+                return;
+            }
+
+            foreach (var control in _rightButtonControls.Controls)
+            {
+                if (HasExpandableFlyout(control))
+                    continue;
                 if (control.IsEngaged)
                 {
                     control.IsPressed = false;
                     control.IsEngaged = false;
-                    // Check if the pointer is still over the control on release to trigger click action
                     if (control.Location.Contains(currentPoint))
-                    {
                         control.HandleClick();
-                    }
                 }
             }
             ModtermCanvas.Invalidate();
