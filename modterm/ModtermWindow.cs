@@ -112,9 +112,9 @@ namespace modterm
 
             // set fonts until we have a config system in place
             _mtd.CurrentFont = new FontFamily("Consolas");
+            _mtd.CurrentControlFont = new FontFamily("Lucida Console");
             _mtd.CurrentFontSize = 12F;
-            _mtd.CurrentControlFont = new FontFamily("Consolas");
-
+            
             // set the color config to a preset on startup
             _mtd.SetColorConfiguration("BluePunk");
 
@@ -297,13 +297,12 @@ namespace modterm
 
             // font family
             _fontFamilyBtn = new TextDisplayControl("FONT", true);
-            var fonts = new[] { "CASCADIA MONO", "CONSOLAS", "COURIER NEW", "LUCIDA CONSOLE", "SIMSUN-EXTB" };
+            var fonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "SimSun-ExtB" };
             foreach (var f in fonts)
             {
                 var item = new TextDisplayControl(f, true);
                 item.Clicked += (_, __) => {
                     _mtd.CurrentFont = new FontFamily(f);
-                    _mtd.CurrentControlFont = new FontFamily(f);
                     ModtermCanvas.Invalidate();
                 };
                 _fontFamilyBtn.Children.Add(item);
@@ -311,7 +310,7 @@ namespace modterm
 
             // font size
             _fontSizeBtn = new TextDisplayControl("FONT SZ", true);
-            var sizes = new[] { 8, 10, 12, 13.5, 14.5, 15.5, 16.5, 17.5 };
+            var sizes = new[] { 8, 10, 12, 13, 14, 15, 16, 17, 19, 23 };
             foreach (var s in sizes)
             {
                 var item = new TextDisplayControl($"{s} pt", true);

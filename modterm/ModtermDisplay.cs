@@ -77,7 +77,7 @@ namespace modterm
             set
             {
                 _currentFontSize = value;
-                _currentControlFontSize = _currentFontSize * _controlFontScale;
+                _currentControlFontSize = 9.5f;// CurrentFontSize * _controlFontScale;
                 ControlPadding = _currentControlFontSize / 1.5f;
                 ControlMargin = 5;// + (_currentFontSize / 2);
                 ControlMarginRight = 10;
@@ -116,7 +116,7 @@ namespace modterm
         {
             // set default values
             CurrentFontSize = 12f;
-            _currentControlFontSize = CurrentFontSize * _controlFontScale;
+            _currentControlFontSize = 9.5f;// CurrentFontSize * _controlFontScale;
 
             _namedColorConfigurations = CreateColorConfigurations();
             _namedColorConfigIndex = 0;
