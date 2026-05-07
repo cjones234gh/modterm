@@ -43,21 +43,12 @@ namespace modterm
         private TextDisplayControl      _backdropOpacityBtn;
         private TextDisplayControl      _fontFamilyBtn;
         private TextDisplayControl      _fontSizeBtn;
-        private TextDisplayControl      _themeSelectBtn;
         private TextDisplayControl      _glowBtn;
         private TextDisplayControl      _shellSelBtn;
         
 
         // modterm display
         private ModtermDisplay _mtd = new ModtermDisplay();
-
-        // background tint drift state
-        private bool            _bgTintDriftEnabled = false;
-        private float           _bgTintDriftSaturation = 0;
-        private List<Color>     _bgTintDriftColors = new List<Color>();
-        private int             _bgTintDriftColorOffset = 0;
-        private int             _bgTintDriftIntervalMs = 300;
-        private Microsoft.UI.Dispatching.DispatcherQueueTimer _bgTintDriftTimer;
 
         // VT mode: cursor visibility only
         private bool            _cursorVisible = true;
@@ -93,30 +84,30 @@ namespace modterm
 
             _cursorTimer = DispatcherQueue.CreateTimer();
             _resizeStopTimer = DispatcherQueue.CreateTimer();
-            _bgTintDriftTimer = DispatcherQueue.CreateTimer();
 
             _terminal = new ConPTYTerminal();
             _flyout = new MenuFlyout();
 
+            // init modterm display and set default appearance config
+            _mtd.Initialize();
+
+            // load/create user config here
+            UserAppConfiguration uac = _mtd.GetDefaultAppConfiguration();
+            
             // default shell
-            _currentShell = _shellEnv.First(item => item.Name == "bash");
+            _currentShell = uac.TerminalShell;
+
+            // set fonts until we have a config system in place
+            _mtd.CurrentFont = new FontFamily(uac.TerminalFont);
+            _mtd.CurrentControlFont = new FontFamily(uac.TerminalControlFont);
+            _mtd.CurrentFontSize = uac.TerminalFontSize;
+
+            // set the color config to a preset on startup
+            _mtd.SetColorConfiguration("Clear");
 
             // Initialize VtNetCore terminal controller and data consumer
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
             _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
-
-            // todo: load/create user config here
-
-            // init modterm display and set default appearance config
-            _mtd.Initialize();
-
-            // set fonts until we have a config system in place
-            _mtd.CurrentFont = new FontFamily("Consolas");
-            _mtd.CurrentControlFont = new FontFamily("Lucida Console");
-            _mtd.CurrentFontSize = 12F;
-            
-            // set the color config to a preset on startup
-            _mtd.SetColorConfiguration("BluePunk");
 
             _vtController.SetRgbForegroundColor(_mtd.OutputColor.R, 
                 _mtd.OutputColor.G, _mtd.OutputColor.B);
@@ -160,16 +151,6 @@ namespace modterm
             {
                 _resizeStopTimer.Stop();
                 await ConfirmResizeRestartAsync();
-            };
-
-            // Background tint drift timer
-            _bgTintDriftTimer.Interval = TimeSpan.FromMilliseconds(_bgTintDriftIntervalMs);
-            _bgTintDriftTimer.Tick += (s, e) =>
-            {
-                _bgTintDriftColorOffset = (_bgTintDriftColorOffset + 1) % _bgTintDriftColors.Count;
-                _mtd.TintColor = _bgTintDriftColors[_bgTintDriftColorOffset];
-                _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
-                ModtermCanvas.Invalidate();
             };
 
             this.InitializeFlyouts();
@@ -218,7 +199,7 @@ namespace modterm
             // next theme button for fun - cycles through color presets
             _autoThemeBtn = new TextDisplayControl("THEME >", true);
             _autoThemeBtn.Clicked += AutoThemeButton_Click;
-
+            
             // font glow
             _glowBtn = new TextDisplayControl("GLOW", true);
             var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
@@ -272,27 +253,10 @@ namespace modterm
                 var item = new TextDisplayControl(label, true);
                 item.Clicked += (_, __) => {
                     _mtd.TintColor = tint;
-                    _bgTintDriftEnabled = false;
-                    _bgTintDriftTimer.Stop();
                     _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate();
                 };
                 _backdropColorBtn.Children.Add(item);
-            }
-
-            // theme
-            _themeSelectBtn = new TextDisplayControl("SEL THEME", true);
-            foreach (var preset in _mtd.GetConfigurationNames())
-            {
-                var item = new TextDisplayControl(preset, true);
-                item.Clicked += (_, __) => {
-                    _mtd.SetColorConfiguration(preset);
-                    _bgTintDriftEnabled = false;
-                    _bgTintDriftTimer.Stop();
-                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
-                    ModtermCanvas.Invalidate();
-                };
-                _themeSelectBtn.Children.Add(item);
             }
 
             // font family
@@ -341,7 +305,7 @@ namespace modterm
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _appearanceInfoControl]);
             _rightButtonControls.Controls.AddRange(
-                [_autoThemeBtn, _themeSelectBtn, _fontFamilyBtn, _fontSizeBtn,
+                [_autoThemeBtn, _fontFamilyBtn, _fontSizeBtn,
                 _systemBackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn, _shellSelBtn]);
         }
 
@@ -473,23 +437,22 @@ namespace modterm
             var pasteItem = new MenuFlyoutItem { Text = "Paste" };
             pasteItem.Click += (_, __) => PasteFromClipboard();
             _flyout.Items.Add(pasteItem);
-            _flyout.Items.Add(new MenuFlyoutSeparator());
-                       
-                
-            // Drift option with saturation sub-flyout
-            var driftSub = new MenuFlyoutItem { Text = "Drifting Tint Color" };
-            driftSub.Click += (_, __) => {
-                    _bgTintDriftEnabled = true;
-                    _bgTintDriftSaturation = 0.5f;
-                    _bgTintDriftColors.Clear();
-                    _bgTintDriftColors = _mtd.GetColorWheelProgression(0.5, _bgTintDriftSaturation, 720);
-                    _bgTintDriftColorOffset = 0;
-                    _bgTintDriftTimer.Start();
-                    ModtermCanvas.Invalidate();
-                };
-            _flyout.Items.Add(driftSub);
 
             _flyout.Items.Add(new MenuFlyoutSeparator());
+
+            // theme
+            var themeItem = new MenuFlyoutSubItem { Text = "Theme" };
+            foreach (var preset in _mtd.GetConfigurationNames())
+            {
+                var item = new MenuFlyoutItem { Text = preset };
+                item.Click += (_, __) => {
+                    _mtd.SetColorConfiguration(preset);
+                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+                    ModtermCanvas.Invalidate();
+                };
+                themeItem.Items.Add(item);
+            }
+            _flyout.Items.Add(themeItem);
         }        
     }
 }

@@ -13,7 +13,25 @@ namespace modterm
 {
     public partial class ModtermDisplay
     {
-        private List<ColorConfiguration> CreateColorConfigurations()
+        public UserAppConfiguration GetDefaultAppConfiguration()
+        {
+            string conargs = "--headless --width [W] --height [H] -- ";
+            return new UserAppConfiguration()
+            {
+                WindowLocation = new Windows.Foundation.Rect(100, 100, 800, 600),
+                TerminalFont = "Consolas",
+                TerminalControlFont = "Lucida Console",
+                TerminalFontSize = 12.0f,
+                TerminalShell = new Shell 
+                { 
+                    Name = "powershell", 
+                    Path = "conhost", 
+                    Arguments = conargs + "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" 
+                },
+                TerminalCursor = "bar"
+            };
+        }
+        private List<ColorConfiguration> GetDefaultColorConfigurations()
         {
 
             return new List<ColorConfiguration>()
@@ -22,12 +40,12 @@ namespace modterm
                 {
                     Name = "Clear",
                     OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputGlowColor = GetColorFromHexString("#00eeff"),
+                    OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = GetColorFromHexString("#d77b27"),
-                    ControlGlowColor = GetColorFromHexString("#c14fff"),
+                    ControlBlurColor = GetColorFromHexString("#c14fff"),
                     BlurAmount = 5.0f,
-                    OpacityPct = 0,
-                    TintColor = GetColorFromHexString("#000000"),
+                    WindowOpacityPct = 0,
+                    WindowColor = GetColorFromHexString("#000000"),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
@@ -35,12 +53,12 @@ namespace modterm
                 {
                     Name = "Matrix",
                     OutputColor = Color.FromArgb(255, 100, 255, 0), // <- nice green
-                    OutputGlowColor = Color.FromArgb(255, 100, 255, 0),
+                    OutputBlurColor = Color.FromArgb(255, 100, 255, 0),
                     ControlColor = Color.FromArgb(255, 100, 255, 0),
-                    ControlGlowColor = Color.FromArgb(255, 100, 255, 0),
+                    ControlBlurColor = Color.FromArgb(255, 100, 255, 0),
                     BlurAmount = 7.0f,
-                    OpacityPct = 80,
-                    TintColor = Colors.Black,
+                    WindowOpacityPct = 80,
+                    WindowColor = Colors.Black,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
@@ -48,12 +66,12 @@ namespace modterm
                 {
                     Name = "BluePunk",
                     OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputGlowColor = GetColorFromHexString("#00eeff"),
+                    OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = Colors.Cyan,
-                    ControlGlowColor = Colors.Magenta,
+                    ControlBlurColor = Colors.Magenta,
                     BlurAmount = 10.0f,
-                    OpacityPct = 8,
-                    TintColor = Colors.DarkSlateBlue,
+                    WindowOpacityPct = 8,
+                    WindowColor = Colors.DarkSlateBlue,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.DarkRed
                 },
@@ -61,12 +79,12 @@ namespace modterm
                 {
                     Name = "Neuromancer",
                     OutputColor = GetColorFromHexString("#50ff8c"), 
-                    OutputGlowColor = GetColorFromHexString("#00eeff"), 
+                    OutputBlurColor = GetColorFromHexString("#00eeff"), 
                     ControlColor = GetColorFromHexString("#6e8ffa"), 
-                    ControlGlowColor = GetColorFromHexString("#c14fff"),
+                    ControlBlurColor = GetColorFromHexString("#c14fff"),
                     BlurAmount = 5.0f,
-                    OpacityPct = 30,
-                    TintColor = Colors.DarkTurquoise,
+                    WindowOpacityPct = 30,
+                    WindowColor = Colors.DarkTurquoise,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
@@ -74,12 +92,12 @@ namespace modterm
                 {
                     Name = "Cyberpunk",
                     OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputGlowColor = GetColorFromHexString("#00eeff"),
+                    OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = Colors.Cyan,
-                    ControlGlowColor = Colors.Magenta,
+                    ControlBlurColor = Colors.Magenta,
                     BlurAmount = 3.0f,
-                    OpacityPct = 20,
-                    TintColor = Color.FromArgb(255, 153, 0, 255),
+                    WindowOpacityPct = 20,
+                    WindowColor = Color.FromArgb(255, 153, 0, 255),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.DarkRed
                 },
@@ -87,12 +105,12 @@ namespace modterm
                 {
                     Name = "Mad Scientist",
                     OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputGlowColor = GetColorFromHexString("#00eeff"),
+                    OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = GetColorFromHexString("#d77b27"),
-                    ControlGlowColor = GetColorFromHexString("#c14fff"),
+                    ControlBlurColor = GetColorFromHexString("#c14fff"),
                     BlurAmount = 5.0f,
-                    OpacityPct = 20,
-                    TintColor = GetColorFromHexString("#b0ff19"),
+                    WindowOpacityPct = 20,
+                    WindowColor = GetColorFromHexString("#b0ff19"),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
 
@@ -102,12 +120,12 @@ namespace modterm
                 {
                     Name = "Aqua",
                     OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputGlowColor = GetColorFromHexString("#00eeff"),
+                    OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = Colors.Cyan,
-                    ControlGlowColor = Colors.Magenta,
+                    ControlBlurColor = Colors.Magenta,
                     BlurAmount = 8.0f,
-                    OpacityPct = 10,
-                    TintColor = Colors.Aqua,
+                    WindowOpacityPct = 10,
+                    WindowColor = Colors.Aqua,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
@@ -115,12 +133,12 @@ namespace modterm
                 {
                     Name = "Cut Paper",
                     OutputColor = Colors.DimGray,
-                    OutputGlowColor = Colors.DarkGray,
+                    OutputBlurColor = Colors.DarkGray,
                     ControlColor = Colors.DarkGray,
-                    ControlGlowColor = Colors.LightGray,
+                    ControlBlurColor = Colors.LightGray,
                     BlurAmount = 4.0f,
-                    OpacityPct = 100,
-                    TintColor = Colors.LightGoldenrodYellow,
+                    WindowOpacityPct = 100,
+                    WindowColor = Colors.LightGoldenrodYellow,
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 }

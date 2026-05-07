@@ -24,8 +24,6 @@ namespace modterm
         private int _leftTextPadding = 5;
         private int _topTextPadding = 33;
 
-        // Offset for banner color cycling effect
-        private int _bannerColorOffset = 0;
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
             // Do not spawn the conhost until we can measure the canvas during drawing and determine how many rows/columns we can fit

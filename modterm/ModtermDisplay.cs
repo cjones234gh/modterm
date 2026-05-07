@@ -21,8 +21,8 @@ namespace modterm
 
     public partial class ModtermDisplay
     {
-        public FontFamily CurrentFont = new FontFamily("SimSun-ExtB");
-        public FontFamily CurrentControlFont = new FontFamily("Consolas");
+        public FontFamily CurrentFont {  get; set; }
+        public FontFamily CurrentControlFont {  get; set; }
         public Color OutputGlowColor { get; set; }
         public Color OutputColor { get; set; }
         public Color ControlColor { get; set; }
@@ -77,7 +77,7 @@ namespace modterm
             set
             {
                 _currentFontSize = value;
-                _currentControlFontSize = 9.5f;// CurrentFontSize * _controlFontScale;
+                _currentControlFontSize = CurrentFontSize * _controlFontScale;
                 ControlPadding = _currentControlFontSize / 1.5f;
                 ControlMargin = 5;// + (_currentFontSize / 2);
                 ControlMarginRight = 10;
@@ -116,9 +116,7 @@ namespace modterm
         {
             // set default values
             CurrentFontSize = 12f;
-            _currentControlFontSize = 9.5f;// CurrentFontSize * _controlFontScale;
-
-            _namedColorConfigurations = CreateColorConfigurations();
+            _namedColorConfigurations = GetDefaultColorConfigurations();
             _namedColorConfigIndex = 0;
 
             // internal control defaults
@@ -127,9 +125,6 @@ namespace modterm
             SharpBorderTransparency = 150;
             SharpFillTransparency = 40;
             LineWidth = 0.5f;
-
-            SetColorConfiguration("Clear");
-
         }
 
         public void ApplySystemBackdrop(BackdropKind kind, Window wInstance)
@@ -191,12 +186,12 @@ namespace modterm
         public void SetColorConfiguration(ColorConfiguration config)
         {
             OutputColor = config.OutputColor;
-            OutputGlowColor = config.OutputGlowColor;
+            OutputGlowColor = config.OutputBlurColor;
             ControlColor = config.ControlColor;
-            ControlGlowColor = config.ControlGlowColor;
+            ControlGlowColor = config.ControlBlurColor;
             BlurAmount = config.BlurAmount;
-            OpacityPct = config.OpacityPct;
-            TintColor = config.TintColor;
+            OpacityPct = config.WindowOpacityPct;
+            TintColor = config.WindowColor;
             ControlEngagedColor = config.ControlEngagedColor;
             ControlEngagedHoverColor = config.ControlEngagedHoverColor;
             _backgroundBrush.Color = GetBackgroundArgb();

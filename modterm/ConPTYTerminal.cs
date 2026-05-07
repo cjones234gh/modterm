@@ -29,15 +29,6 @@ namespace modterm
         private Task?           _readTask;
         private bool            _disposed;
         private IntPtr          _attrListPtr = IntPtr.Zero;
-        private List<Color>     _bannerColors;
-        private IntPtr          _conhostWindow = IntPtr.Zero;
-        private int             _conhostProcessId = -1;
-        private int             _conhostBaseWindowWidth = 0;
-        private int             _conhostBaseWindowHeight = 0;
-        private short           _conhostBaseCols = 0;
-        private short           _conhostBaseRows = 0;
-        private bool            _useConhostWindowResize = false;
-        private int             _conhostWindowProcessId = -1;
 
         public event EventHandler<string>? OutputReceived;
 
@@ -45,6 +36,7 @@ namespace modterm
         {
             return _process?.Id ?? -1;
         }
+
         public ConPTYTerminal()
         {
             _inputWrite = new SafeFileHandle();
@@ -311,14 +303,6 @@ namespace modterm
                 Marshal.FreeHGlobal(_hPCPtr);
                 _hPCPtr = IntPtr.Zero;
             }
-            _conhostWindow = IntPtr.Zero;
-            _conhostProcessId = -1;
-            _conhostBaseWindowWidth = 0;
-            _conhostBaseWindowHeight = 0;
-            _conhostBaseCols = 0;
-            _conhostBaseRows = 0;
-            _useConhostWindowResize = false;
-            _conhostWindowProcessId = -1;
         }
 
         // P/Invoke for Windows API access
