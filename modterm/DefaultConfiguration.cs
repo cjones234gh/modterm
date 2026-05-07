@@ -45,7 +45,7 @@ namespace modterm
                     ControlColor = GetColorFromHexString("#ff4fc1"),
                     ControlBlurColor = GetColorFromHexString("#3333ff"),
                     BlurAmount = 7.0f,
-                    WindowOpacityPct = 10,
+                    WindowOpacityPct = 20,
                     WindowColor = GetColorFromHexString("#000066"),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
@@ -65,14 +65,14 @@ namespace modterm
                 },
                 new ColorConfiguration
                 {
-                    Name = "BluePunk",
+                    Name = "Cyber Eggplant",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = Colors.Cyan,
                     ControlBlurColor = Colors.Magenta,
-                    BlurAmount = 10.0f,
-                    WindowOpacityPct = 8,
-                    WindowColor = Colors.DarkSlateBlue,
+                    BlurAmount = 15.0f,
+                    WindowOpacityPct = 60,
+                    WindowColor = GetColorFromHexString("#280654"),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.DarkRed
                 },
