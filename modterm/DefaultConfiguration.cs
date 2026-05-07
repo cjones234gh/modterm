@@ -78,16 +78,16 @@ namespace modterm
                 },
                 new ColorConfiguration()
                 {
-                    Name = "Neuromancer",
+                    Name = "Blurromancer",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = GetColorFromHexString("#6e8ffa"),
-                    ControlBlurColor = GetColorFromHexString("#c14fff"),
+                    ControlColor = Colors.Cyan,
+                    ControlBlurColor = Colors.Blue,
                     BlurAmount = 5.0f,
                     WindowOpacityPct = 30,
-                    WindowColor = Colors.DarkTurquoise,
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red
+                    WindowColor = Colors.DarkBlue,
+                    ControlEngagedColor = Colors.Orange,
+                    ControlEngagedHoverColor = Colors.Orange
                 },
                 new ColorConfiguration
                 {
@@ -101,21 +101,6 @@ namespace modterm
                     WindowColor = Color.FromArgb(255, 153, 0, 255),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.DarkRed
-                },
-                new ColorConfiguration
-                {
-                    Name = "Mad Scientist",
-                    OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = GetColorFromHexString("#d77b27"),
-                    ControlBlurColor = GetColorFromHexString("#c14fff"),
-                    BlurAmount = 5.0f,
-                    WindowOpacityPct = 20,
-                    WindowColor = GetColorFromHexString("#b0ff19"),
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red
-
-
                 },
                 new ColorConfiguration
                 {
@@ -136,12 +121,12 @@ namespace modterm
                     OutputColor = Colors.DimGray,
                     OutputBlurColor = Colors.DarkGray,
                     ControlColor = Colors.DarkGray,
-                    ControlBlurColor = Colors.LightGray,
-                    BlurAmount = 4.0f,
+                    ControlBlurColor = Colors.AliceBlue,
+                    BlurAmount = 2.0f,
                     WindowOpacityPct = 100,
                     WindowColor = Colors.LightGoldenrodYellow,
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red
+                    ControlEngagedColor = Colors.Navy,
+                    ControlEngagedHoverColor = Colors.Navy
                 }
             };
         }
