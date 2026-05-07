@@ -8,7 +8,7 @@
         xmlns:modterm="using:modterm"
         xmlns:win2dcanvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
         mc:Ignorable="d"
-        Title="Modern Terminal">
+        Title="modterm">
 
     <Window.SystemBackdrop>
         <modterm:BlurredBackdrop/>
