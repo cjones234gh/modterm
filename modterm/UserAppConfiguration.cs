@@ -15,5 +15,7 @@ namespace modterm
         public float TerminalFontSize { get; set; }
         public Shell TerminalShell { get; set; } = null!;
         public string TerminalCursor { get; set; } = string.Empty;
+
+        public string ColorConfiguration { get; set; } = string.Empty;
     }
 }

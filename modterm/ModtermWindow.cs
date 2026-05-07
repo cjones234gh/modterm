@@ -100,16 +100,11 @@ namespace modterm
             // load/create user config here
             UserAppConfiguration uac = _mtd.GetDefaultAppConfiguration();
             
-            // default shell
             _currentShell = uac.TerminalShell;
-
-            // set fonts until we have a config system in place
             _mtd.CurrentFont = new FontFamily(uac.TerminalFont);
             _mtd.CurrentControlFont = new FontFamily(uac.TerminalControlFont);
             _mtd.CurrentFontSize = uac.TerminalFontSize;
-
-            // set the color config to a preset on startup
-            _mtd.SetColorConfiguration("Clear");
+            _mtd.SetColorConfiguration(uac.ColorConfiguration);
 
             // all modterm-style labels and flyout controls
             InitializeModtermControls();

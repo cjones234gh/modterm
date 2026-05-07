@@ -28,7 +28,8 @@ namespace modterm
                     Path = "conhost", 
                     Arguments = conargs + "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" 
                 },
-                TerminalCursor = "bar"
+                TerminalCursor = "bar",
+                ColorConfiguration = "User"
             };
         }
         private List<ColorConfiguration> GetDefaultColorConfigurations()
@@ -38,14 +39,14 @@ namespace modterm
             {
                 new ColorConfiguration()
                 {
-                    Name = "Clear",
+                    Name = "User",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = GetColorFromHexString("#d77b27"),
-                    ControlBlurColor = GetColorFromHexString("#c14fff"),
-                    BlurAmount = 5.0f,
-                    WindowOpacityPct = 0,
-                    WindowColor = GetColorFromHexString("#000000"),
+                    ControlColor = GetColorFromHexString("#ff4fc1"),
+                    ControlBlurColor = GetColorFromHexString("#3333ff"),
+                    BlurAmount = 7.0f,
+                    WindowOpacityPct = 10,
+                    WindowColor = GetColorFromHexString("#000066"),
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
@@ -78,9 +79,9 @@ namespace modterm
                 new ColorConfiguration()
                 {
                     Name = "Neuromancer",
-                    OutputColor = GetColorFromHexString("#50ff8c"), 
-                    OutputBlurColor = GetColorFromHexString("#00eeff"), 
-                    ControlColor = GetColorFromHexString("#6e8ffa"), 
+                    OutputColor = GetColorFromHexString("#50ff8c"),
+                    OutputBlurColor = GetColorFromHexString("#00eeff"),
+                    ControlColor = GetColorFromHexString("#6e8ffa"),
                     ControlBlurColor = GetColorFromHexString("#c14fff"),
                     BlurAmount = 5.0f,
                     WindowOpacityPct = 30,
