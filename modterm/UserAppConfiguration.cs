@@ -10,10 +10,10 @@ namespace modterm
     public class UserAppConfiguration
     {
         public Rect WindowLocation { get; set; }
-        public string TerminalFont { get; set; }
-        public string TerminalControlFont { get; set; }
+        public string TerminalFont { get; set; } = string.Empty;
+        public string TerminalControlFont { get; set; } = string.Empty;
         public float TerminalFontSize { get; set; }
-        public Shell TerminalShell { get; set; }
-        public string TerminalCursor { get; set; }
+        public Shell TerminalShell { get; set; } = null!;
+        public string TerminalCursor { get; set; } = string.Empty;
     }
 }

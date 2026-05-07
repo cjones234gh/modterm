@@ -75,7 +75,7 @@ namespace modterm
             float canvasWidth = (float)sender.ActualWidth;
             float canvasHeight = (float)sender.ActualHeight;
 
-            float x = 0, y = 0;
+            float y = 0;
 
             switch (Dock)
             {

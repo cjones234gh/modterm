@@ -21,8 +21,8 @@ namespace modterm
 
     public partial class ModtermDisplay
     {
-        public FontFamily CurrentFont {  get; set; }
-        public FontFamily CurrentControlFont {  get; set; }
+        public FontFamily CurrentFont { get; set; } = null!;
+        public FontFamily CurrentControlFont { get; set; } = null!;
         public Color OutputGlowColor { get; set; }
         public Color OutputColor { get; set; }
         public Color ControlColor { get; set; }
@@ -39,7 +39,7 @@ namespace modterm
         public float BlurAmount { get; set; }
 
         // theme
-        public string CurrentConfigurationName { get; set; }
+        public string CurrentConfigurationName { get; set; } = string.Empty;
 
         // space between content and control borders
         public float ControlPadding { get; set; }
@@ -64,8 +64,8 @@ namespace modterm
 
         private bool _effectSequenceStarted = false;
         private List<DrawTextCall> _effectSequence = new List<DrawTextCall>();
-        private CanvasControl _sender;
-        private CanvasDrawingSession _drawSession;
+        private CanvasControl _sender = null!;
+        private CanvasDrawingSession _drawSession = null!;
         private Effects _effect = Effects.None;
 
         public float CurrentFontSize
@@ -235,9 +235,9 @@ namespace modterm
         public void SetColorConfiguration(string configurationName)
         {
             var config = _namedColorConfigurations.Find(c => c.Name == configurationName);
-            CurrentConfigurationName = config.Name;
             if (config != null)
             {
+                CurrentConfigurationName = config.Name;
                 SetColorConfiguration(config);
             }
         }

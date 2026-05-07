@@ -163,7 +163,7 @@ namespace modterm
             }
 
             // Map special keys to VT sequences
-            string vtSeq = null;
+            string vtSeq = string.Empty;
             switch (e.Key)
             {
                 case Windows.System.VirtualKey.Enter:
@@ -203,7 +203,7 @@ namespace modterm
                     var keyChar = GetCharFromVirtualKey(e.Key, e);
                     if (keyChar != null)
                     {
-                        vtSeq = keyChar.ToString();
+                        vtSeq = keyChar.ToString() ?? "";
                     }
                     //Debug.WriteLine($"Key: {e.Key}, Char: {keyChar}, Ctrl: {isCtrlPressed}");
                     break;

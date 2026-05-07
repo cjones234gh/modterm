@@ -19,17 +19,20 @@ namespace modterm
         public float Y;
         public float Width;
         public float Height;
-        public string Text;
+
+        public string Text = string.Empty;
+
         public Color Color;
         public Color BackgroundColor;
-        /// <summary>VT SGR default foreground (CSI 39); host theme should replace resolved color.</summary>
+
+        // VT SGR default foreground (CSI 39); host theme should replace resolved color.
         public bool ForegroundIsDefault;
-        /// <summary>VT SGR default background (CSI 49); skip cell background fill.</summary>
+        
+        // VT SGR default background (CSI 49); skip cell background fill.
         public bool BackgroundIsDefault;
-        public CanvasTextFormat TextFormat;
-
-        public DrawTextCall() { }
-
+        
+        public CanvasTextFormat TextFormat = null!;
+        
         public DrawTextCall(string text, float x, float y, float width, Color color, Color backgroundColor, 
                     CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false)
         {

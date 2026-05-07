@@ -27,6 +27,7 @@ namespace modterm
         public ModtermWindow()
         {
             this.InitializeComponent();
+
             this.InitializeApplication();
 
             AppWindow.SetIcon("modterm.ico");

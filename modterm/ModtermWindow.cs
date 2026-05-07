@@ -9,7 +9,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.System;
+
 using Windows.UI;
 using Windows.Foundation;
 using Windows.Graphics;
@@ -21,30 +21,29 @@ namespace modterm
     public sealed partial class ModtermWindow : Window
     {
         // VtNetCore terminal state
-        private VtNetCore.VirtualTerminal.VirtualTerminalController _vtController;
-        private VtNetCore.XTermParser.DataConsumer _vtDataConsumer;
+        private VtNetCore.VirtualTerminal.VirtualTerminalController _vtController = null!;
+        private VtNetCore.XTermParser.DataConsumer _vtDataConsumer = null!;
 
         // main terminal logic and state
-        private ConPTYTerminal  _terminal;
+        private ConPTYTerminal  _terminal = null!;
         private Shell           _currentShell = new Shell();
         private int             _scrollOffset = 0;
-        private Microsoft.UI.Dispatching.DispatcherQueueTimer _cursorTimer;
-        private Microsoft.UI.Dispatching.DispatcherQueueTimer _resizeStopTimer;
-
+        private DispatcherQueueTimer _cursorTimer = null!;
+        private DispatcherQueueTimer _resizeStopTimer = null!;
         // modterm UI controls
-        private ControlGroup            _titleBarControls;
-        private ControlGroup            _rightButtonControls;
-        private TextDisplayControl      _pathControl;
-        private TextDisplayControl      _appearanceInfoControl;
-        private TextDisplayControl      _autoThemeBtn;
+        private ControlGroup            _titleBarControls = null!;
+        private ControlGroup            _rightButtonControls = null!;
+        private TextDisplayControl      _pathControl = null!;
+        private TextDisplayControl      _appearanceInfoControl = null!;
+        private TextDisplayControl      _autoThemeBtn = null!;
         private int                     _autoThemeIndex = 0;
-        private TextDisplayControl      _systemBackdropBtn;
-        private TextDisplayControl      _backdropColorBtn;
-        private TextDisplayControl      _backdropOpacityBtn;
-        private TextDisplayControl      _fontFamilyBtn;
-        private TextDisplayControl      _fontSizeBtn;
-        private TextDisplayControl      _glowBtn;
-        private TextDisplayControl      _shellSelBtn;
+        private TextDisplayControl      _systemBackdropBtn = null!;
+        private TextDisplayControl      _backdropColorBtn = null!;
+        private TextDisplayControl      _backdropOpacityBtn = null!;
+        private TextDisplayControl      _fontFamilyBtn = null!;
+        private TextDisplayControl      _fontSizeBtn = null!;
+        private TextDisplayControl      _glowBtn = null!;
+        private TextDisplayControl      _shellSelBtn = null!;
         
 
         // modterm display
@@ -55,7 +54,7 @@ namespace modterm
         private int             _cursorSpeed = 500;
 
         // context menu flyout for right-click
-        private MenuFlyout _flyout;
+        private MenuFlyout _flyout = null!;
         private SizeInt32 _lastWindowSize;
         private SizeInt32 _resizeStartSize;
         private SizeInt32 _resizeEndSize;
@@ -81,13 +80,20 @@ namespace modterm
 
         private void InitializeApplication()
         {
+            _flyout = new MenuFlyout();
 
             _cursorTimer = DispatcherQueue.CreateTimer();
             _resizeStopTimer = DispatcherQueue.CreateTimer();
 
             _terminal = new ConPTYTerminal();
-            _flyout = new MenuFlyout();
 
+            // Initialize VtNetCore terminal controller and data consumer
+            _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
+            _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
+
+            _vtController.SetRgbForegroundColor(_mtd.OutputColor.R,
+                _mtd.OutputColor.G, _mtd.OutputColor.B);
+                        
             // init modterm display and set default appearance config
             _mtd.Initialize();
 
@@ -104,13 +110,6 @@ namespace modterm
 
             // set the color config to a preset on startup
             _mtd.SetColorConfiguration("Clear");
-
-            // Initialize VtNetCore terminal controller and data consumer
-            _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
-            _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
-
-            _vtController.SetRgbForegroundColor(_mtd.OutputColor.R, 
-                _mtd.OutputColor.G, _mtd.OutputColor.B);
 
             // all modterm-style labels and flyout controls
             InitializeModtermControls();
@@ -355,7 +354,7 @@ namespace modterm
             ModtermCanvas.Invalidate();
         }
 
-        private void AutoThemeButton_Click(object sender, EventArgs e)
+        private void AutoThemeButton_Click(object? sender, EventArgs e)
         {
             // cycle through color presets for fun
             var presets = _mtd.GetConfigurationNames();
