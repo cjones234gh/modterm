@@ -59,7 +59,7 @@ namespace modterm
         private byte _alpha;
         private Color _tintColor;
         private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.Red);
-        private List<ColorConfiguration> _namedColorConfigurations = new List<ColorConfiguration>();
+        private List<ThemeConfiguration> _namedColorConfigurations = new List<ThemeConfiguration>();
         private int _namedColorConfigIndex = 0;
 
         private bool _effectSequenceStarted = false;
@@ -183,7 +183,7 @@ namespace modterm
                 : Color.FromArgb(_alpha, TintColor.R, TintColor.G, TintColor.B);
         }
 
-        public void SetColorConfiguration(ColorConfiguration config)
+        public void SetColorConfiguration(ThemeConfiguration config)
         {
             OutputColor = config.OutputColor;
             OutputGlowColor = config.OutputBlurColor;

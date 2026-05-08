@@ -32,12 +32,12 @@ namespace modterm
                 ColorConfiguration = "User"
             };
         }
-        private List<ColorConfiguration> GetDefaultColorConfigurations()
+        private List<ThemeConfiguration> GetDefaultColorConfigurations()
         {
 
-            return new List<ColorConfiguration>()
+            return new List<ThemeConfiguration>()
             {
-                new ColorConfiguration()
+                new ThemeConfiguration()
                 {
                     Name = "User",
                     OutputColor = GetColorFromHexString("#50ff8c"),
@@ -50,7 +50,7 @@ namespace modterm
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
-                new ColorConfiguration()
+                new ThemeConfiguration()
                 {
                     Name = "Matrix",
                     OutputColor = Color.FromArgb(255, 100, 255, 0), // <- nice green
@@ -63,7 +63,7 @@ namespace modterm
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
-                new ColorConfiguration
+                new ThemeConfiguration
                 {
                     Name = "Cyber Eggplant",
                     OutputColor = GetColorFromHexString("#50ff8c"),
@@ -76,7 +76,7 @@ namespace modterm
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.DarkRed
                 },
-                new ColorConfiguration()
+                new ThemeConfiguration()
                 {
                     Name = "Blurromancer",
                     OutputColor = GetColorFromHexString("#50ff8c"),
@@ -89,7 +89,7 @@ namespace modterm
                     ControlEngagedColor = Colors.Orange,
                     ControlEngagedHoverColor = Colors.Orange
                 },
-                new ColorConfiguration
+                new ThemeConfiguration
                 {
                     Name = "Cyberpunk",
                     OutputColor = GetColorFromHexString("#50ff8c"),
@@ -102,7 +102,7 @@ namespace modterm
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.DarkRed
                 },
-                new ColorConfiguration
+                new ThemeConfiguration
                 {
                     Name = "Aqua",
                     OutputColor = GetColorFromHexString("#50ff8c"),
@@ -115,7 +115,7 @@ namespace modterm
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red
                 },
-                new ColorConfiguration
+                new ThemeConfiguration
                 {
                     Name = "Cut Paper",
                     OutputColor = Colors.DimGray,

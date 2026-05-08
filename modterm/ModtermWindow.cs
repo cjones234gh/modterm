@@ -15,6 +15,7 @@ using Windows.Foundation;
 using Windows.Graphics;
 using System.Linq;
 using System.IO;
+using System.Text.Json;
 
 namespace modterm
 {
@@ -44,7 +45,14 @@ namespace modterm
         private TextDisplayControl      _fontSizeBtn = null!;
         private TextDisplayControl      _glowBtn = null!;
         private TextDisplayControl      _shellSelBtn = null!;
-        
+
+        // user storage for configs, themes, etc.
+        private string _userConfigDirectory = string.Empty;
+        private string _userAppConfigPath = string.Empty;
+        private string _userThemePath = string.Empty;
+
+        // user app configuration
+        private UserAppConfiguration _uac;
 
         // modterm display
         private ModtermDisplay _mtd = new ModtermDisplay();
@@ -97,14 +105,36 @@ namespace modterm
             // init modterm display and set default appearance config
             _mtd.Initialize();
 
-            // load/create user config here
-            UserAppConfiguration uac = _mtd.GetDefaultAppConfiguration();
-            
-            _currentShell = uac.TerminalShell;
-            _mtd.CurrentFont = new FontFamily(uac.TerminalFont);
-            _mtd.CurrentControlFont = new FontFamily(uac.TerminalControlFont);
-            _mtd.CurrentFontSize = uac.TerminalFontSize;
-            _mtd.SetColorConfiguration(uac.ColorConfiguration);
+            _userConfigDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "modterm");
+            Directory.CreateDirectory(_userConfigDirectory);
+            _userAppConfigPath = Path.Combine(_userConfigDirectory, "userAppConfig.json");
+            _userThemePath = Path.Combine(_userConfigDirectory, "userTheme.json");
+
+            if (File.Exists(_userAppConfigPath))
+            {
+                // Load user config from file
+                string json = File.ReadAllText(_userAppConfigPath);
+                _uac = JsonSerializer.Deserialize<UserAppConfiguration>(json) ?? _mtd.GetDefaultAppConfiguration();
+            }
+            else
+            {
+                _uac = _mtd.GetDefaultAppConfiguration();
+                // write it to file for next time
+                string json = JsonSerializer.Serialize(_uac, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_userAppConfigPath, json);
+            }
+            _uac.PropertyChanged += (s, e) =>
+            {
+                // persist config changes immediately
+                string json = JsonSerializer.Serialize(_uac, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_userAppConfigPath, json);
+            };
+
+            _currentShell = _uac.TerminalShell;
+            _mtd.CurrentFont = new FontFamily(_uac.TerminalFont);
+            _mtd.CurrentControlFont = new FontFamily(_uac.TerminalControlFont);
+            _mtd.CurrentFontSize = _uac.TerminalFontSize;
+            _mtd.SetColorConfiguration(_uac.ColorConfiguration);
 
             // all modterm-style labels and flyout controls
             InitializeModtermControls();
@@ -292,6 +322,7 @@ namespace modterm
                     _terminal = new ConPTYTerminal();
                     _terminal.OutputReceived += OnOutputReceived;
                     _terminal.Start(sh, _lines, _columns);
+                    _uac.TerminalShell = sh;
                 };
                 _shellSelBtn.Children.Add(item);
             }
