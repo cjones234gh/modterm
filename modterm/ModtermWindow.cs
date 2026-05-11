@@ -35,7 +35,12 @@ namespace modterm
         private ControlGroup            _titleBarControls = null!;
         private ControlGroup            _rightButtonControls = null!;
         private TextDisplayControl      _pathControl = null!;
-        private TextDisplayControl      _appearanceInfoControl = null!;
+        private TextDisplayControl      _themeInfoCtrl = null!;
+        private TextDisplayControl      _backdropInfoCtrl = null!;
+        private TextDisplayControl      _opacityInfoCtrl = null!;
+        private TextDisplayControl      _colorInfoCtrl = null!;
+        private TextDisplayControl      _linesInfoCtrl = null!;
+        private TextDisplayControl      _columnsInfoCtrl = null!;
         private TextDisplayControl      _autoThemeBtn = null!;
         private int                     _autoThemeIndex = 0;
         private TextDisplayControl      _systemBackdropBtn = null!;
@@ -255,10 +260,6 @@ namespace modterm
             _rightButtonControls = new ControlGroup(
                 ControlGroup.ControlDock.Right, _mtd.ControlPadding);
 
-            // path and appearance info labels
-            _pathControl = new TextDisplayControl(_currentShell.Name, false);
-            _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
-
             // next theme button for fun - cycles through color themes
             _autoThemeBtn = new TextDisplayControl("THEME >", true);
             _autoThemeBtn.Clicked += AutoThemeButton_Click;
@@ -268,7 +269,7 @@ namespace modterm
             var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
             foreach (var s in glowSubAmts)
             {
-                var item = new TextDisplayControl($"{s} radius", true);
+                var item = new TextDisplayControl(s.ToString(), true);
                 item.Clicked += (_, __) => { 
                     _mtd.BlurAmount = s; 
                     _uac.ThemeConfiguration.BlurAmount = s; 
@@ -281,12 +282,12 @@ namespace modterm
             _backdropOpacityBtn = new TextDisplayControl("WINDOW OPACITY", true);
             for (int i = 0; i <= 10; i++)
             {
-                byte pct = (byte)(i * 10);
-                var item = new TextDisplayControl(i == 0 ? "Transparent 0%" : $"{pct}%", true);
+                int pct = i * 10;
+                var item = new TextDisplayControl(pct.ToString(), true);
                 item.Clicked += (_, __) => {
                     _mtd.OpacityPct = pct;
                     _uac.ThemeConfiguration.WindowOpacityPct = pct;
-                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+                    UpdateInformationLabels();
                     ModtermCanvas.Invalidate();
                 };
                 _backdropOpacityBtn.Children.Add(item);
@@ -334,7 +335,7 @@ namespace modterm
                 item.Clicked += (_, __) => {
                     _mtd.TintColor = tint;
                     _uac.ThemeConfiguration.WindowColor = tint;
-                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+                    UpdateInformationLabels();
                     ModtermCanvas.Invalidate();
                 };
                 _backdropColorBtn.Children.Add(item);
@@ -359,7 +360,7 @@ namespace modterm
             var sizes = new[] { 8, 10, 12, 13, 14, 15, 16, 17, 19, 23 };
             foreach (var s in sizes)
             {
-                var item = new TextDisplayControl($"{s} pt", true);
+                var item = new TextDisplayControl(s.ToString(), true);
                 item.Clicked += (_, __) => {
                     _mtd.CurrentFontSize = (float)s;
                     RestartTerminalForLayoutChange();
@@ -385,11 +386,33 @@ namespace modterm
                 _shellSelBtn.Children.Add(item);
             }
 
+            // path and appearance info labels
+            _pathControl = new TextDisplayControl("", false);
+            _themeInfoCtrl = new TextDisplayControl("", false);
+            _backdropInfoCtrl = new TextDisplayControl("", false);
+            _opacityInfoCtrl = new TextDisplayControl("", false);
+            _colorInfoCtrl = new TextDisplayControl("", false);
+            _linesInfoCtrl = new TextDisplayControl("", false);
+            _columnsInfoCtrl = new TextDisplayControl("", false);
+            UpdateInformationLabels();
+
             _titleBarControls.Controls.AddRange(
-                [_pathControl, _appearanceInfoControl]);
+                [_pathControl, _themeInfoCtrl, _backdropInfoCtrl, _opacityInfoCtrl, _colorInfoCtrl, _linesInfoCtrl, _columnsInfoCtrl]);
             _rightButtonControls.Controls.AddRange(
                 [_autoThemeBtn, _fontFamilyBtn, _fontSizeBtn,
                 _systemBackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn, _shellSelBtn]);
+        }
+
+        private void UpdateInformationLabels()
+        {
+            // path and appearance info labels
+            _pathControl.TextContent = $"Shell: {_currentShell.Name}";
+            _themeInfoCtrl.TextContent = $"Theme: {_uac.ThemeConfiguration.Name}";
+            _backdropInfoCtrl.TextContent = $"System Backdrop: {_mtd.SystemBackdropInfo}";
+            _opacityInfoCtrl.TextContent = $"Opacity: {_mtd.OpacityPct}%";
+            _colorInfoCtrl.TextContent = $"Color: {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
+            _linesInfoCtrl.TextContent = $"Lines: {_lines}";
+            _columnsInfoCtrl.TextContent = $"Columns: {_columns}";
         }
 
         private async Task ConfirmResizeRestartAsync()
@@ -444,7 +467,8 @@ namespace modterm
             var themes = _mtd.GetConfigurationNames();
             _autoThemeIndex = (_autoThemeIndex + 1) % themes.Count;
             _mtd.SetColorConfiguration(themes[_autoThemeIndex]);
-            _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+            _uac.ThemeConfiguration = _mtd.GetAllColorConfigurations().Find(c => c.Name == themes[_autoThemeIndex]);
+            UpdateInformationLabels();
             ModtermCanvas.Invalidate();
         }   
 
@@ -474,7 +498,7 @@ namespace modterm
             if (_terminal.Started)
                 return;
 
-            _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+            UpdateInformationLabels();
 
             _terminal.OutputReceived += OnOutputReceived;
             _terminal.Start(_currentShell, _lines, _columns);
@@ -535,7 +559,7 @@ namespace modterm
                     _mtd.SetColorConfiguration(themeConfig);
                     _uac.ThemeConfiguration = themeConfig;
                     _uac.ThemeConfiguration.PropertyChanged += (s, e) => SaveConfig();
-                    _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
+                    UpdateInformationLabels();
                     ModtermCanvas.Invalidate();
                 };
                 themeItem.Items.Add(item);

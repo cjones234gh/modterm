@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Windows.Foundation;
 using Windows.UI;
+using WinRT.modtermVtableClasses;
 
 namespace modterm
 {
@@ -41,6 +42,8 @@ namespace modterm
         // theme
         public string CurrentConfigurationName { get; set; } = string.Empty;
 
+        public string SystemBackdropInfo { get; private set; } = string.Empty;
+
         // space between content and control borders
         public float ControlPadding { get; set; }
 
@@ -60,7 +63,7 @@ namespace modterm
         private Color _tintColor;
         private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.Red);
         private List<ThemeConfiguration> _namedColorConfigurations = new List<ThemeConfiguration>();
-        private int _namedColorConfigIndex = 0;
+        private int _themeConfigIndex = 0;
 
         private bool _effectSequenceStarted = false;
         private List<DrawTextCall> _effectSequence = new List<DrawTextCall>();
@@ -117,7 +120,7 @@ namespace modterm
             // set default values
             CurrentFontSize = 12f;
             _namedColorConfigurations = GetDefaultColorConfigurations();
-            _namedColorConfigIndex = 0;
+            _themeConfigIndex = 0;
 
             // internal control defaults
             CornerRadius = 2f;
@@ -137,6 +140,7 @@ namespace modterm
                 _ => new BlurredBackdrop()
             };
             wInstance.SystemBackdrop = backdrop;
+            SystemBackdropInfo = $"{kind}";
         }
 
         public List<ThemeConfiguration> GetAllColorConfigurations()
@@ -424,8 +428,8 @@ namespace modterm
 
         public void CycleColorConfiguration()
         {
-            _namedColorConfigIndex = (_namedColorConfigIndex + 1) % _namedColorConfigurations.Count;
-            SetColorConfiguration(_namedColorConfigurations[_namedColorConfigIndex]);
+            _themeConfigIndex = (_themeConfigIndex + 1) % _namedColorConfigurations.Count;
+            SetColorConfiguration(_namedColorConfigurations[_themeConfigIndex]);
         }
 
         public CanvasTextFormat GetControlTextFormat()
@@ -448,7 +452,7 @@ namespace modterm
 
         public string GetHexStringFromColor(Color color)
         {
-            return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
+            return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
         }
 
         public Color GetColorFromHexString(string hex)
@@ -470,14 +474,6 @@ namespace modterm
                 b = Convert.ToByte(hex.Substring(4, 2), 16);
             }
             return Color.FromArgb(a, r, g, b);
-        }
-
-        public string GetAppearanceInfo(int lines, int columns)
-        {
-            string info =
-                $"\"{CurrentConfigurationName}\" Tint: {GetHexStringFromColor(GetBackgroundBrush().Color)} " +
-                $" Lines: {lines} Cols: {columns}";
-            return info.Replace(" ", "\u00A0"); // replace spaces with non-breaking spaces to prevent collapsing in the UI
         }
     }
 }

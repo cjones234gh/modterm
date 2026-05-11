@@ -40,7 +40,8 @@ namespace modterm
                     WindowOpacityPct = 20,
                     WindowColor = GetColorFromHexString("#000066"),
                     ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red
+                    ControlEngagedHoverColor = Colors.Red,
+                    BackdropKind = BackdropKind.Blurred
                 }
             };
         }
@@ -86,7 +87,8 @@ namespace modterm
                     WindowOpacityPct = 60,
                     WindowColor = GetColorFromHexString("#280654"),
                     ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.DarkRed
+                    ControlEngagedHoverColor = Colors.DarkRed,
+                    BackdropKind = BackdropKind.Mica
                 },
                 new ThemeConfiguration()
                 {
@@ -99,7 +101,8 @@ namespace modterm
                     WindowOpacityPct = 30,
                     WindowColor = Colors.DarkBlue,
                     ControlEngagedColor = Colors.Orange,
-                    ControlEngagedHoverColor = Colors.Orange
+                    ControlEngagedHoverColor = Colors.Orange,
+                    BackdropKind = BackdropKind.Acrylic
                 },
                 new ThemeConfiguration
                 {
