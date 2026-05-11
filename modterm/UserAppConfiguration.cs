@@ -10,7 +10,8 @@ namespace modterm
 {
     public class UserAppConfiguration : INotifyPropertyChanged
     {
-        public Rect WindowLocation { get; set; }
+        public Rect WindowLocation { get => _windowLocation; set { _windowLocation = value; OnPropertyChanged(nameof(WindowLocation)); } }
+        private Rect _windowLocation;
         public string TerminalFont { get => _terminalFont; set { _terminalFont = value; OnPropertyChanged(nameof(TerminalFont)); } }
         private string _terminalFont = string.Empty;
         public string TerminalControlFont { get => _terminalControlFont; set { _terminalControlFont = value; OnPropertyChanged(nameof(TerminalControlFont)); } }

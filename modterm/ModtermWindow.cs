@@ -140,6 +140,7 @@ namespace modterm
                 }
             }
 
+
             _uac.PropertyChanged += (s, e) =>
             {
                 SaveConfig();
@@ -148,6 +149,16 @@ namespace modterm
             {
                 SaveConfig();
             };
+            
+            var loc = _uac.WindowLocation;
+            var rectInt32 = new Windows.Graphics.RectInt32
+            {
+                X = (int)loc.X,
+                Y = (int)loc.Y,
+                Width = (int)loc.Width,
+                Height = (int)loc.Height
+            };
+            this.AppWindow.MoveAndResize(rectInt32);
 
             _currentShell = _uac.TerminalShell;
             _mtd.CurrentFont = new FontFamily(_uac.TerminalFont);
@@ -229,6 +240,8 @@ namespace modterm
 
             _resizeEndSize = currentSize;
             _lastWindowSize = currentSize;
+            _uac.WindowLocation = new Rect(this.AppWindow.Position.X, this.AppWindow.Position.Y,
+                this.AppWindow.Size.Width, this.AppWindow.Size.Height);
 
             _resizeStopTimer.Stop();
             _resizeStopTimer.Start();
