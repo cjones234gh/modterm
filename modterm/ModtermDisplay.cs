@@ -139,6 +139,11 @@ namespace modterm
             wInstance.SystemBackdrop = backdrop;
         }
 
+        public List<ThemeConfiguration> GetAllColorConfigurations()
+        {
+            return _namedColorConfigurations;
+        }
+
         public List<string> GetConfigurationNames()
         {
             List<string> names = new List<string>();

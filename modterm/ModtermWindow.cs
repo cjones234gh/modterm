@@ -49,10 +49,12 @@ namespace modterm
         // user storage for configs, themes, etc.
         private string _userConfigDirectory = string.Empty;
         private string _userAppConfigPath = string.Empty;
-        private string _userThemePath = string.Empty;
 
         // user app configuration
         private UserAppConfiguration _uac;
+
+        // theme names from config directory
+        private List<string> _themeNames = new List<string>();
 
         // modterm display
         private ModtermDisplay _mtd = new ModtermDisplay();
@@ -108,33 +110,51 @@ namespace modterm
             _userConfigDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "modterm");
             Directory.CreateDirectory(_userConfigDirectory);
             _userAppConfigPath = Path.Combine(_userConfigDirectory, "userAppConfig.json");
-            _userThemePath = Path.Combine(_userConfigDirectory, "userTheme.json");
 
             if (File.Exists(_userAppConfigPath))
             {
                 // Load user config from file
                 string json = File.ReadAllText(_userAppConfigPath);
                 _uac = JsonSerializer.Deserialize<UserAppConfiguration>(json) ?? _mtd.GetDefaultAppConfiguration();
+
+                // load the name of each theme configuration from disk so we can populate the theme menu
+                // theme files are all prefixed with "theme_" so we can easily identify them and extract the theme name
+                var themeFiles = Directory.GetFiles(_userConfigDirectory, "theme_*.json");
+                    _themeNames = themeFiles.Select(f => Path.GetFileNameWithoutExtension(f).Substring(6)).ToList();
             }
             else
             {
                 _uac = _mtd.GetDefaultAppConfiguration();
-                // write it to file for next time
-                string json = JsonSerializer.Serialize(_uac, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_userAppConfigPath, json);
+                // write to disk
+                SaveConfig();
+
+                // write the theme configurations to disk as well so users can edit or add to them if they want
+                foreach (var themeConfig in _mtd.GetAllColorConfigurations())
+                {
+                    string themePath = Path.Combine(_userConfigDirectory, $"theme_{themeConfig.Name}.json");
+                    if (!File.Exists(themePath))
+                    {
+                        string themeJson = JsonSerializer.Serialize(themeConfig, new JsonSerializerOptions { WriteIndented = true });
+                        File.WriteAllText(themePath, themeJson);
+                    }
+                }
             }
+
             _uac.PropertyChanged += (s, e) =>
             {
-                // persist config changes immediately
-                string json = JsonSerializer.Serialize(_uac, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_userAppConfigPath, json);
+                SaveConfig();
+            };
+            _uac.ThemeConfiguration.PropertyChanged += (s, e) =>
+            {
+                SaveConfig();
             };
 
             _currentShell = _uac.TerminalShell;
             _mtd.CurrentFont = new FontFamily(_uac.TerminalFont);
             _mtd.CurrentControlFont = new FontFamily(_uac.TerminalControlFont);
             _mtd.CurrentFontSize = _uac.TerminalFontSize;
-            _mtd.SetColorConfiguration(_uac.ColorConfiguration);
+            _mtd.SetColorConfiguration(_uac.ThemeConfiguration);
+            _mtd.ApplySystemBackdrop(_uac.ThemeConfiguration.BackdropKind, this);
 
             // all modterm-style labels and flyout controls
             InitializeModtermControls();
@@ -184,6 +204,12 @@ namespace modterm
             ModtermCanvas.Invalidate();
         }
 
+        private void SaveConfig()
+        {
+            string json = JsonSerializer.Serialize(_uac, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_userAppConfigPath, json);
+        }
+
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
             _rightButtonControls?.InvalidateExpandableChildMeasureCache();
@@ -220,7 +246,7 @@ namespace modterm
             _pathControl = new TextDisplayControl(_currentShell.Name, false);
             _appearanceInfoControl = new TextDisplayControl(_mtd.GetAppearanceInfo(_lines, _columns), false);
 
-            // next theme button for fun - cycles through color presets
+            // next theme button for fun - cycles through color themes
             _autoThemeBtn = new TextDisplayControl("THEME >", true);
             _autoThemeBtn.Clicked += AutoThemeButton_Click;
             
@@ -230,7 +256,11 @@ namespace modterm
             foreach (var s in glowSubAmts)
             {
                 var item = new TextDisplayControl($"{s} radius", true);
-                item.Clicked += (_, __) => { _mtd.BlurAmount = s; ModtermCanvas.Invalidate(); };
+                item.Clicked += (_, __) => { 
+                    _mtd.BlurAmount = s; 
+                    _uac.ThemeConfiguration.BlurAmount = s; 
+                    ModtermCanvas.Invalidate(); 
+                };
                 _glowBtn.Children.Add(item);
             }
 
@@ -242,6 +272,7 @@ namespace modterm
                 var item = new TextDisplayControl(i == 0 ? "Transparent 0%" : $"{pct}%", true);
                 item.Clicked += (_, __) => {
                     _mtd.OpacityPct = pct;
+                    _uac.ThemeConfiguration.WindowOpacityPct = pct;
                     _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate();
                 };
@@ -251,13 +282,25 @@ namespace modterm
             // system backdrop (Mica / Acrylic / custom blurred host backdrop)
             _systemBackdropBtn = new TextDisplayControl("SYSTEM BACKDROP", true);
             var blurredBackdropItem = new TextDisplayControl("BLURRED", true);
-            blurredBackdropItem.Clicked += (_, __) => { _mtd.OpacityPct = 0; _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this); };
+            blurredBackdropItem.Clicked += (_, __) => { 
+                _mtd.OpacityPct = 0; 
+                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Blurred; 
+                _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this); 
+            };
             _systemBackdropBtn.Children.Add(blurredBackdropItem);
             var micaBackdropItem = new TextDisplayControl("MICA", true);
-            micaBackdropItem.Clicked += (_, __) => { _mtd.OpacityPct = 0; _mtd.ApplySystemBackdrop(BackdropKind.Mica, this); };
+            micaBackdropItem.Clicked += (_, __) => { 
+                _mtd.OpacityPct = 0; 
+                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Mica; 
+                _mtd.ApplySystemBackdrop(BackdropKind.Mica, this); 
+            };
             _systemBackdropBtn.Children.Add(micaBackdropItem);
             var acrylicBackdropItem = new TextDisplayControl("ACRYLIC", true);
-            acrylicBackdropItem.Clicked += (_, __) => { _mtd.OpacityPct = 0; _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this); };
+            acrylicBackdropItem.Clicked += (_, __) => { 
+                _mtd.OpacityPct = 0; 
+                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Acrylic; 
+                _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this); 
+            };
             _systemBackdropBtn.Children.Add(acrylicBackdropItem);
 
             // window tint
@@ -277,6 +320,7 @@ namespace modterm
                 var item = new TextDisplayControl(label, true);
                 item.Clicked += (_, __) => {
                     _mtd.TintColor = tint;
+                    _uac.ThemeConfiguration.WindowColor = tint;
                     _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate();
                 };
@@ -291,6 +335,7 @@ namespace modterm
                 var item = new TextDisplayControl(f, true);
                 item.Clicked += (_, __) => {
                     _mtd.CurrentFont = new FontFamily(f);
+                    _uac.TerminalFont = f;
                     ModtermCanvas.Invalidate();
                 };
                 _fontFamilyBtn.Children.Add(item);
@@ -382,10 +427,10 @@ namespace modterm
 
         private void AutoThemeButton_Click(object? sender, EventArgs e)
         {
-            // cycle through color presets for fun
-            var presets = _mtd.GetConfigurationNames();
-            _autoThemeIndex = (_autoThemeIndex + 1) % presets.Count;
-            _mtd.SetColorConfiguration(presets[_autoThemeIndex]);
+            // cycle through themes
+            var themes = _mtd.GetConfigurationNames();
+            _autoThemeIndex = (_autoThemeIndex + 1) % themes.Count;
+            _mtd.SetColorConfiguration(themes[_autoThemeIndex]);
             _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
             ModtermCanvas.Invalidate();
         }   
@@ -467,11 +512,16 @@ namespace modterm
 
             // theme
             var themeItem = new MenuFlyoutSubItem { Text = "Theme" };
-            foreach (var preset in _mtd.GetConfigurationNames())
+            foreach (var preset in _themeNames)
             {
                 var item = new MenuFlyoutItem { Text = preset };
                 item.Click += (_, __) => {
-                    _mtd.SetColorConfiguration(preset);
+                    // deserialize the theme config from disk and apply it
+                    string themePath = Path.Combine(_userConfigDirectory, $"theme_{preset}.json");
+                    ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
+                    _mtd.SetColorConfiguration(themeConfig);
+                    _uac.ThemeConfiguration = themeConfig;
+                    _uac.ThemeConfiguration.PropertyChanged += (s, e) => SaveConfig();
                     _appearanceInfoControl.TextContent = _mtd.GetAppearanceInfo(_lines, _columns);
                     ModtermCanvas.Invalidate();
                 };

@@ -29,7 +29,19 @@ namespace modterm
                     Arguments = conargs + "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" 
                 },
                 TerminalCursor = "bar",
-                ColorConfiguration = "User"
+                ThemeConfiguration = new ThemeConfiguration()
+                {
+                    Name = "Purpleser",
+                    OutputColor = GetColorFromHexString("#50ff8c"),
+                    OutputBlurColor = GetColorFromHexString("#00eeff"),
+                    ControlColor = GetColorFromHexString("#ff4fc1"),
+                    ControlBlurColor = GetColorFromHexString("#3333ff"),
+                    BlurAmount = 7.0f,
+                    WindowOpacityPct = 20,
+                    WindowColor = GetColorFromHexString("#000066"),
+                    ControlEngagedColor = Colors.Red,
+                    ControlEngagedHoverColor = Colors.Red
+                }
             };
         }
         private List<ThemeConfiguration> GetDefaultColorConfigurations()
@@ -39,7 +51,7 @@ namespace modterm
             {
                 new ThemeConfiguration()
                 {
-                    Name = "User",
+                    Name = "Purpleser",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = GetColorFromHexString("#ff4fc1"),
@@ -65,7 +77,7 @@ namespace modterm
                 },
                 new ThemeConfiguration
                 {
-                    Name = "Cyber Eggplant",
+                    Name = "CyberEggplant",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = Colors.Cyan,
