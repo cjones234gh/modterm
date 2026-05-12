@@ -565,6 +565,11 @@ namespace modterm
                 themeItem.Items.Add(item);
             }
             _flyout.Items.Add(themeItem);
+
+            // toggle right button controls
+            var toggleControlsItem = new MenuFlyoutItem { Text = "Toggle Right Controls" };
+            toggleControlsItem.Click += (_, __) => { _showRightButtonControls = !_showRightButtonControls; ModtermCanvas.Invalidate(); };
+            _flyout.Items.Add(toggleControlsItem);
         }        
     }
 }

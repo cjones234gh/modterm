@@ -24,6 +24,9 @@ namespace modterm
         private int _leftTextPadding = 5;
         private int _topTextPadding = 33;
 
+        private bool _showRightButtonControls = true;
+        private bool _showTitleBarControls = true;
+
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
             // Do not spawn the conhost until we can measure the canvas during drawing and determine how many rows/columns we can fit
@@ -114,8 +117,14 @@ namespace modterm
             }
 
             // draw all UI controls
-            _rightButtonControls?.DrawControls(sender, args.DrawingSession, _mtd);
-            _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
+            if (_showRightButtonControls)
+            {
+                _rightButtonControls?.DrawControls(sender, args.DrawingSession, _mtd);
+            }
+            if (_showTitleBarControls)
+            {
+                _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
+            } 
         }
 
         // Measure the width of a typical monospace character for accurate column calculation
