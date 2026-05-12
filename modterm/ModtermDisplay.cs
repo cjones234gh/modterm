@@ -22,35 +22,35 @@ namespace modterm
 
     public partial class ModtermDisplay
     {
+        // font families for terminal and control text
         public FontFamily CurrentFont { get; set; } = null!;
         public FontFamily CurrentControlFont { get; set; } = null!;
+        // glow colors for terminal and control text
         public Color OutputGlowColor { get; set; }
+        // normal colors for terminal and control text
         public Color OutputColor { get; set; }
+        // control colors (normal, engaged, hovered, etc.)
         public Color ControlColor { get; set; }
         public Color ControlGlowColor { get; set; }
         public Color ControlEngagedColor { get; set; }
         public Color ControlEngagedHoverColor { get; set; }
-
+        // control rendering details (rounded corners, line width, etc.)
         public float CornerRadius { get; set; }
         public float LineWidth { get; set; }
         public byte BlurFillTransparency { get; set; }
         public byte SharpBorderTransparency { get; set; }
         public byte SharpFillTransparency { get; set; }
-
+        // blur amount for text and control boxes
         public float BlurAmount { get; set; }
-
         // theme
         public string CurrentConfigurationName { get; set; } = string.Empty;
-
+        // system backdrop info
         public string SystemBackdropInfo { get; private set; } = string.Empty;
-
         // space between content and control borders
         public float ControlPadding { get; set; }
-
         // space between controls and canvas edges/other controls
         public float ControlMargin { get; set; }
         public float ControlMarginRight { get; set; }
-
         // control scale based on font size to maintain consistent proportions
         public float CurrentFontSizeControlScale { get; set; }
 
@@ -64,7 +64,6 @@ namespace modterm
         private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.Red);
         private List<ThemeConfiguration> _namedColorConfigurations = new List<ThemeConfiguration>();
         private int _themeConfigIndex = 0;
-
         private bool _effectSequenceStarted = false;
         private List<DrawTextCall> _effectSequence = new List<DrawTextCall>();
         private CanvasControl _sender = null!;

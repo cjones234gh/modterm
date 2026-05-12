@@ -61,7 +61,8 @@ namespace modterm
                     WindowOpacityPct = 20,
                     WindowColor = GetColorFromHexString("#000066"),
                     ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red
+                    ControlEngagedHoverColor = Colors.Red,
+                    BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration()
                 {
@@ -74,7 +75,8 @@ namespace modterm
                     WindowOpacityPct = 80,
                     WindowColor = Colors.Black,
                     ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red
+                    ControlEngagedHoverColor = Colors.Red,
+                    BackdropKind = BackdropKind.Mica
                 },
                 new ThemeConfiguration
                 {
@@ -115,7 +117,8 @@ namespace modterm
                     WindowOpacityPct = 20,
                     WindowColor = Color.FromArgb(255, 153, 0, 255),
                     ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.DarkRed
+                    ControlEngagedHoverColor = Colors.DarkRed,
+                    BackdropKind = BackdropKind.Acrylic
                 },
                 new ThemeConfiguration
                 {
@@ -128,7 +131,8 @@ namespace modterm
                     WindowOpacityPct = 10,
                     WindowColor = Colors.Aqua,
                     ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red
+                    ControlEngagedHoverColor = Colors.Red,
+                    BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration
                 {
@@ -141,7 +145,8 @@ namespace modterm
                     WindowOpacityPct = 100,
                     WindowColor = Colors.LightGoldenrodYellow,
                     ControlEngagedColor = Colors.Navy,
-                    ControlEngagedHoverColor = Colors.Navy
+                    ControlEngagedHoverColor = Colors.Navy,
+                    BackdropKind = BackdropKind.Blurred
                 }
             };
         }

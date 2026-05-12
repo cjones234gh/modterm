@@ -25,12 +25,7 @@ namespace modterm
             Bottom
         }
         public ControlDock Dock { get; set; }
-
         public List<ModtermControl> Controls { get; set; } = new List<ModtermControl>();
-
-        /// <summary>
-        /// Cached text measurements for expandable (child flyout) controls; invalidated on resize via <see cref="InvalidateExpandableChildMeasureCache"/>.
-        /// </summary>
         private Size _expandableMeasureCanvasSize = new Size(1, 1);
         private readonly Dictionary<ModtermControl, (float w, float h)[]> _expandableChildSizes = new Dictionary<ModtermControl, (float w, float h)[]>();
 

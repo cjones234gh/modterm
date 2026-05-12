@@ -18,9 +18,7 @@ namespace modterm
         public Rect Location { get; set; }
         public string TextContent { get; set; } = string.Empty;
         public bool ContentSizing { get; set; }
-
         public EventHandler Clicked { get; set; } = null!;
-
         public List<ModtermControl> Children { get; set; } = new List<ModtermControl>();
 
         public abstract void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd);

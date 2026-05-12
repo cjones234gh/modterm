@@ -77,7 +77,7 @@ namespace modterm
         private bool _isResizeConfirmationInProgress = false;
         private bool _suppressResizeHandling = false;
 
-        // shell definitions - TODO: move to config and add more options like env vars, starting dir, etc.
+        // shell definitions (TODO: move to a "static" part of user app config and add more options like env vars, starting dir, etc., allow users to add their own shells)
         private static string _conargs = "--headless --width [W] --height [H] -- "; 
         private List<Shell> _shellEnv = new List<Shell>()
         {
@@ -320,14 +320,17 @@ namespace modterm
             // window tint
             _backdropColorBtn = new TextDisplayControl("WINDOW COLOR", true);
             var colorOptions = new (string, Color)[] {
-                ("Coral", Colors.Coral),
-                ("Sea Green", Colors.MediumSeaGreen),
-                ("Turquoise", Colors.DarkTurquoise),
-                ("Orange", Colors.DarkOrange),
-                ("Magenta", Colors.Magenta),
-                ("Violet", Colors.DarkViolet),
-                ("Cyan", Colors.DarkCyan),
-                ("Slate", Colors.DarkSlateBlue)
+                ("DeepBlue", Colors.DarkBlue),
+                ("DeepGreen", Colors.DarkGreen),
+                ("DeepRed", Colors.DarkRed),
+                ("DeepPurple", Colors.DarkPurple),
+                ("DeepYellow", Colors.DarkYellow),
+                ("DeepOrange", Colors.DarkOrange),
+                ("DeepPink", Colors.DarkPink),
+                ("DeepBrown", Colors.DarkBrown),
+                ("DeepGray", Colors.DarkGray),
+                ("DeepWhite", Colors.White),
+                ("DeepBlack", Colors.Black)
             };
             foreach (var (label, tint) in colorOptions)
             {

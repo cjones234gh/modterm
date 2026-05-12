@@ -43,7 +43,6 @@ namespace modterm
             _inputRead = new SafeFileHandle();
             _outputWrite = new SafeFileHandle();
             _outputRead = new SafeFileHandle();
-            //_bannerColors = ModtermDisplay.GetColorWheelProgression(10f, 100, 7);
         }
 
         public void Start(Shell targetShell, int lines, int columns)
@@ -184,18 +183,6 @@ namespace modterm
 
             // Start async reader
             _readTask = Task.Run(ReadOutputLoop);
-
-
-            //// show the banner (true ASCII art with 24-bit ANSI encoded color, because why not)
-            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[0]) + "                                                                                    ");
-            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[0]) + "                                  .o8      .                                        ");
-            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[1]) + "                                 \"888    .o8                                        ");
-            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[2]) + "ooo. .oo.  .oo.    .ooooo.   .oooo888  .o888oo  .ooooo.  oooo d8b ooo. .oo.  .oo.   ");
-            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[3]) + "`888P\"Y88bP\"Y88b  d88' `88b d88' `888    888   d88' `88b `888\"\"8P `888P\"Y88bP\"Y88b  ");
-            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[4]) + " 888   888   888  888   888 888   888    888   888ooo888  888      888   888   888  ");
-            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[5]) + " 888   888   888  888   888 888   888    888 . 888    .o  888      888   888   888  ");
-            //OutputReceived?.Invoke(this, "\x1B[38;2;" + GetAnsiRGB(_bannerColors[6]) + "o888o o888o o888o `Y8bod8P' `Y8bod88P\"   \"888\" `Y8bod8P' d888b    o888o o888o o888o \x1B[0m");
-            //OutputReceived?.Invoke(this, "\x1B[0m\n\x1B[0m\n\x1B[0m\n");
         }
 
         /// <summary>
@@ -219,8 +206,6 @@ namespace modterm
 
         private string GetAnsiRGB(Color c)
         {
-            //  \x1B[38;2;+GetAnsiRGB(<color>)
-            //  \x1B[0m
             return c.R.ToString() + ";" + c.G.ToString() + ";" + c.B.ToString() + "m";
         }
                 
@@ -239,7 +224,8 @@ namespace modterm
             ResizePseudoConsole(_hPC, new COORD { X = cols, Y = rows });
         }
 
-        // Use UTF-8 decoder that replaces invalid bytes instead of throwing (ConPTY may send OEM/code-page or binary)
+        // Use UTF-8 decoder that replaces invalid bytes instead of throwing 
+        // (ConPTY may send OEM/code-page or binary)
         private static readonly Encoding Utf8Relaxed = Encoding.GetEncoding(65001,
             EncoderFallback.ReplacementFallback, DecoderFallback.ReplacementFallback);
 
