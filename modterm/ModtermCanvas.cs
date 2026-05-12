@@ -45,8 +45,9 @@ namespace modterm
 
             _mtd.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
-            // use toprow to calculate visible area
-            int topRow = _vtController.ViewPort.TopRow;
+            // Keep the VT controller's TopRow as the live screen position; scrollback only changes what we render.
+            ClampScrollOffset();
+            int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
             var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, _lines, _columns);
             double y = _topTextPadding;
             foreach (var row in pageSpans)
@@ -90,8 +91,8 @@ namespace modterm
             // Debug: Draw grid lines for columns and rows
             //DrawDebugGrid(sender, args);
 
-            // Draw blinking cursor if visible
-            if (_cursorVisible)
+            // Draw blinking cursor only on the live viewport.
+            if (_cursorVisible && _scrollOffset == 0)
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
                 float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
@@ -167,7 +168,10 @@ namespace modterm
             // Handle Ctrl+C (send interrupt)
             if (isCtrlPressed && e.Key == Windows.System.VirtualKey.C)
             {
+                _scrollOffset = 0;
                 _terminal.WriteInput("\x03");
+                e.Handled = true;
+                ModtermCanvas.Invalidate();
                 return;
             }
 
@@ -175,6 +179,14 @@ namespace modterm
             string vtSeq = string.Empty;
             switch (e.Key)
             {
+                case Windows.System.VirtualKey.PageUp:
+                    ScrollBackBy(Math.Max(1, _lines - 1));
+                    e.Handled = true;
+                    return;
+                case Windows.System.VirtualKey.PageDown:
+                    ScrollBackBy(-Math.Max(1, _lines - 1));
+                    e.Handled = true;
+                    return;
                 case Windows.System.VirtualKey.Enter:
                     vtSeq = "\r";
                     break;
@@ -219,7 +231,9 @@ namespace modterm
             }
             if (!string.IsNullOrEmpty(vtSeq))
             {
+                _scrollOffset = 0;
                 _terminal.WriteInput(vtSeq);
+                e.Handled = true;
             }
             ModtermCanvas.Invalidate();
         }
@@ -432,9 +446,31 @@ namespace modterm
         private void ModtermCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
         {
             int delta = e.GetCurrentPoint(ModtermCanvas).Properties.MouseWheelDelta;
-            int step = delta > 0 ? 1 : -1;                 // scroll up = positive delta
-            //_scrollOffset = Math.Clamp(_scrollOffset + step, 0, Math.Max(0, _bufferLines.Count - 1));
-            ModtermCanvas.Invalidate();
+            int notches = Math.Max(1, Math.Abs(delta) / 120);
+            int rowsPerNotch = Math.Max(1, _lines / 10);
+            int rows = notches * rowsPerNotch * (delta > 0 ? 1 : -1);
+
+            ScrollBackBy(rows);
+            e.Handled = true;
+        }
+
+        private void ScrollBackBy(int rows)
+        {
+            if (rows == 0)
+                return;
+
+            int previousOffset = _scrollOffset;
+            _scrollOffset += rows;
+            ClampScrollOffset();
+
+            if (_scrollOffset != previousOffset)
+                ModtermCanvas.Invalidate();
+        }
+
+        private void ClampScrollOffset()
+        {
+            int maxScrollOffset = Math.Max(0, _vtController.ViewPort.TopRow);
+            _scrollOffset = Math.Clamp(_scrollOffset, 0, maxScrollOffset);
         }
 
 

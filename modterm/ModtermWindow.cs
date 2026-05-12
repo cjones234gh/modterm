@@ -320,17 +320,17 @@ namespace modterm
             // window tint
             _backdropColorBtn = new TextDisplayControl("WINDOW COLOR", true);
             var colorOptions = new (string, Color)[] {
-                ("DeepBlue", Colors.DarkBlue),
-                ("DeepGreen", Colors.DarkGreen),
-                ("DeepRed", Colors.DarkRed),
-                ("DeepPurple", Colors.DarkPurple),
-                ("DeepYellow", Colors.DarkYellow),
-                ("DeepOrange", Colors.DarkOrange),
-                ("DeepPink", Colors.DarkPink),
-                ("DeepBrown", Colors.DarkBrown),
-                ("DeepGray", Colors.DarkGray),
-                ("DeepWhite", Colors.White),
-                ("DeepBlack", Colors.Black)
+                ("Dark Blue", Colors.DarkBlue),
+                ("Dark Green", Colors.DarkGreen),
+                ("Dark Red", Colors.DarkRed),
+                ("Dark Violet", Colors.DarkViolet),
+                ("Dark Goldenrod", Colors.DarkGoldenrod),
+                ("Dark Orange", Colors.DarkOrange),
+                ("Deep Pink", Colors.DeepPink),
+                ("Saddle Brown", Colors.SaddleBrown),
+                ("Dim Gray", Colors.DimGray),
+                ("White", Colors.White),
+                ("Black", Colors.Black)
             };
             foreach (var (label, tint) in colorOptions)
             {
@@ -490,6 +490,7 @@ namespace modterm
                 string text = await dataPackageView.GetTextAsync();
                 if (!string.IsNullOrEmpty(text))
                 {
+                    _scrollOffset = 0;
                     _terminal?.WriteInput(text);
                 }
                 ModtermCanvas.Invalidate();
