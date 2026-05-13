@@ -191,7 +191,7 @@ namespace modterm
                 : Color.FromArgb(_alpha, TintColor.R, TintColor.G, TintColor.B);
         }
 
-        public void SetColorConfiguration(ThemeConfiguration config)
+        public void SetColorConfiguration(ThemeConfiguration config, Window wInstance)
         {
             OutputColor = config.OutputColor;
             OutputGlowColor = config.OutputBlurColor;
@@ -202,6 +202,7 @@ namespace modterm
             TintColor = config.WindowColor;
             ControlEngagedColor = config.ControlEngagedColor;
             ControlEngagedHoverColor = config.ControlEngagedHoverColor;
+            ApplySystemBackdrop(config.BackdropKind, wInstance);
             _backgroundBrush.Color = GetBackgroundArgb();
         }
 
@@ -240,13 +241,13 @@ namespace modterm
             }
         }
 
-        public void SetColorConfiguration(string configurationName)
+        public void SetColorConfiguration(string configurationName, Window wInstance)
         {
             var config = _namedColorConfigurations.Find(c => c.Name == configurationName);
             if (config != null)
             {
                 CurrentConfigurationName = config.Name;
-                SetColorConfiguration(config);
+                SetColorConfiguration(config, wInstance);
             }
         }
 
@@ -425,10 +426,10 @@ namespace modterm
             }
         }
 
-        public void CycleColorConfiguration()
+        public void CycleColorConfiguration(Window wInstance)
         {
             _themeConfigIndex = (_themeConfigIndex + 1) % _namedColorConfigurations.Count;
-            SetColorConfiguration(_namedColorConfigurations[_themeConfigIndex]);
+            SetColorConfiguration(_namedColorConfigurations[_themeConfigIndex], wInstance);
         }
 
         public CanvasTextFormat GetControlTextFormat()
