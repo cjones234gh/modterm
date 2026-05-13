@@ -91,6 +91,8 @@ namespace modterm
         private bool _isSelecting = false;
         private Windows.Foundation.Point _selectionStart;
         private Windows.Foundation.Point _selectionEnd;
+        private int _selectionTopRow = 0;
+        private VtNetCore.VirtualTerminal.TextRange? _selectionRange;
         private string _selectedText = "";
 
         private void InitializeApplication()
@@ -477,9 +479,66 @@ namespace modterm
 
         private void UpdateSelectedText()
         {
-            // TODO: this is no longer complete and broke af - also, we should just copy when the rectangle is drawn (mouse button up),
-            // not wait for a ctrl-c or context copy selection.
+            _selectionRange = null;
             _selectedText = string.Empty;
+
+            if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
+                return;
+
+            if (Math.Abs(_selectionStart.X - _selectionEnd.X) < 2 &&
+                Math.Abs(_selectionStart.Y - _selectionEnd.Y) < 2)
+                return;
+
+            _selectionRange = new VtNetCore.VirtualTerminal.TextRange
+            {
+                Start = GetTextPositionFromPoint(_selectionStart),
+                End = GetTextPositionFromPoint(_selectionEnd)
+            };
+
+            _selectedText = _vtController.GetText(_selectionRange);
+        }
+
+        private bool IsInTextArea(Point point)
+        {
+            if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
+                return false;
+
+            double lineHeight = _mtd.CurrentFontSize + 2;
+            double textRight = _leftTextPadding + (_columns * _measuredCharWidth);
+            double textBottom = _topTextPadding + (_lines * lineHeight);
+
+            return point.X >= _leftTextPadding &&
+                point.X <= textRight &&
+                point.Y >= _topTextPadding &&
+                point.Y <= textBottom;
+        }
+
+        private VtNetCore.VirtualTerminal.TextPosition GetTextPositionFromPoint(Point point)
+        {
+            double lineHeight = _mtd.CurrentFontSize + 2;
+            int column = (int)Math.Floor((point.X - _leftTextPadding) / _measuredCharWidth);
+            int visibleRow = (int)Math.Floor((point.Y - _topTextPadding) / lineHeight);
+            int topRow = _isSelecting ? _selectionTopRow : _vtController.ViewPort.TopRow - _scrollOffset;
+
+            column = Math.Clamp(column, 0, Math.Max(0, _columns - 1));
+            visibleRow = Math.Clamp(visibleRow, 0, Math.Max(0, _lines - 1));
+
+            return new VtNetCore.VirtualTerminal.TextPosition
+            {
+                Column = column,
+                Row = topRow + visibleRow
+            };
+        }
+
+        private void CopySelectedTextToClipboard()
+        {
+            if (string.IsNullOrEmpty(_selectedText))
+                return;
+
+            DataPackage dataPackage = new DataPackage();
+            dataPackage.SetText(_selectedText.Replace("\n", Environment.NewLine));
+            Clipboard.SetContent(dataPackage);
+            Clipboard.Flush();
         }
 
         private async void PasteFromClipboard()
@@ -514,7 +573,7 @@ namespace modterm
         private void OnOutputReceived(object? sender, string line)
         {
             // Feed all output directly to the VT parser
-            if (_scrollOffset > 0) _scrollOffset = 0;
+            if (_scrollOffset > 0 && !_isSelecting) _scrollOffset = 0;
             if (!string.IsNullOrEmpty(line))
             {
                 _vtDataConsumer.Write(line);
@@ -529,19 +588,7 @@ namespace modterm
             var copyItem = new MenuFlyoutItem { Text = "Copy" };
             copyItem.Click += (_, __) =>
             {
-                //DataPackage dataPackage = new DataPackage();
-                //if (!string.IsNullOrEmpty(_selectedText))
-                //{
-                //    dataPackage.SetText(_selectedText);
-                //    Clipboard.SetContent(dataPackage);
-                //}
-                //else if (!string.IsNullOrEmpty(_commandLine))
-                //{
-                //    dataPackage.SetText(_commandLine);
-                //    Clipboard.SetContent(dataPackage);
-                //}
-                Debug.WriteLine("Copy command executed - selection: " + _selectedText);
-
+                CopySelectedTextToClipboard();
             };
             _flyout.Items.Add(copyItem);
 

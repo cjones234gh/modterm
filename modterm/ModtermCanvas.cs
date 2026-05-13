@@ -48,7 +48,8 @@ namespace modterm
             // Keep the VT controller's TopRow as the live screen position; scrollback only changes what we render.
             ClampScrollOffset();
             int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
-            var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, _lines, _columns);
+            var selectionRange = _isSelecting ? _selectionRange : null;
+            var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, _lines, _columns, selectionRange);
             double y = _topTextPadding;
             foreach (var row in pageSpans)
             {
@@ -101,21 +102,6 @@ namespace modterm
             }
 
             _mtd.EndEffectSequence();
-
-            // Visual selection highlight (simple semi-transparent overlay)
-            if (!string.IsNullOrEmpty(_selectedText) && _isSelecting)
-            {
-                double x = Math.Min(_selectionStart.X, _selectionEnd.X);
-                double yy = Math.Min(_selectionStart.Y, _selectionEnd.Y);
-                double width = Math.Abs(_selectionEnd.X - _selectionStart.X);
-                double height = Math.Abs(_selectionEnd.Y - _selectionStart.Y);
-                if (width > 0 && height > 0)
-                {
-                    args.DrawingSession.FillRectangle(
-                        new Windows.Foundation.Rect(x, yy, width, height),
-                        Color.FromArgb(80, 0, 120, 255));
-                }
-            }
 
             // draw all UI controls
             if (_showRightButtonControls)
@@ -247,9 +233,8 @@ namespace modterm
             if (!e.GetCurrentPoint(ModtermCanvas).Properties.IsLeftButtonPressed)
                 return;
 
-            _isSelecting = true;
-            _selectionStart = currentPoint;
-            _selectionEnd = _selectionStart;
+            _isSelecting = false;
+            _selectionRange = null;
             _selectedText = "";
 
             // Flyout child (expanded parent)
@@ -318,6 +303,17 @@ namespace modterm
                     c.IsEngaged = false;
             }
 
+            if (!IsInTextArea(currentPoint))
+            {
+                ModtermCanvas.Invalidate();
+                return;
+            }
+
+            _isSelecting = true;
+            _selectionStart = currentPoint;
+            _selectionEnd = _selectionStart;
+            _selectionTopRow = _vtController.ViewPort.TopRow - _scrollOffset;
+            UpdateSelectedText();
             ModtermCanvas.Invalidate();
         }
 
@@ -384,10 +380,18 @@ namespace modterm
 
         private void ModtermCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            _isSelecting = false;
-            UpdateSelectedText();
-
             Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
+
+            bool wasSelecting = _isSelecting;
+            if (wasSelecting)
+            {
+                _selectionEnd = currentPoint;
+                UpdateSelectedText();
+                _isSelecting = false;
+                CopySelectedTextToClipboard();
+                ModtermCanvas.Invalidate();
+                return;
+            }
 
             // Finish flyout child click
             foreach (var control in _rightButtonControls.Controls)
