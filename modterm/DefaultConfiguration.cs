@@ -15,18 +15,17 @@ namespace modterm
     {
         public UserAppConfiguration GetDefaultAppConfiguration()
         {
-            string conargs = "--headless --width [W] --height [H] -- ";
             return new UserAppConfiguration()
             {
                 WindowLocation = new Windows.Foundation.Rect(100, 100, 800, 600),
                 TerminalFont = "Consolas",
                 TerminalControlFont = "Lucida Console",
                 TerminalFontSize = 12.0f,
-                TerminalShell = new Shell 
-                { 
-                    Name = "powershell", 
-                    Path = "conhost", 
-                    Arguments = conargs + "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" 
+                TerminalShell = new Shell
+                {
+                    Name = "powershell",
+                    Path = "conhost",
+                    Arguments = " --headless --width [W] --height [H] -- C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
                 },
                 TerminalCursor = "bar",
                 ThemeConfiguration = new ThemeConfiguration()
@@ -42,6 +41,13 @@ namespace modterm
                     ControlEngagedColor = Colors.Red,
                     ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Blurred
+                },
+                ShellConfigurations = new List<Shell>()
+                {
+                    new Shell { Name = "cmd", Path = "conhost", Arguments = " --headless --width [W] --height [H] -- C:\\Windows\\System32\\cmd.exe" },
+                    new Shell { Name = "powershell", Path = "conhost", Arguments = " --headless --width [W] --height [H] -- C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
+                    new Shell { Name = "bash", Path = "conhost", Arguments = " --headless --width [W] --height [H] -- C:\\Program Files\\Git\\bin\\bash.exe" },
+                    new Shell { Name = "wsl", Path = "conhost", Arguments = " --headless --width [W] --height [H] -- wsl.exe" },
                 }
             };
         }

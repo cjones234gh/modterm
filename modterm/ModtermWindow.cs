@@ -77,16 +77,6 @@ namespace modterm
         private bool _isResizeConfirmationInProgress = false;
         private bool _suppressResizeHandling = false;
 
-        // shell definitions (TODO: move to a "static" part of user app config and add more options like env vars, starting dir, etc., allow users to add their own shells)
-        private static string _conargs = "--headless --width [W] --height [H] -- "; 
-        private List<Shell> _shellEnv = new List<Shell>()
-        {
-            new Shell { Name = "cmd", Path = "conhost", Arguments = _conargs + "C:\\Windows\\System32\\cmd.exe" },
-            new Shell { Name = "powershell", Path = "conhost", Arguments = _conargs + "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
-            new Shell { Name = "bash", Path = "conhost", Arguments = _conargs + "C:\\Program Files\\Git\\bin\\bash.exe" },
-            new Shell { Name = "wsl", Path = "conhost", Arguments = _conargs + "wsl.exe" }, 
-        };
-
         // mouse selection state
         private bool _isSelecting = false;
         private Windows.Foundation.Point _selectionStart;
@@ -375,7 +365,7 @@ namespace modterm
 
             // shell selection
             _shellSelBtn = new TextDisplayControl("SHELL", true);
-            foreach (Shell sh in _shellEnv)
+            foreach (Shell sh in _uac.ShellConfigurations)
             {
                 var item = new TextDisplayControl(sh.Name.ToUpper(), true);
                 item.Clicked += async (_, __) =>

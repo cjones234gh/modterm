@@ -24,7 +24,8 @@ namespace modterm
         private string _terminalCursor = string.Empty;
         public ThemeConfiguration ThemeConfiguration { get => _themeConfiguration; set { _themeConfiguration = value; OnPropertyChanged(nameof(ThemeConfiguration)); } }
         private ThemeConfiguration _themeConfiguration = null!;
-
+        public List<Shell> ShellConfigurations  { get => _shellConfigurations; set { _shellConfigurations = value; OnPropertyChanged(nameof(ShellConfigurations)); } }
+        private List<Shell> _shellConfigurations = null!;
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void OnPropertyChanged(string propertyName)
