@@ -26,30 +26,30 @@ namespace modterm
         private VtNetCore.XTermParser.DataConsumer _vtDataConsumer = null!;
 
         // main terminal logic and state
-        private ConPTYTerminal  _terminal = null!;
-        private Shell           _currentShell = new Shell();
-        private int             _scrollOffset = 0;
+        private ConPTYTerminal _terminal = null!;
+        private Shell _currentShell = new Shell();
+        private int _scrollOffset = 0;
         private DispatcherQueueTimer _cursorTimer = null!;
         private DispatcherQueueTimer _resizeStopTimer = null!;
         // modterm UI controls
-        private ControlGroup            _titleBarControls = null!;
-        private ControlGroup            _rightButtonControls = null!;
-        private TextDisplayControl      _pathControl = null!;
-        private TextDisplayControl      _themeInfoCtrl = null!;
-        private TextDisplayControl      _backdropInfoCtrl = null!;
-        private TextDisplayControl      _opacityInfoCtrl = null!;
-        private TextDisplayControl      _colorInfoCtrl = null!;
-        private TextDisplayControl      _linesInfoCtrl = null!;
-        private TextDisplayControl      _columnsInfoCtrl = null!;
-        private TextDisplayControl      _autoThemeBtn = null!;
-        private int                     _autoThemeIndex = 0;
-        private TextDisplayControl      _systemBackdropBtn = null!;
-        private TextDisplayControl      _backdropColorBtn = null!;
-        private TextDisplayControl      _backdropOpacityBtn = null!;
-        private TextDisplayControl      _fontFamilyBtn = null!;
-        private TextDisplayControl      _fontSizeBtn = null!;
-        private TextDisplayControl      _glowBtn = null!;
-        private TextDisplayControl      _shellSelBtn = null!;
+        private ControlGroup _titleBarControls = null!;
+        private ControlGroup _rightButtonControls = null!;
+        private TextDisplayControl _pathControl = null!;
+        private TextDisplayControl _themeInfoCtrl = null!;
+        private TextDisplayControl _backdropInfoCtrl = null!;
+        private TextDisplayControl _opacityInfoCtrl = null!;
+        private TextDisplayControl _colorInfoCtrl = null!;
+        private TextDisplayControl _linesInfoCtrl = null!;
+        private TextDisplayControl _columnsInfoCtrl = null!;
+        private TextDisplayControl _autoThemeBtn = null!;
+        private int _autoThemeIndex = 0;
+        private TextDisplayControl _systemBackdropBtn = null!;
+        private TextDisplayControl _backdropColorBtn = null!;
+        private TextDisplayControl _backdropOpacityBtn = null!;
+        private TextDisplayControl _fontFamilyBtn = null!;
+        private TextDisplayControl _fontSizeBtn = null!;
+        private TextDisplayControl _glowBtn = null!;
+        private TextDisplayControl _shellSelBtn = null!;
 
         // user storage for configs, themes, etc.
         private string _userConfigDirectory = string.Empty;
@@ -65,8 +65,8 @@ namespace modterm
         private ModtermDisplay _mtd = new ModtermDisplay();
 
         // VT mode: cursor visibility only
-        private bool            _cursorVisible = true;
-        private int             _cursorSpeed = 500;
+        private bool _cursorVisible = true;
+        private int _cursorSpeed = 500;
 
         // context menu flyout for right-click
         private MenuFlyout _flyout = null!;
@@ -100,7 +100,7 @@ namespace modterm
 
             _vtController.SetRgbForegroundColor(_mtd.OutputColor.R,
                 _mtd.OutputColor.G, _mtd.OutputColor.B);
-                        
+
             // init modterm display and set default appearance config
             _mtd.Initialize();
 
@@ -117,7 +117,7 @@ namespace modterm
                 // load the name of each theme configuration from disk so we can populate the theme menu
                 // theme files are all prefixed with "theme_" so we can easily identify them and extract the theme name
                 var themeFiles = Directory.GetFiles(_userConfigDirectory, "theme_*.json");
-                    _themeNames = themeFiles.Select(f => Path.GetFileNameWithoutExtension(f).Substring(6)).ToList();
+                _themeNames = themeFiles.Select(f => Path.GetFileNameWithoutExtension(f).Substring(6)).ToList();
             }
             else
             {
@@ -146,7 +146,7 @@ namespace modterm
             {
                 SaveConfig();
             };
-            
+
             var loc = _uac.WindowLocation;
             var rectInt32 = new Windows.Graphics.RectInt32
             {
@@ -165,7 +165,7 @@ namespace modterm
 
             // all modterm-style labels and flyout controls
             InitializeModtermControls();
-            
+
             // window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
             this.AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
@@ -254,17 +254,18 @@ namespace modterm
             // next theme button for fun - cycles through color themes
             _autoThemeBtn = new TextDisplayControl("THEME >", true);
             _autoThemeBtn.Clicked += AutoThemeButton_Click;
-            
+
             // font glow
             _glowBtn = new TextDisplayControl("GLOW", true);
             var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
             foreach (var s in glowSubAmts)
             {
                 var item = new TextDisplayControl(s.ToString(), true);
-                item.Clicked += (_, __) => { 
-                    _mtd.BlurAmount = s; 
-                    _uac.ThemeConfiguration.BlurAmount = s; 
-                    ModtermCanvas.Invalidate(); 
+                item.Clicked += (_, __) =>
+                {
+                    _mtd.BlurAmount = s;
+                    _uac.ThemeConfiguration.BlurAmount = s;
+                    ModtermCanvas.Invalidate();
                 };
                 _glowBtn.Children.Add(item);
             }
@@ -275,7 +276,8 @@ namespace modterm
             {
                 int pct = i * 10;
                 var item = new TextDisplayControl(pct.ToString(), true);
-                item.Clicked += (_, __) => {
+                item.Clicked += (_, __) =>
+                {
                     _mtd.OpacityPct = pct;
                     _uac.ThemeConfiguration.WindowOpacityPct = pct;
                     UpdateInformationLabels();
@@ -287,21 +289,24 @@ namespace modterm
             // system backdrop (Mica / Acrylic / custom blurred host backdrop)
             _systemBackdropBtn = new TextDisplayControl("SYSTEM BACKDROP", true);
             var blurredBackdropItem = new TextDisplayControl("BLURRED", true);
-            blurredBackdropItem.Clicked += (_, __) => { 
-                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Blurred; 
-                _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this); 
+            blurredBackdropItem.Clicked += (_, __) =>
+            {
+                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Blurred;
+                _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this);
             };
             _systemBackdropBtn.Children.Add(blurredBackdropItem);
             var micaBackdropItem = new TextDisplayControl("MICA", true);
-            micaBackdropItem.Clicked += (_, __) => { 
-                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Mica; 
-                _mtd.ApplySystemBackdrop(BackdropKind.Mica, this); 
+            micaBackdropItem.Clicked += (_, __) =>
+            {
+                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Mica;
+                _mtd.ApplySystemBackdrop(BackdropKind.Mica, this);
             };
             _systemBackdropBtn.Children.Add(micaBackdropItem);
             var acrylicBackdropItem = new TextDisplayControl("ACRYLIC", true);
-            acrylicBackdropItem.Clicked += (_, __) => { 
-                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Acrylic; 
-                _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this); 
+            acrylicBackdropItem.Clicked += (_, __) =>
+            {
+                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Acrylic;
+                _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this);
             };
             _systemBackdropBtn.Children.Add(acrylicBackdropItem);
 
@@ -323,7 +328,8 @@ namespace modterm
             foreach (var (label, tint) in colorOptions)
             {
                 var item = new TextDisplayControl(label, true);
-                item.Clicked += (_, __) => {
+                item.Clicked += (_, __) =>
+                {
                     _mtd.TintColor = tint;
                     _uac.ThemeConfiguration.WindowColor = tint;
                     UpdateInformationLabels();
@@ -338,7 +344,8 @@ namespace modterm
             foreach (var f in fonts)
             {
                 var item = new TextDisplayControl(f, true);
-                item.Clicked += (_, __) => {
+                item.Clicked += (_, __) =>
+                {
                     _mtd.CurrentFont = f;
                     _uac.TerminalFont = f;
                     ModtermCanvas.Invalidate();
@@ -352,7 +359,8 @@ namespace modterm
             foreach (var s in sizes)
             {
                 var item = new TextDisplayControl(s.ToString(), true);
-                item.Clicked += (_, __) => {
+                item.Clicked += (_, __) =>
+                {
                     _mtd.CurrentFontSize = (float)s;
                     RestartTerminalForLayoutChange();
                 };
@@ -461,7 +469,7 @@ namespace modterm
             _uac.ThemeConfiguration = _mtd.GetAllColorConfigurations().Find(c => c.Name == themes[_autoThemeIndex]);
             UpdateInformationLabels();
             ModtermCanvas.Invalidate();
-        }   
+        }
 
         private void UpdateSelectedText()
         {
@@ -589,7 +597,8 @@ namespace modterm
             foreach (var preset in _themeNames)
             {
                 var item = new MenuFlyoutItem { Text = preset };
-                item.Click += (_, __) => {
+                item.Click += (_, __) =>
+                {
                     // deserialize the theme config from disk and apply it
                     string themePath = Path.Combine(_userConfigDirectory, $"theme_{preset}.json");
                     ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
@@ -607,6 +616,9 @@ namespace modterm
             var toggleControlsItem = new MenuFlyoutItem { Text = "Toggle Right Controls" };
             toggleControlsItem.Click += (_, __) => { _showRightButtonControls = !_showRightButtonControls; ModtermCanvas.Invalidate(); };
             _flyout.Items.Add(toggleControlsItem);
-        }        
+            var toggleTitleBarControlsItem = new MenuFlyoutItem { Text = "Toggle Title Bar Controls" };
+            toggleTitleBarControlsItem.Click += (_, __) => { _showTitleBarControls = !_showTitleBarControls; ModtermCanvas.Invalidate(); };
+            _flyout.Items.Add(toggleTitleBarControlsItem);
+        }
     }
 }

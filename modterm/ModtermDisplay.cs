@@ -258,35 +258,35 @@ namespace modterm
             _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault));
         }
 
-        public void DrawControlBox(CanvasControl sender, CanvasDrawingSession cds, Rect location)
-        {
-            var controlColor = OutputColor;
-            var controlBlurColor = OutputGlowColor;
-            // blur layer
-            using (var commandList = new CanvasCommandList(sender))
-            {
-                using (var clds = commandList.CreateDrawingSession())
-                {
-                    // Draw a bordered rectangle
-                    clds.DrawRoundedRectangle(
-                        location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
+        //public void DrawControlBox(CanvasControl sender, CanvasDrawingSession cds, Rect location)
+        //{
+        //    var controlColor = OutputColor;
+        //    var controlBlurColor = OutputGlowColor;
+        //    // blur layer
+        //    using (var commandList = new CanvasCommandList(sender))
+        //    {
+        //        using (var clds = commandList.CreateDrawingSession())
+        //        {
+        //            // Draw a bordered rectangle
+        //            clds.DrawRoundedRectangle(
+        //                location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
 
-                    // Draw background rectangle only in hover state
-                    // (see below, do we want to bother with states for a box?)
-                }
+        //            // Draw background rectangle only in hover state
+        //            // (see below, do we want to bother with states for a box?)
+        //        }
 
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
-                cds.DrawImage(blurEffect);
-            }
+        //        var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
+        //        cds.DrawImage(blurEffect);
+        //    }
 
-            // Draw a bordered rectangle
-            cds.DrawRoundedRectangle(location, CornerRadius, CornerRadius,
-                Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
+        //    // Draw a bordered rectangle
+        //    cds.DrawRoundedRectangle(location, CornerRadius, CornerRadius,
+        //        Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
 
-            // Draw background rectangle
-            cds.FillRoundedRectangle(location, CornerRadius, CornerRadius,
-                Color.FromArgb(SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
-        }
+        //    // Draw background rectangle
+        //    cds.FillRoundedRectangle(location, CornerRadius, CornerRadius,
+        //        Color.FromArgb(SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
+        //}
 
         public void DrawTextDisplayControl(CanvasControl sender, CanvasDrawingSession cds, TextDisplayControl control)
         {
@@ -304,14 +304,16 @@ namespace modterm
                 {
                     //if (control.Interactive)
                     //{
-                        // Draw a bordered rectangle
-                        //clds.DrawRoundedRectangle(
-                        //    control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
+                    // Draw a bordered rectangle
+                    //clds.DrawRoundedRectangle(
+                    //    control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
 
-                        // Draw background rectangle except when in hover state
-                        if (!control.IsHovered || !control.Interactive)
-                            clds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
-                                Color.FromArgb(BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
+                    // Draw background rectangle except when in hover state
+                    //if (!control.IsHovered || !control.Interactive)
+                    //{
+                    //    clds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
+                    //        Color.FromArgb(BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
+                    //}
                     //}
                     
                     // Draw TextContent
