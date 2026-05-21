@@ -22,9 +22,9 @@ namespace modterm
 
     public partial class ModtermDisplay
     {
-        // font families for terminal and control text
-        public FontFamily CurrentFont { get; set; } = null!;
-        public FontFamily CurrentControlFont { get; set; } = null!;
+        // font family names for terminal and control text (Win2D CanvasTextFormat)
+        public string CurrentFont { get; set; } = string.Empty;
+        public string CurrentControlFont { get; set; } = string.Empty;
         // glow colors for terminal and control text
         public Color OutputGlowColor { get; set; }
         // normal colors for terminal and control text
@@ -118,6 +118,8 @@ namespace modterm
         {
             // set default values
             CurrentFontSize = 12f;
+            CurrentFont = "Consolas";
+            CurrentControlFont = "Lucida Console";
             _namedColorConfigurations = GetDefaultColorConfigurations();
             _themeConfigIndex = 0;
 
@@ -436,7 +438,7 @@ namespace modterm
         {
             return new CanvasTextFormat
             {
-                FontFamily = CurrentControlFont.Source,
+                FontFamily = CurrentControlFont,
                 FontSize = _currentControlFontSize
             };
         }
@@ -445,7 +447,7 @@ namespace modterm
         {
             return new CanvasTextFormat
             {
-                FontFamily = CurrentFont.Source,
+                FontFamily = CurrentFont,
                 FontSize = CurrentFontSize
             };
         }

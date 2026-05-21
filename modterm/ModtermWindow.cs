@@ -158,8 +158,8 @@ namespace modterm
             this.AppWindow.MoveAndResize(rectInt32);
 
             _currentShell = _uac.TerminalShell;
-            _mtd.CurrentFont = new FontFamily(_uac.TerminalFont);
-            _mtd.CurrentControlFont = new FontFamily(_uac.TerminalControlFont);
+            _mtd.CurrentFont = _uac.TerminalFont;
+            _mtd.CurrentControlFont = _uac.TerminalControlFont;
             _mtd.CurrentFontSize = _uac.TerminalFontSize;
             _mtd.SetColorConfiguration(_uac.ThemeConfiguration, this);
 
@@ -339,7 +339,7 @@ namespace modterm
             {
                 var item = new TextDisplayControl(f, true);
                 item.Clicked += (_, __) => {
-                    _mtd.CurrentFont = new FontFamily(f);
+                    _mtd.CurrentFont = f;
                     _uac.TerminalFont = f;
                     ModtermCanvas.Invalidate();
                 };
