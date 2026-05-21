@@ -447,8 +447,9 @@ namespace modterm
         {
             return new CanvasTextFormat
             {
-                FontFamily = CurrentFont,
-                FontSize = CurrentFontSize
+                FontFamily = string.IsNullOrWhiteSpace(CurrentFont) ? "Cascadia Mono" : CurrentFont,
+                FontSize = CurrentFontSize,
+                WordWrapping = CanvasWordWrapping.NoWrap
             };
         }
 

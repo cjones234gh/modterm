@@ -141,6 +141,8 @@ namespace modterm
             envVars["COLORTERM"] = "truecolor";
             envVars["FORCE_COLOR"] = "true";
             envVars["TERM_PROGRAM"] = "modterm";
+            envVars["LANG"] = "en_US.UTF-8";
+            envVars["LC_ALL"] = "en_US.UTF-8";
 
             // wsl.exe → Linux: only vars listed in WSLENV are forwarded; merge so TERM_PROGRAM / dimensions reach bash.
             if (string.Equals(targetShell.Name, "wsl", StringComparison.OrdinalIgnoreCase)
@@ -192,7 +194,7 @@ namespace modterm
         {
             // /u = available in WSL (Unix-style). Colon-delimited list.
             // https://learn.microsoft.com/en-us/windows/wsl/interop#share-environment-variables-between-windows-and-wsl-with-wslenv
-            const string block = "TERM/u:COLORTERM/u:TERM_PROGRAM/u:FORCE_COLOR/u:LINES/u:COLUMNS/u";
+            const string block = "TERM/u:COLORTERM/u:TERM_PROGRAM/u:FORCE_COLOR/u:LINES/u:COLUMNS/u:LANG/u:LC_ALL/u";
             if (envVars.TryGetValue("WSLENV", out var existing) && !string.IsNullOrWhiteSpace(existing))
             {
                 string trimmed = existing.TrimEnd(':', ';');

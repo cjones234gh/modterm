@@ -34,7 +34,7 @@ namespace modterm
             {
                 int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (_mtd.CurrentFontSize + 2));
                 float measuredCharWidth = MeasureCharWidth(sender, args);
-                int measuredCols = (int)(sender.ActualWidth / measuredCharWidth);
+                int measuredCols = (int)((sender.ActualWidth - _leftTextPadding) / measuredCharWidth);
                 _lines = measuredRows;
                 _columns = measuredCols;
                 _measuredCharWidth = measuredCharWidth;
@@ -49,44 +49,66 @@ namespace modterm
             ClampScrollOffset();
             int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
             var selectionRange = _isSelecting ? _selectionRange : null;
-            var pageSpans = _vtController.ViewPort.GetPageSpans(topRow, _lines, _columns, selectionRange);
-            double y = _topTextPadding;
-            foreach (var row in pageSpans)
+            double lineHeight = _mtd.CurrentFontSize + 2;
+            var baseTextFormat = _mtd.GetTextFormat();
+
+            for (int visibleRow = 0; visibleRow < _lines; visibleRow++)
             {
-                float x = _leftTextPadding;
-                int col = 0; // Reset column at the start of each row
-                foreach (var span in row.Spans)
+                int logicalRow = topRow + visibleRow;
+                float y = _topTextPadding + (float)(visibleRow * lineHeight);
+                var sourceLine = _vtController.ViewPort.GetLine(logicalRow);
+
+                for (int col = 0; col < _columns; col++)
                 {
-                    //Debug.WriteLine($"span.BackgroundColor: {span.BackgroundColor}, span.ForgroundColor: {span.ForgroundColor}");
+                    var sourceChar = sourceLine != null && col < sourceLine.Count ? sourceLine[col] : null;
+                    bool inverted = selectionRange != null && selectionRange.Contains(col, logicalRow);
+                    var attr = sourceChar == null
+                        ? _vtController.NullAttribute
+                        : ((_vtController.CursorState.ReverseVideoMode ^ inverted ^ sourceChar.Attributes.Reverse)
+                            ? sourceChar.Attributes.Inverse
+                            : sourceChar.Attributes);
+
+                    char displayChar = sourceChar == null ? ' ' : sourceChar.Char;
+                    if (TryResolveMissingGlyph(logicalRow, col, displayChar, out char resolvedDisplay))
+                        displayChar = resolvedDisplay;
+
+                    string cellText = displayChar.ToString() + (sourceChar?.CombiningCharacters ?? string.Empty);
+
                     Color fg = _mtd.OutputColor;
-                    if (!span.ForegroundIsDefault)
+                    if (!attr.DefaultForeground)
                     {
-                        try { fg = _mtd.GetColorFromHexString(span.ForgroundColor); } catch { }
+                        try { fg = _mtd.GetColorFromHexString(attr.WebColor); } catch { }
                     }
 
                     Color bg = Colors.Black;
-                    if (!span.BackgroundIsDefault)
+                    if (!attr.DefaultBackground)
                     {
-                        try { bg = _mtd.GetColorFromHexString(span.BackgroundColor); } catch { }
+                        try { bg = _mtd.GetColorFromHexString(attr.BackgroundWebColor); } catch { }
                     }
 
-                    if (span.Hidden)
-                    {
-                        fg = bg; // Set foreground to background color to hide text
-                    }
+                    if (attr.Hidden)
+                        fg = bg;
 
-                    // Draw the text span at the correct column position
-                    x = _leftTextPadding + (col * _measuredCharWidth);
-                    CanvasTextFormat textFormat = _mtd.GetTextFormat();
-                    textFormat.FontWeight = span.Bold ? FontWeights.Bold : FontWeights.Normal;
-                    
-                    _mtd.DrawText(span.Text, x, (float)y, (float)(span.Text.Length * _measuredCharWidth), fg, bg, 
-                        textFormat, span.ForegroundIsDefault, span.BackgroundIsDefault);
-                    
-                    // Advance col by the number of characters in the span
-                    col += span.Text.Length;
+                    var textFormat = new CanvasTextFormat
+                    {
+                        FontFamily = baseTextFormat.FontFamily,
+                        FontSize = baseTextFormat.FontSize,
+                        FontWeight = attr.Bright ? FontWeights.Bold : FontWeights.Normal,
+                        WordWrapping = CanvasWordWrapping.NoWrap
+                    };
+
+                    float cellX = _leftTextPadding + (col * _measuredCharWidth);
+                    _mtd.DrawText(
+                        cellText,
+                        cellX,
+                        y,
+                        _measuredCharWidth,
+                        fg,
+                        bg,
+                        textFormat,
+                        attr.DefaultForeground,
+                        attr.DefaultBackground);
                 }
-                y += _mtd.CurrentFontSize + 2;
             }
 
             // Draw blinking cursor only on the live viewport.
@@ -111,15 +133,149 @@ namespace modterm
             } 
         }
 
-        // Measure the width of a typical monospace character for accurate column calculation
+        // Measure monospace cell advance width (not ink bounds) for column grid alignment.
         private float MeasureCharWidth(CanvasControl sender, CanvasDrawEventArgs args)
         {
-            // Use 'W' as a typical wide character for monospace fonts
-            using (var layout = new CanvasTextLayout(args.DrawingSession, "W", _mtd.GetTextFormat(), 9999, 9999))
-            {
-                return (float)layout.DrawBounds.Width * 1.1f; // add a small buffer to prevent clipping
-            }
+            return MeasureCellAdvance(args.DrawingSession, _mtd.GetTextFormat());
         }
+
+        private static float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
+        {
+            const int sampleLength = 32;
+            using var layout = new CanvasTextLayout(ds, new string('0', sampleLength), format, 9999, 9999);
+            float total = 0;
+            foreach (var cluster in layout.ClusterMetrics)
+                total += cluster.Width;
+            return total / sampleLength;
+        }
+
+        private char GetCellCharAt(int logicalRow, int col)
+        {
+            if (col < 0 || col >= _columns)
+                return ' ';
+            var line = _vtController.ViewPort.GetLine(logicalRow);
+            if (line == null || col >= line.Count)
+                return ' ';
+            return line[col].Char;
+        }
+
+        private bool RowLooksLikeBorder(int logicalRow)
+        {
+            var line = _vtController.ViewPort.GetLine(logicalRow);
+            if (line == null)
+                return false;
+
+            int boxCount = 0;
+            int limit = Math.Min(line.Count, _columns);
+            for (int c = 0; c < limit; c++)
+            {
+                if (IsBoxDrawingChar(line[c].Char))
+                    boxCount++;
+            }
+            return boxCount >= 2;
+        }
+
+        private bool TryResolveMissingGlyph(int logicalRow, int col, char rawChar, out char displayChar)
+        {
+            displayChar = rawChar;
+            if (!IsMissingGlyph(rawChar) || !RowLooksLikeBorder(logicalRow))
+                return false;
+
+            GetMissingGlyphRunBounds(logicalRow, col, out int runStart, out _);
+
+            // A run of ?? (or more) in the PTY buffer is one missing glyph — render only the first cell.
+            if (col != runStart)
+            {
+                displayChar = ' ';
+                return true;
+            }
+
+            displayChar = ResolveMissingBoxChar(logicalRow, col);
+            return true;
+        }
+
+        private void GetMissingGlyphRunBounds(int logicalRow, int col, out int runStart, out int runEnd)
+        {
+            runStart = col;
+            while (runStart > 0 && IsMissingGlyph(GetCellCharAt(logicalRow, runStart - 1)))
+                runStart--;
+
+            runEnd = col;
+            while (runEnd + 1 < _columns && IsMissingGlyph(GetCellCharAt(logicalRow, runEnd + 1)))
+                runEnd++;
+        }
+
+        private bool RowHasHorizontalBoxChar(int logicalRow)
+        {
+            var line = _vtController.ViewPort.GetLine(logicalRow);
+            if (line == null)
+                return false;
+
+            int limit = Math.Min(line.Count, _columns);
+            for (int c = 0; c < limit; c++)
+            {
+                if (IsHorizontalBox(line[c].Char))
+                    return true;
+            }
+            return false;
+        }
+
+        private bool ColumnHasVerticalStreakAt(int col, int nearLogicalRow)
+        {
+            int count = 0;
+            int start = Math.Max(0, nearLogicalRow - 20);
+            int end = nearLogicalRow + 20;
+            for (int r = start; r <= end; r++)
+            {
+                char c = GetCellCharAt(r, col);
+                if (IsVerticalBox(c) || IsMissingGlyph(c))
+                    count++;
+            }
+            return count >= 3;
+        }
+
+        private char ResolveMissingBoxChar(int logicalRow, int col)
+        {
+            char up = GetCellCharAt(logicalRow - 1, col);
+            char down = GetCellCharAt(logicalRow + 1, col);
+            char left = GetCellCharAt(logicalRow, col - 1);
+            char right = GetCellCharAt(logicalRow, col + 1);
+
+            bool rowHasHorizontal = RowHasHorizontalBoxChar(logicalRow);
+            bool columnHasVertical = ColumnHasVerticalStreakAt(col, logicalRow);
+
+            if (rowHasHorizontal && columnHasVertical)
+                return '\u253C';
+
+            bool verticalContext =
+                IsVerticalBox(up) || IsVerticalBox(down) ||
+                IsMissingGlyph(up) || IsMissingGlyph(down);
+            bool horizontalContext =
+                IsHorizontalBox(left) || IsHorizontalBox(right) ||
+                IsMissingGlyph(left) || IsMissingGlyph(right);
+
+            if (verticalContext && !horizontalContext)
+                return '\u2502';
+
+            if (horizontalContext && !verticalContext)
+                return '\u2500';
+
+            if (columnHasVertical)
+                return '\u2502';
+
+            return rowHasHorizontal ? '\u2500' : '\u2502';
+        }
+
+        private static bool IsMissingGlyph(char c) => c == '?' || c == '\uFFFD';
+
+        private static bool IsBoxDrawingChar(char c) =>
+            (c >= '\u2500' && c <= '\u257F') || (c >= '\u2550' && c <= '\u256F');
+
+        private static bool IsHorizontalBox(char c) =>
+            c == '\u2500' || c == '\u2501' || c == '\u2550' || c == '\u2551' || c == '-';
+
+        private static bool IsVerticalBox(char c) =>
+            c == '\u2502' || c == '\u2503' || c == '\u2551' || c == '|';
 
         private void ModtermCanvas_KeyDown(object sender, KeyRoutedEventArgs e)
         {
