@@ -194,7 +194,7 @@ namespace modterm
         {
             // /u = available in WSL (Unix-style). Colon-delimited list.
             // https://learn.microsoft.com/en-us/windows/wsl/interop#share-environment-variables-between-windows-and-wsl-with-wslenv
-            const string block = "TERM/u:COLORTERM/u:TERM_PROGRAM/u:FORCE_COLOR/u:LINES/u:COLUMNS/u:LANG/u:LC_ALL/u";
+            const string block = "TERM/u:COLORTERM/u:TERM_PROGRAM/u:FORCE_COLOR/u:LINES/u:COLUMNS/u:LANG/u";
             if (envVars.TryGetValue("WSLENV", out var existing) && !string.IsNullOrWhiteSpace(existing))
             {
                 string trimmed = existing.TrimEnd(':', ';');
