@@ -497,7 +497,7 @@ namespace modterm
             if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
                 return false;
 
-            double lineHeight = _mtd.CurrentFontSize + 2;
+            double lineHeight = _mtd.CurrentFontSize + _lineHeightPadding;
             double textRight = _leftTextPadding + (_columns * _measuredCharWidth);
             double textBottom = _topTextPadding + (_lines * lineHeight);
 
@@ -509,7 +509,7 @@ namespace modterm
 
         private VtNetCore.VirtualTerminal.TextPosition GetTextPositionFromPoint(Point point)
         {
-            double lineHeight = _mtd.CurrentFontSize + 2;
+            double lineHeight = _mtd.CurrentFontSize + _lineHeightPadding;
             int column = (int)Math.Floor((point.X - _leftTextPadding) / _measuredCharWidth);
             int visibleRow = (int)Math.Floor((point.Y - _topTextPadding) / lineHeight);
             int topRow = _isSelecting ? _selectionTopRow : _vtController.ViewPort.TopRow - _scrollOffset;

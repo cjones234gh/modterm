@@ -23,6 +23,7 @@ namespace modterm
 
         private int _leftTextPadding = 5;
         private int _topTextPadding = 33;
+        private int _lineHeightPadding = 0;
 
         private bool _showRightButtonControls = true;
         private bool _showTitleBarControls = true;
@@ -32,7 +33,7 @@ namespace modterm
             // Do not spawn the conhost until we can measure the canvas during drawing and determine how many rows/columns we can fit
             if (!_terminal.Started)
             {
-                int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (_mtd.CurrentFontSize + 2));
+                int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (_mtd.CurrentFontSize + _lineHeightPadding));
                 float measuredCharWidth = MeasureCharWidth(sender, args);
                 int measuredCols = (int)((sender.ActualWidth - _leftTextPadding) / measuredCharWidth);
                 _lines = measuredRows;
@@ -49,7 +50,7 @@ namespace modterm
             ClampScrollOffset();
             int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
             var selectionRange = _isSelecting ? _selectionRange : null;
-            double lineHeight = _mtd.CurrentFontSize + 2;
+            double lineHeight = _mtd.CurrentFontSize + _lineHeightPadding;
             var baseTextFormat = _mtd.GetTextFormat();
 
             for (int visibleRow = 0; visibleRow < _lines; visibleRow++)
@@ -116,7 +117,7 @@ namespace modterm
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
                 float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
-                float cursorY = (float)(cursor.Row * (_mtd.CurrentFontSize + 2)) + _topTextPadding;
+                float cursorY = (float)(cursor.Row * (_mtd.CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
                 args.DrawingSession.DrawText("|", cursorX, cursorY, _mtd.OutputColor, _mtd.GetTextFormat());
             }
 
