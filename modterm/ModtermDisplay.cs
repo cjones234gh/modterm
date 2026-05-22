@@ -125,7 +125,7 @@ namespace modterm
 
             // internal control defaults
             CornerRadius = 2f;
-            BlurFillTransparency = 150;
+            BlurFillTransparency = 90;
             SharpBorderTransparency = 150;
             SharpFillTransparency = 40;
             LineWidth = 0.5f;
@@ -309,11 +309,11 @@ namespace modterm
                     //    control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
 
                     // Draw background rectangle except when in hover state
-                    //if (!control.IsHovered || !control.Interactive)
-                    //{
-                    //    clds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
-                    //        Color.FromArgb(BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
-                    //}
+                    if (!control.IsHovered || !control.Interactive)
+                    {
+                        clds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
+                            Color.FromArgb(BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
+                    }
                     //}
                     
                     // Draw TextContent
