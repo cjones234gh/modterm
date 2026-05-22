@@ -112,12 +112,7 @@ namespace modterm
             {
                 // Load user config from file
                 string json = File.ReadAllText(_userAppConfigPath);
-                _uac = JsonSerializer.Deserialize<UserAppConfiguration>(json) ?? _mtd.GetDefaultAppConfiguration();
-
-                // load the name of each theme configuration from disk so we can populate the theme menu
-                // theme files are all prefixed with "theme_" so we can easily identify them and extract the theme name
-                var themeFiles = Directory.GetFiles(_userConfigDirectory, "theme_*.json");
-                _themeNames = themeFiles.Select(f => Path.GetFileNameWithoutExtension(f).Substring(6)).ToList();
+                _uac = JsonSerializer.Deserialize<UserAppConfiguration>(json) ?? _mtd.GetDefaultAppConfiguration();                
             }
             else
             {
@@ -136,7 +131,10 @@ namespace modterm
                     }
                 }
             }
-
+            // load the name of each theme configuration from disk so we can populate the theme menu
+            // theme files are all prefixed with "theme_" so we can easily identify them and extract the theme name
+            var themeFiles = Directory.GetFiles(_userConfigDirectory, "theme_*.json");
+            _themeNames = themeFiles.Select(f => Path.GetFileNameWithoutExtension(f).Substring(6)).ToList();
 
             _uac.PropertyChanged += (s, e) =>
             {
@@ -462,11 +460,12 @@ namespace modterm
 
         private void AutoThemeButton_Click(object? sender, EventArgs e)
         {
-            // cycle through themes
-            var themes = _mtd.GetConfigurationNames();
-            _autoThemeIndex = (_autoThemeIndex + 1) % themes.Count;
-            _mtd.SetColorConfiguration(themes[_autoThemeIndex], this);
-            _uac.ThemeConfiguration = _mtd.GetAllColorConfigurations().Find(c => c.Name == themes[_autoThemeIndex]);
+            _autoThemeIndex = (_autoThemeIndex + 1) % _themeNames.Count;
+
+            string themePath = Path.Combine(_userConfigDirectory, $"theme_{_themeNames[_autoThemeIndex]}.json");
+            ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
+            _mtd.SetColorConfiguration(themeConfig, this);
+            _uac.ThemeConfiguration = themeConfig;
             UpdateInformationLabels();
             ModtermCanvas.Invalidate();
         }

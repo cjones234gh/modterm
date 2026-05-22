@@ -120,7 +120,7 @@ namespace modterm
             CurrentFontSize = 12f;
             CurrentFont = "Consolas";
             CurrentControlFont = "Lucida Console";
-            _namedColorConfigurations = GetDefaultColorConfigurations();
+            _namedColorConfigurations = GetDefaultThemeConfigurations();
             _themeConfigIndex = 0;
 
             // internal control defaults
@@ -147,16 +147,6 @@ namespace modterm
         public List<ThemeConfiguration> GetAllColorConfigurations()
         {
             return _namedColorConfigurations;
-        }
-
-        public List<string> GetConfigurationNames()
-        {
-            List<string> names = new List<string>();
-            foreach (var config in _namedColorConfigurations)
-            {
-                names.Add(config.Name);
-            }
-            return names;
         }
 
         public Color GetControlColor(ModtermControl control)
@@ -240,16 +230,6 @@ namespace modterm
             else
             {
                 throw new InvalidOperationException("Effect sequence was not started.");
-            }
-        }
-
-        public void SetColorConfiguration(string configurationName, Window wInstance)
-        {
-            var config = _namedColorConfigurations.Find(c => c.Name == configurationName);
-            if (config != null)
-            {
-                CurrentConfigurationName = config.Name;
-                SetColorConfiguration(config, wInstance);
             }
         }
 
@@ -428,12 +408,6 @@ namespace modterm
                 }
                 _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);
             }
-        }
-
-        public void CycleColorConfiguration(Window wInstance)
-        {
-            _themeConfigIndex = (_themeConfigIndex + 1) % _namedColorConfigurations.Count;
-            SetColorConfiguration(_namedColorConfigurations[_themeConfigIndex], wInstance);
         }
 
         public CanvasTextFormat GetControlTextFormat()

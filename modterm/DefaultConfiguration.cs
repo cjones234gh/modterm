@@ -51,7 +51,7 @@ namespace modterm
                 }
             };
         }
-        private List<ThemeConfiguration> GetDefaultColorConfigurations()
+        private List<ThemeConfiguration> GetDefaultThemeConfigurations()
         {
 
             return new List<ThemeConfiguration>()
