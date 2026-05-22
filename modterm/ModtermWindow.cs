@@ -256,7 +256,6 @@ namespace modterm
                 {
                     _mtd.BlurAmount = s;
                     _uac.ThemeConfiguration.BlurAmount = s;
-                    ModtermCanvas.Invalidate();
                 };
                 _glowBtn.Children.Add(item);
             }
@@ -321,7 +320,6 @@ namespace modterm
                 {
                     _mtd.TintColor = tint;
                     _uac.ThemeConfiguration.WindowColor = tint;
-                    ModtermCanvas.Invalidate();
                 };
                 _backdropColorBtn.Children.Add(item);
             }
@@ -336,7 +334,6 @@ namespace modterm
                 {
                     _mtd.CurrentFont = f;
                     _uac.TerminalFont = f;
-                    ModtermCanvas.Invalidate();
                 };
                 _fontFamilyBtn.Children.Add(item);
             }
@@ -457,7 +454,6 @@ namespace modterm
             ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
             _mtd.SetColorConfiguration(themeConfig, this);
             _uac.ThemeConfiguration = themeConfig;
-            ModtermCanvas.Invalidate();
         }
 
         private void UpdateSelectedText()
@@ -591,7 +587,6 @@ namespace modterm
                     ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
                     _mtd.SetColorConfiguration(themeConfig, this);
                     _uac.ThemeConfiguration = themeConfig;
-                    ModtermCanvas.Invalidate();
                 };
                 themeItem.Items.Add(item);
             }
