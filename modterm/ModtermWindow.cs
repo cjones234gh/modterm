@@ -592,13 +592,16 @@ namespace modterm
             }
             _flyout.Items.Add(themeItem);
 
+            // toggle title bar controls
+            var toggleTitleBarControlsItem = new MenuFlyoutItem { Text = "Toggle Title Bar Controls" };
+            toggleTitleBarControlsItem.Click += (_, __) => { _showTitleBarControls = !_showTitleBarControls; ModtermCanvas.Invalidate(); };
+            _flyout.Items.Add(toggleTitleBarControlsItem);
+
             // toggle right button controls
             var toggleControlsItem = new MenuFlyoutItem { Text = "Toggle Right Controls" };
             toggleControlsItem.Click += (_, __) => { _showRightButtonControls = !_showRightButtonControls; ModtermCanvas.Invalidate(); };
             _flyout.Items.Add(toggleControlsItem);
-            var toggleTitleBarControlsItem = new MenuFlyoutItem { Text = "Toggle Title Bar Controls" };
-            toggleTitleBarControlsItem.Click += (_, __) => { _showTitleBarControls = !_showTitleBarControls; ModtermCanvas.Invalidate(); };
-            _flyout.Items.Add(toggleTitleBarControlsItem);
+            
         }
     }
 }
