@@ -27,7 +27,6 @@ namespace modterm
 
         // main terminal logic and state
         private ConPTYTerminal _terminal = null!;
-        private Shell _currentShell = new Shell();
         private int _scrollOffset = 0;
         private DispatcherQueueTimer _cursorTimer = null!;
         private DispatcherQueueTimer _resizeStopTimer = null!;
@@ -119,6 +118,7 @@ namespace modterm
                 _uac = _mtd.GetDefaultAppConfiguration();
                 // write to disk
                 SaveConfig();
+                UpdateTitleBarLabels();
 
                 // write the theme configurations to disk as well so users can edit or add to them if they want
                 foreach (var themeConfig in _mtd.GetAllColorConfigurations())
@@ -136,14 +136,8 @@ namespace modterm
             var themeFiles = Directory.GetFiles(_userConfigDirectory, "theme_*.json");
             _themeNames = themeFiles.Select(f => Path.GetFileNameWithoutExtension(f).Substring(6)).ToList();
 
-            _uac.PropertyChanged += (s, e) =>
-            {
-                SaveConfig();
-            };
-            _uac.ThemeConfiguration.PropertyChanged += (s, e) =>
-            {
-                SaveConfig();
-            };
+            _uac.PropertyChanged += (s, e) => { SaveConfig(); UpdateTitleBarLabels(); };
+            _uac.ThemeConfiguration.PropertyChanged += (s, e) => { SaveConfig(); UpdateTitleBarLabels(); };
 
             var loc = _uac.WindowLocation;
             var rectInt32 = new Windows.Graphics.RectInt32
@@ -155,7 +149,6 @@ namespace modterm
             };
             this.AppWindow.MoveAndResize(rectInt32);
 
-            _currentShell = _uac.TerminalShell;
             _mtd.CurrentFont = _uac.TerminalFont;
             _mtd.CurrentControlFont = _uac.TerminalControlFont;
             _mtd.CurrentFontSize = _uac.TerminalFontSize;
@@ -205,8 +198,8 @@ namespace modterm
             this.InitializeFlyouts();
             _lastWindowSize = this.AppWindow.Size;
 
-            // Ensure a draw pass runs so deferred ConPTY start can measure the canvas.
-            ModtermCanvas.Invalidate();
+            // Update labels and ensure a draw pass runs so deferred ConPTY start can measure the canvas.
+            UpdateTitleBarLabels();
         }
 
         private void SaveConfig()
@@ -278,7 +271,6 @@ namespace modterm
                 {
                     _mtd.OpacityPct = pct;
                     _uac.ThemeConfiguration.WindowOpacityPct = pct;
-                    UpdateInformationLabels();
                     ModtermCanvas.Invalidate();
                 };
                 _backdropOpacityBtn.Children.Add(item);
@@ -330,7 +322,6 @@ namespace modterm
                 {
                     _mtd.TintColor = tint;
                     _uac.ThemeConfiguration.WindowColor = tint;
-                    UpdateInformationLabels();
                     ModtermCanvas.Invalidate();
                 };
                 _backdropColorBtn.Children.Add(item);
@@ -391,7 +382,6 @@ namespace modterm
             _colorInfoCtrl = new TextDisplayControl("", false);
             _linesInfoCtrl = new TextDisplayControl("", false);
             _columnsInfoCtrl = new TextDisplayControl("", false);
-            UpdateInformationLabels();
 
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _themeInfoCtrl, _backdropInfoCtrl, _opacityInfoCtrl, _colorInfoCtrl, _linesInfoCtrl, _columnsInfoCtrl]);
@@ -400,16 +390,18 @@ namespace modterm
                 _systemBackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn, _shellSelBtn]);
         }
 
-        private void UpdateInformationLabels()
+        private void UpdateTitleBarLabels()
         {
             // path and appearance info labels
-            _pathControl.TextContent = $"Shell: {_currentShell.Name}";
+            _pathControl.TextContent = $"Shell: {_uac.TerminalShell.Name}";
             _themeInfoCtrl.TextContent = $"Theme: {_uac.ThemeConfiguration.Name}";
             _backdropInfoCtrl.TextContent = $"System Backdrop: {_uac.ThemeConfiguration.BackdropKind.ToString()}";
             _opacityInfoCtrl.TextContent = $"Opacity: {_mtd.OpacityPct}%";
             _colorInfoCtrl.TextContent = $"Color: {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
             _linesInfoCtrl.TextContent = $"Lines: {_lines}";
             _columnsInfoCtrl.TextContent = $"Columns: {_columns}";
+
+            ModtermCanvas.Invalidate();
         }
 
         private async Task ConfirmResizeRestartAsync()
@@ -466,7 +458,6 @@ namespace modterm
             ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
             _mtd.SetColorConfiguration(themeConfig, this);
             _uac.ThemeConfiguration = themeConfig;
-            UpdateInformationLabels();
             ModtermCanvas.Invalidate();
         }
 
@@ -554,10 +545,8 @@ namespace modterm
             if (_terminal.Started)
                 return;
 
-            UpdateInformationLabels();
-
             _terminal.OutputReceived += OnOutputReceived;
-            _terminal.Start(_currentShell, _lines, _columns);
+            _terminal.Start(_uac.TerminalShell, _lines, _columns);
 
             _vtController.ResizeView(_columns, _lines);
             _terminal?.Resize((short)_columns, (short)_lines);
@@ -603,8 +592,6 @@ namespace modterm
                     ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
                     _mtd.SetColorConfiguration(themeConfig, this);
                     _uac.ThemeConfiguration = themeConfig;
-                    _uac.ThemeConfiguration.PropertyChanged += (s, e) => SaveConfig();
-                    UpdateInformationLabels();
                     ModtermCanvas.Invalidate();
                 };
                 themeItem.Items.Add(item);
