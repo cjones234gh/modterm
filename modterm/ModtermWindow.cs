@@ -271,7 +271,6 @@ namespace modterm
                 {
                     _mtd.OpacityPct = pct;
                     _uac.ThemeConfiguration.WindowOpacityPct = pct;
-                    ModtermCanvas.Invalidate();
                 };
                 _backdropOpacityBtn.Children.Add(item);
             }
