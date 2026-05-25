@@ -84,6 +84,34 @@ namespace modterm
                     ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Mica
                 },
+                new ThemeConfiguration()
+                {
+                    Name = "BluePrism",
+                    OutputColor = Color.FromArgb(255, 0, 0, 255),
+                    OutputBlurColor = Colors.Cyan,
+                    ControlColor = Color.FromArgb(255, 0, 0, 255),
+                    ControlBlurColor = Colors.Cyan,
+                    BlurAmount = 12.0f,
+                    WindowOpacityPct = 20,
+                    WindowColor = GetColorFromHexString("#000066"),
+                    ControlEngagedColor = Colors.Red,
+                    ControlEngagedHoverColor = Colors.Red,
+                    BackdropKind = BackdropKind.Blurred
+                },
+                new ThemeConfiguration()
+                {
+                    Name = "BlueMatrice",
+                    OutputColor = Color.FromArgb(255, 90, 255, 90),
+                    OutputBlurColor = Color.FromArgb(255, 90, 45, 240),
+                    ControlColor = Color.FromArgb(255, 100, 255, 0),
+                    ControlBlurColor = Color.FromArgb(255, 90, 45, 240),
+                    BlurAmount = 12.0f,
+                    WindowOpacityPct = 40,
+                    WindowColor = GetColorFromHexString("#000000"),
+                    ControlEngagedColor = Colors.Red,
+                    ControlEngagedHoverColor = Colors.Red,
+                    BackdropKind = BackdropKind.Blurred
+                },
                 new ThemeConfiguration
                 {
                     Name = "CyberEggplant",
