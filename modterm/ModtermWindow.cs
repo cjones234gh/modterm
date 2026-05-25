@@ -13,6 +13,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI;
 using Windows.UI;
 using Windows.Graphics;
+using System.ComponentModel;
 
 namespace modterm
 {
@@ -44,7 +45,9 @@ namespace modterm
         private string _userAppConfigPath = string.Empty;
 
         // user app configuration
-        private UserAppConfiguration _uac;
+        private UserAppConfiguration _uac = null!;
+        private bool _saveConfiguration = true;
+        private bool _showConfigLoadFailureDialog = false;
 
         // theme names from config directory
         private List<string> _themeNames = new List<string>();
@@ -76,6 +79,7 @@ namespace modterm
         private void InitializeApplication()
         {
             _flyout = new MenuFlyout();
+            RootGrid.Loaded += RootGrid_Loaded;
 
             _cursorTimer = DispatcherQueue.CreateTimer();
             _resizeStopTimer = DispatcherQueue.CreateTimer();
@@ -98,50 +102,26 @@ namespace modterm
 
             if (File.Exists(_userAppConfigPath))
             {
-                // Load user config from file
-                string json = File.ReadAllText(_userAppConfigPath);
-                _uac = JsonSerializer.Deserialize<UserAppConfiguration>(json) ?? _mtd.GetDefaultAppConfiguration();                
+                if (TryLoadUserConfiguration(out var loadedConfiguration))
+                {
+                    SetUserConfiguration(loadedConfiguration);
+                }
+                else
+                {
+                    _saveConfiguration = false;
+                    _showConfigLoadFailureDialog = true;
+                    SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+                }
             }
             else
             {
-                _uac = _mtd.GetDefaultAppConfiguration();
-                // write to disk
-                SaveConfig();
-                UpdateTitleBarLabels();
-
-                // write the theme configurations to disk as well so users can edit or add to them if they want
-                foreach (var themeConfig in _mtd.GetAllColorConfigurations())
-                {
-                    string themePath = Path.Combine(_userConfigDirectory, $"theme_{themeConfig.Name}.json");
-                    if (!File.Exists(themePath))
-                    {
-                        string themeJson = JsonSerializer.Serialize(themeConfig, new JsonSerializerOptions { WriteIndented = true });
-                        File.WriteAllText(themePath, themeJson);
-                    }
-                }
+                SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+                WriteConfigurationToDisk(_uac);
+                WriteDefaultThemeConfigurations(overwriteExisting: false);
             }
-            // load the name of each theme configuration from disk so we can populate the theme menu
-            // theme files are all prefixed with "theme_" so we can easily identify them and extract the theme name
-            var themeFiles = Directory.GetFiles(_userConfigDirectory, "theme_*.json");
-            _themeNames = themeFiles.Select(f => Path.GetFileNameWithoutExtension(f).Substring(6)).ToList();
 
-            _uac.PropertyChanged += (s, e) => { SaveConfig(); UpdateTitleBarLabels(); };
-            _uac.ThemeConfiguration.PropertyChanged += (s, e) => { SaveConfig(); UpdateTitleBarLabels(); };
-
-            var loc = _uac.WindowLocation;
-            var rectInt32 = new Windows.Graphics.RectInt32
-            {
-                X = (int)loc.X,
-                Y = (int)loc.Y,
-                Width = (int)loc.Width,
-                Height = (int)loc.Height
-            };
-            this.AppWindow.MoveAndResize(rectInt32);
-
-            _mtd.CurrentFont = _uac.TerminalFont;
-            _mtd.CurrentControlFont = _uac.TerminalControlFont;
-            _mtd.CurrentFontSize = _uac.TerminalFontSize;
-            _mtd.SetColorConfiguration(_uac.ThemeConfiguration, this);
+            LoadThemeNames();
+            ApplyCurrentUserConfiguration(applyWindowBounds: true);
 
             // all modterm-style labels and flyout controls
             InitializeModtermControls();
@@ -155,7 +135,6 @@ namespace modterm
             this.SizeChanged += MainWindow_SizeChanged;
             this.Closed += (s, e) => _terminal?.Dispose();
 
-            RootGrid.Background = _mtd.GetBackgroundBrush();
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
             ModtermCanvas.Draw += this.ModtermCanvas_Draw;
@@ -193,8 +172,170 @@ namespace modterm
 
         private void SaveConfig()
         {
-            string json = JsonSerializer.Serialize(_uac, new JsonSerializerOptions { WriteIndented = true });
+            if (!_saveConfiguration)
+            {
+                return;
+            }
+
+            WriteConfigurationToDisk(_uac);
+        }
+
+        private void WriteConfigurationToDisk(UserAppConfiguration configuration)
+        {
+            string json = JsonSerializer.Serialize(configuration, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_userAppConfigPath, json);
+        }
+
+        private void WriteDefaultThemeConfigurations(bool overwriteExisting)
+        {
+            foreach (var themeConfig in _mtd.GetAllColorConfigurations())
+            {
+                string themePath = Path.Combine(_userConfigDirectory, $"theme_{themeConfig.Name}.json");
+                if (!overwriteExisting && File.Exists(themePath))
+                {
+                    continue;
+                }
+
+                string themeJson = JsonSerializer.Serialize(themeConfig, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(themePath, themeJson);
+            }
+        }
+
+        private void LoadThemeNames()
+        {
+            var themeFiles = Directory.GetFiles(_userConfigDirectory, "theme_*.json");
+            _themeNames = themeFiles
+                .Select(f => Path.GetFileNameWithoutExtension(f).Substring(6))
+                .ToList();
+        }
+
+        private bool TryLoadUserConfiguration(out UserAppConfiguration configuration)
+        {
+            try
+            {
+                string json = File.ReadAllText(_userAppConfigPath);
+                configuration = ValidateLoadedConfiguration(JsonSerializer.Deserialize<UserAppConfiguration>(json));
+                return true;
+            }
+            catch
+            {
+                configuration = _mtd.GetDefaultAppConfiguration();
+                return false;
+            }
+        }
+
+        private static UserAppConfiguration ValidateLoadedConfiguration(UserAppConfiguration? configuration)
+        {
+            if (configuration is null)
+            {
+                throw new InvalidDataException("User configuration deserialized to null.");
+            }
+
+            if (configuration.TerminalShell is null)
+            {
+                throw new InvalidDataException("Terminal shell is missing.");
+            }
+
+            if (configuration.ThemeConfiguration is null)
+            {
+                throw new InvalidDataException("Theme configuration is missing.");
+            }
+
+            if (configuration.ShellConfigurations is null)
+            {
+                throw new InvalidDataException("Shell configurations are missing.");
+            }
+
+            return configuration;
+        }
+
+        private void SetUserConfiguration(UserAppConfiguration configuration)
+        {
+            if (_uac is not null)
+            {
+                _uac.PropertyChanged -= UserConfiguration_PropertyChanged;
+                _uac.ThemeConfiguration.PropertyChanged -= ThemeConfiguration_PropertyChanged;
+            }
+
+            _uac = configuration;
+            _uac.PropertyChanged += UserConfiguration_PropertyChanged;
+            _uac.ThemeConfiguration.PropertyChanged += ThemeConfiguration_PropertyChanged;
+        }
+
+        private void SetThemeConfiguration(ThemeConfiguration themeConfig)
+        {
+            _uac.ThemeConfiguration.PropertyChanged -= ThemeConfiguration_PropertyChanged;
+            _uac.ThemeConfiguration = themeConfig;
+            _uac.ThemeConfiguration.PropertyChanged += ThemeConfiguration_PropertyChanged;
+        }
+
+        private void ApplyCurrentUserConfiguration(bool applyWindowBounds)
+        {
+            if (applyWindowBounds)
+            {
+                var loc = _uac.WindowLocation;
+                var rectInt32 = new Windows.Graphics.RectInt32
+                {
+                    X = (int)loc.X,
+                    Y = (int)loc.Y,
+                    Width = (int)loc.Width,
+                    Height = (int)loc.Height
+                };
+                this.AppWindow.MoveAndResize(rectInt32);
+            }
+
+            _mtd.CurrentFont = _uac.TerminalFont;
+            _mtd.CurrentControlFont = _uac.TerminalControlFont;
+            _mtd.CurrentFontSize = _uac.TerminalFontSize;
+            _mtd.SetColorConfiguration(_uac.ThemeConfiguration, this);
+            RootGrid.Background = _mtd.GetBackgroundBrush();
+        }
+
+        private void ResetDefaultConfiguration()
+        {
+            _saveConfiguration = true;
+            SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+            ApplyCurrentUserConfiguration(applyWindowBounds: false);
+            InitializeModtermControls();
+            RestartTerminalForLayoutChange();
+            WriteConfigurationToDisk(_uac);
+            WriteDefaultThemeConfigurations(overwriteExisting: true);
+            LoadThemeNames();
+            InitializeFlyouts();
+            UpdateTitleBarLabels();
+        }
+
+        private void UserConfiguration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            SaveConfig();
+            UpdateTitleBarLabels();
+        }
+
+        private void ThemeConfiguration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            SaveConfig();
+            UpdateTitleBarLabels();
+        }
+
+        private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (!_showConfigLoadFailureDialog)
+            {
+                return;
+            }
+
+            _showConfigLoadFailureDialog = false;
+
+            var dialog = new ContentDialog
+            {
+                Title = "Configuration Load Failed",
+                Content = "Your configration failed to load. Using the default, any visual changes won't be saved.",
+                CloseButtonText = "OK",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = RootGrid.XamlRoot
+            };
+
+            await dialog.ShowAsync();
         }
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
@@ -524,11 +665,15 @@ namespace modterm
                     string themePath = Path.Combine(_userConfigDirectory, $"theme_{preset}.json");
                     ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
                     _mtd.SetColorConfiguration(themeConfig, this);
-                    _uac.ThemeConfiguration = themeConfig;
+                    SetThemeConfiguration(themeConfig);
                 };
                 themeItem.Items.Add(item);
             }
             _flyout.Items.Add(themeItem);
+
+            var resetDefaultsItem = new MenuFlyoutItem { Text = "Reset Default Configuration" };
+            resetDefaultsItem.Click += (_, __) => ResetDefaultConfiguration();
+            _flyout.Items.Add(resetDefaultsItem);
 
             // toggle title bar controls
             var toggleTitleBarControlsItem = new MenuFlyoutItem { Text = "Toggle Title Bar Controls" };

@@ -19,7 +19,7 @@ namespace modterm
             {
                 WindowLocation = new Windows.Foundation.Rect(100, 100, 800, 600),
                 TerminalFont = "Consolas",
-                TerminalControlFont = "Lucida Console",
+                TerminalControlFont = "3270 Nerd Font Mono",
                 TerminalFontSize = 12.0f,
                 TerminalShell = new Shell
                 {
@@ -35,7 +35,7 @@ namespace modterm
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
                     ControlColor = GetColorFromHexString("#ff4fc1"),
                     ControlBlurColor = GetColorFromHexString("#3333ff"),
-                    BlurAmount = 7.0f,
+                    BlurAmount = 12.0f,
                     WindowOpacityPct = 20,
                     WindowColor = GetColorFromHexString("#000066"),
                     ControlEngagedColor = Colors.Red,
