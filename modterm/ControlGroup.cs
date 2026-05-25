@@ -81,7 +81,7 @@ namespace modterm
                     foreach (var control in Controls)
                     { 
                         totalWidth += control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.GetControlTextFormat(), 9999, 9999).DrawBounds.Width + _widthPadding)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.CurrentControlTextFormat, 9999, 9999).DrawBounds.Width + _widthPadding)
                             : (float)control.Location.Width + _padding;
                     }
                     float startX = (canvasWidth - totalWidth) / 2;
@@ -89,10 +89,10 @@ namespace modterm
                     foreach (var control in Controls)
                     {
                         float width = control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.GetControlTextFormat(), 9999, 9999).DrawBounds.Width + _widthPadding)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.CurrentControlTextFormat, 9999, 9999).DrawBounds.Width + _widthPadding)
                             : (float)control.Location.Width;
                         float height = control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.GetControlTextFormat(), 9999, 9999).DrawBounds.Height + _heightPadding)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.CurrentControlTextFormat, 9999, 9999).DrawBounds.Height + _heightPadding)
                             : (float)control.Location.Height;
                         control.Location = new Windows.Foundation.Rect(startX, yy, width, height);
                         startX += width + _padding;
@@ -106,7 +106,7 @@ namespace modterm
                         float width, height;
                         if (control.ContentSizing)
                         {
-                            var textFormat = mtd.GetControlTextFormat();
+                            var textFormat = mtd.CurrentControlTextFormat;
                             var textLayout = new CanvasTextLayout(sender, control.TextContent, textFormat, 9999, 9999);
                             width = (float)textLayout.DrawBounds.Width + _widthPadding;
                             height = (float)textLayout.DrawBounds.Height + _heightPadding;
@@ -151,7 +151,7 @@ namespace modterm
             if (!_expandableChildSizes.TryGetValue(parent, out var wh) || wh.Length != parent.Children.Count)
             {
                 wh = new (float w, float h)[parent.Children.Count];
-                var textFormat = mtd.GetControlTextFormat();
+                var textFormat = mtd.CurrentControlTextFormat;
                 for (int i = 0; i < parent.Children.Count; i++)
                 {
                     var child = parent.Children[i];

@@ -34,7 +34,7 @@ namespace modterm
             if (!_terminal.Started)
             {
                 int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (_mtd.CurrentFontSize + _lineHeightPadding));
-                float measuredCharWidth = MeasureCharWidth(sender, args);
+                float measuredCharWidth = MeasureCellAdvance(args.DrawingSession, _mtd.CurrentTextFormat);
                 int measuredCols = (int)((sender.ActualWidth - _leftTextPadding) / measuredCharWidth);
                 _lines = measuredRows;
                 _columns = measuredCols;
@@ -51,7 +51,6 @@ namespace modterm
             int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
             var selectionRange = _isSelecting ? _selectionRange : null;
             double lineHeight = _mtd.CurrentFontSize + _lineHeightPadding;
-            var baseTextFormat = _mtd.GetTextFormat();
 
             for (int visibleRow = 0; visibleRow < _lines; visibleRow++)
             {
@@ -90,14 +89,8 @@ namespace modterm
                     if (attr.Hidden)
                         fg = bg;
 
-                    var textFormat = new CanvasTextFormat
-                    {
-                        FontFamily = baseTextFormat.FontFamily,
-                        FontSize = baseTextFormat.FontSize,
-                        FontWeight = attr.Bright ? FontWeights.Bold : FontWeights.Normal,
-                        WordWrapping = CanvasWordWrapping.NoWrap
-                    };
-
+                    _mtd.CurrentTextFormat.FontWeight = attr.Bright ? FontWeights.Bold : FontWeights.Normal;
+                    
                     float cellX = _leftTextPadding + (col * _measuredCharWidth);
                     _mtd.DrawText(
                         cellText,
@@ -106,7 +99,7 @@ namespace modterm
                         _measuredCharWidth,
                         fg,
                         bg,
-                        textFormat,
+                        _mtd.CurrentTextFormat,
                         attr.DefaultForeground,
                         attr.DefaultBackground);
                 }
@@ -118,7 +111,7 @@ namespace modterm
                 var cursor = _vtController.ViewPort.CursorPosition;
                 float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
                 float cursorY = (float)(cursor.Row * (_mtd.CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
-                args.DrawingSession.DrawText("|", cursorX, cursorY, _mtd.OutputColor, _mtd.GetTextFormat());
+                args.DrawingSession.DrawText("|", cursorX, cursorY, _mtd.OutputColor, _mtd.CurrentTextFormat);
             }
 
             _mtd.EndEffectSequence();
@@ -133,14 +126,8 @@ namespace modterm
                 _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
             } 
         }
-
-        // Measure monospace cell advance width (not ink bounds) for column grid alignment.
-        private float MeasureCharWidth(CanvasControl sender, CanvasDrawEventArgs args)
-        {
-            return MeasureCellAdvance(args.DrawingSession, _mtd.GetTextFormat());
-        }
-
-        private static float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
+        
+        private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
         {
             const int sampleLength = 32;
             using var layout = new CanvasTextLayout(ds, new string('0', sampleLength), format, 9999, 9999);

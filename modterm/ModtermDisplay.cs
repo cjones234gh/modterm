@@ -22,9 +22,6 @@ namespace modterm
 
     public partial class ModtermDisplay
     {
-        // font family names for terminal and control text (Win2D CanvasTextFormat)
-        public string CurrentFont { get; set; } = string.Empty;
-        public string CurrentControlFont { get; set; } = string.Empty;
         // glow colors for terminal and control text
         public Color OutputGlowColor { get; set; }
         // normal colors for terminal and control text
@@ -54,9 +51,11 @@ namespace modterm
         // control scale based on font size to maintain consistent proportions
         public float CurrentFontSizeControlScale { get; set; }
 
-        private float _currentFontSize;
-        private float _currentControlFontSize;
+        private string _currentFont = "Consolas";
+        private string _currentControlFont = "3270 Nerd Font Mono";
+        private float _currentFontSize = 12f;
         private float _controlFontScale = 0.8f;
+        private float _currentControlFontSize = 12f * 0.8f;
         private float _currentBgColorPadding; 
         private int _transparencyPct;
         private byte _alpha;
@@ -70,6 +69,28 @@ namespace modterm
         private CanvasDrawingSession _drawSession = null!;
         private Effects _effect = Effects.None;
 
+        public CanvasTextFormat CurrentTextFormat { get; set; } = null!;
+        public CanvasTextFormat CurrentControlTextFormat { get; set; } = null!;
+
+        public string CurrentFont 
+        { 
+            get 
+            {
+                return _currentFont;
+            }
+            set 
+            {
+                _currentFont = value; 
+                CurrentTextFormat.FontFamily = _currentFont; 
+            }
+        }
+
+        public string CurrentControlFont 
+        { 
+            get { return _currentControlFont; }
+            set { _currentControlFont = value; CurrentControlTextFormat.FontFamily = _currentControlFont; }
+        }
+        
         public float CurrentFontSize
         {
             get
@@ -80,6 +101,8 @@ namespace modterm
             {
                 _currentFontSize = value;
                 _currentControlFontSize = CurrentFontSize * _controlFontScale;
+                CurrentTextFormat.FontSize = _currentFontSize;
+                CurrentControlTextFormat.FontSize = _currentControlFontSize;
                 ControlPadding = _currentControlFontSize / 1.5f;
                 ControlMargin = 5;// + (_currentFontSize / 2);
                 ControlMarginRight = 10;
@@ -117,9 +140,10 @@ namespace modterm
         public void Initialize()
         {
             // set default values
-            CurrentFontSize = 12f;
-            CurrentFont = "Consolas";
-            CurrentControlFont = "Lucida Console";
+            CurrentTextFormat = new CanvasTextFormat { FontFamily = _currentFont,
+                FontSize = _currentFontSize, WordWrapping = CanvasWordWrapping.NoWrap };
+            CurrentControlTextFormat = new CanvasTextFormat { FontFamily = _currentControlFont,
+                FontSize = _currentControlFontSize, WordWrapping = CanvasWordWrapping.NoWrap };
             _namedColorConfigurations = GetDefaultThemeConfigurations();
             _themeConfigIndex = 0;
 
@@ -243,9 +267,6 @@ namespace modterm
             Color controlColor = GetControlColor(control);
             Color controlBlurColor = GetControlGlowColor(control);
 
-            CanvasTextFormat textFormat = GetControlTextFormat();
-
-            //
             //
             // blur layer
             using (var commandList = new CanvasCommandList(sender))
@@ -268,7 +289,7 @@ namespace modterm
                     
                     // Draw TextContent
                     clds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
-                        (float)control.Location.Y + ControlPadding / 2, controlBlurColor, textFormat);
+                        (float)control.Location.Y + ControlPadding / 2, controlBlurColor, CurrentControlTextFormat);
                 }
 
                 var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
@@ -281,7 +302,7 @@ namespace modterm
             if (control.Interactive)
             {
                 // Draw a bordered rectangle
-                //cds.DrawRoundedRectangle(control.Location, CornerRadius, CornerRadius,
+                // cds.DrawRoundedRectangle(control.Location, CornerRadius, CornerRadius,
                 //    Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
             }
 
@@ -291,7 +312,7 @@ namespace modterm
 
             // Draw TextContent
             cds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
-                (float)control.Location.Y + ControlPadding / 2, controlColor, textFormat);
+                (float)control.Location.Y + ControlPadding / 2, controlColor, CurrentControlTextFormat);
 
             if (control.IsEngaged && control.Children is { Count: > 0 })
             {
@@ -378,25 +399,6 @@ namespace modterm
                 }
                 _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);
             }
-        }
-
-        public CanvasTextFormat GetControlTextFormat()
-        {
-            return new CanvasTextFormat
-            {
-                FontFamily = CurrentControlFont,
-                FontSize = _currentControlFontSize
-            };
-        }
-
-        public CanvasTextFormat GetTextFormat()
-        {
-            return new CanvasTextFormat
-            {
-                FontFamily = string.IsNullOrWhiteSpace(CurrentFont) ? "Cascadia Mono" : CurrentFont,
-                FontSize = CurrentFontSize,
-                WordWrapping = CanvasWordWrapping.NoWrap
-            };
         }
 
         public string GetHexStringFromColor(Color color)
