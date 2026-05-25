@@ -29,9 +29,6 @@ namespace modterm
         private bool _showRightButtonControls = true;
         private bool _showTitleBarControls = true;
 
-        // Cached per-weight text formats so batched runs can share one instance without
-        // the mutate-shared-state bug that would otherwise apply the last weight to all
-        // queued draw calls. Rebuilt only when font family or size changes.
         private CanvasTextFormat? _normalTextFormat;
         private CanvasTextFormat? _boldTextFormat;
         private string? _cachedFontFamily;

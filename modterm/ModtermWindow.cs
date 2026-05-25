@@ -40,13 +40,9 @@ namespace modterm
         private TextDisplayControl _colorInfoCtrl = null!;
         private TextDisplayControl _linesInfoCtrl = null!;
         private TextDisplayControl _columnsInfoCtrl = null!;
-        private TextDisplayControl _autoThemeBtn = null!;
-        private int _autoThemeIndex = 0;
         private TextDisplayControl _systemBackdropBtn = null!;
         private TextDisplayControl _backdropColorBtn = null!;
         private TextDisplayControl _backdropOpacityBtn = null!;
-        private TextDisplayControl _fontFamilyBtn = null!;
-        private TextDisplayControl _fontSizeBtn = null!;
         private TextDisplayControl _glowBtn = null!;
         private TextDisplayControl _shellSelBtn = null!;
 
@@ -242,10 +238,6 @@ namespace modterm
             _rightButtonControls = new ControlGroup(
                 ControlGroup.ControlDock.Right, _mtd.ControlPadding);
 
-            // next theme button for fun - cycles through color themes
-            _autoThemeBtn = new TextDisplayControl("THEME >", true);
-            _autoThemeBtn.Clicked += AutoThemeButton_Click;
-
             // font glow
             _glowBtn = new TextDisplayControl("GLOW", true);
             var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
@@ -324,34 +316,6 @@ namespace modterm
                 _backdropColorBtn.Children.Add(item);
             }
 
-            // font family
-            _fontFamilyBtn = new TextDisplayControl("FONT", true);
-            var fonts = new[] { "Cascadia Mono", "Consolas", "Courier New", "Lucida Console", "SimSun-ExtB" };
-            foreach (var f in fonts)
-            {
-                var item = new TextDisplayControl(f, true);
-                item.Clicked += (_, __) =>
-                {
-                    _mtd.CurrentFont = f;
-                    _uac.TerminalFont = f;
-                };
-                _fontFamilyBtn.Children.Add(item);
-            }
-
-            // font size
-            _fontSizeBtn = new TextDisplayControl("FONT SZ", true);
-            var sizes = new[] { 8, 10, 12, 13, 14, 15, 16, 17, 19, 23 };
-            foreach (var s in sizes)
-            {
-                var item = new TextDisplayControl(s.ToString(), true);
-                item.Clicked += (_, __) =>
-                {
-                    _mtd.CurrentFontSize = (float)s;
-                    RestartTerminalForLayoutChange();
-                };
-                _fontSizeBtn.Children.Add(item);
-            }
-
             // shell selection
             _shellSelBtn = new TextDisplayControl("SHELL", true);
             foreach (Shell sh in _uac.ShellConfigurations)
@@ -382,8 +346,7 @@ namespace modterm
             _titleBarControls.Controls.AddRange(
                 [_pathControl, _themeInfoCtrl, _backdropInfoCtrl, _opacityInfoCtrl, _colorInfoCtrl, _linesInfoCtrl, _columnsInfoCtrl]);
             _rightButtonControls.Controls.AddRange(
-                [_autoThemeBtn, _fontFamilyBtn, _fontSizeBtn,
-                _systemBackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn, _shellSelBtn]);
+                [_systemBackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn, _shellSelBtn]);
         }
 
         private void UpdateTitleBarLabels()
@@ -444,16 +407,6 @@ namespace modterm
             _terminal = new ConPTYTerminal();
             // terminal start is deferred until the first draw pass so we can measure
             ModtermCanvas.Invalidate();
-        }
-
-        private void AutoThemeButton_Click(object? sender, EventArgs e)
-        {
-            _autoThemeIndex = (_autoThemeIndex + 1) % _themeNames.Count;
-
-            string themePath = Path.Combine(_userConfigDirectory, $"theme_{_themeNames[_autoThemeIndex]}.json");
-            ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
-            _mtd.SetColorConfiguration(themeConfig, this);
-            _uac.ThemeConfiguration = themeConfig;
         }
 
         private void UpdateSelectedText()
