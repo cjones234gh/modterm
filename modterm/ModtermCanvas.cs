@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using System;
 using System.Diagnostics;
+using System.Text;
 using Windows.System;
 using Windows.UI;
 using Windows.Foundation;
@@ -27,6 +28,16 @@ namespace modterm
 
         private bool _showRightButtonControls = true;
         private bool _showTitleBarControls = true;
+
+        // Cached per-weight text formats so batched runs can share one instance without
+        // the mutate-shared-state bug that would otherwise apply the last weight to all
+        // queued draw calls. Rebuilt only when font family or size changes.
+        private CanvasTextFormat? _normalTextFormat;
+        private CanvasTextFormat? _boldTextFormat;
+        private string? _cachedFontFamily;
+        private float _cachedFontSize;
+
+        private readonly StringBuilder _runBuffer = new StringBuilder(256);
 
         private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
@@ -52,11 +63,26 @@ namespace modterm
             var selectionRange = _isSelecting ? _selectionRange : null;
             double lineHeight = _mtd.CurrentFontSize + _lineHeightPadding;
 
+            EnsureTextFormats();
+
             for (int visibleRow = 0; visibleRow < _lines; visibleRow++)
             {
                 int logicalRow = topRow + visibleRow;
                 float y = _topTextPadding + (float)(visibleRow * lineHeight);
                 var sourceLine = _vtController.ViewPort.GetLine(logicalRow);
+
+                // Run-batching state: accumulate contiguous cells with identical SGR
+                // attributes so the row can be drawn as a small number of DrawText calls
+                // instead of one per cell. Unsafe glyphs (box-drawing, combining marks,
+                // etc.) break the run and are drawn individually to preserve alignment.
+                bool runActive = false;
+                int runStartCol = 0;
+                Color runFg = default;
+                Color runBg = default;
+                bool runFgDefault = false;
+                bool runBgDefault = false;
+                CanvasTextFormat? runFormat = null;
+                _runBuffer.Clear();
 
                 for (int col = 0; col < _columns; col++)
                 {
@@ -69,10 +95,11 @@ namespace modterm
                             : sourceChar.Attributes);
 
                     char displayChar = sourceChar == null ? ' ' : sourceChar.Char;
-                    if (TryResolveMissingGlyph(logicalRow, col, displayChar, out char resolvedDisplay))
+                    bool wasResolved = TryResolveMissingGlyph(logicalRow, col, displayChar, out char resolvedDisplay);
+                    if (wasResolved)
                         displayChar = resolvedDisplay;
 
-                    string cellText = displayChar.ToString() + (sourceChar?.CombiningCharacters ?? string.Empty);
+                    string combining = sourceChar?.CombiningCharacters ?? string.Empty;
 
                     Color fg = _mtd.OutputColor;
                     if (!attr.DefaultForeground)
@@ -89,19 +116,63 @@ namespace modterm
                     if (attr.Hidden)
                         fg = bg;
 
-                    _mtd.CurrentTextFormat.FontWeight = attr.Bright ? FontWeights.Bold : FontWeights.Normal;
-                    
-                    float cellX = _leftTextPadding + (col * _measuredCharWidth);
-                    _mtd.DrawText(
-                        cellText,
-                        cellX,
-                        y,
-                        _measuredCharWidth,
-                        fg,
-                        bg,
-                        _mtd.CurrentTextFormat,
-                        attr.DefaultForeground,
-                        attr.DefaultBackground);
+                    CanvasTextFormat cellFormat = attr.Bright ? _boldTextFormat! : _normalTextFormat!;
+
+                    // Only batch cells whose glyph is known to use the primary monospace
+                    // font's natural advance (printable ASCII). Box-drawing, braille,
+                    // resolved missing glyphs, and combining sequences are drawn per-cell
+                    // at the measured grid so they stay column-aligned.
+                    bool canBatch = !wasResolved
+                        && combining.Length == 0
+                        && IsSafeForBatch(displayChar);
+
+                    bool matchesRun = runActive
+                        && ReferenceEquals(runFormat, cellFormat)
+                        && runFg == fg
+                        && runBg == bg
+                        && runFgDefault == attr.DefaultForeground
+                        && runBgDefault == attr.DefaultBackground;
+
+                    if (runActive && (!canBatch || !matchesRun))
+                    {
+                        FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!);
+                        runActive = false;
+                    }
+
+                    if (canBatch)
+                    {
+                        if (!runActive)
+                        {
+                            runActive = true;
+                            runStartCol = col;
+                            runFg = fg;
+                            runBg = bg;
+                            runFgDefault = attr.DefaultForeground;
+                            runBgDefault = attr.DefaultBackground;
+                            runFormat = cellFormat;
+                        }
+                        _runBuffer.Append(displayChar);
+                    }
+                    else
+                    {
+                        string cellText = displayChar.ToString() + combining;
+                        float cellX = _leftTextPadding + (col * _measuredCharWidth);
+                        _mtd.DrawText(
+                            cellText,
+                            cellX,
+                            y,
+                            _measuredCharWidth,
+                            fg,
+                            bg,
+                            cellFormat,
+                            attr.DefaultForeground,
+                            attr.DefaultBackground);
+                    }
+                }
+
+                if (runActive)
+                {
+                    FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!);
                 }
             }
 
@@ -136,6 +207,56 @@ namespace modterm
                 total += cluster.Width;
             return total / sampleLength;
         }
+
+        private void EnsureTextFormats()
+        {
+            if (_normalTextFormat != null
+                && _cachedFontFamily == _mtd.CurrentFont
+                && _cachedFontSize == _mtd.CurrentFontSize)
+            {
+                return;
+            }
+
+            _normalTextFormat = new CanvasTextFormat
+            {
+                FontFamily = _mtd.CurrentFont,
+                FontSize = _mtd.CurrentFontSize,
+                FontWeight = FontWeights.Normal,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
+            _boldTextFormat = new CanvasTextFormat
+            {
+                FontFamily = _mtd.CurrentFont,
+                FontSize = _mtd.CurrentFontSize,
+                FontWeight = FontWeights.Bold,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
+            _cachedFontFamily = _mtd.CurrentFont;
+            _cachedFontSize = _mtd.CurrentFontSize;
+        }
+
+        private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format)
+        {
+            float x = _leftTextPadding + (startCol * _measuredCharWidth);
+            float width = _runBuffer.Length * _measuredCharWidth;
+            _mtd.DrawText(
+                _runBuffer.ToString(),
+                x,
+                y,
+                width,
+                fg,
+                bg,
+                format,
+                fgDefault,
+                bgDefault);
+            _runBuffer.Clear();
+        }
+
+        // Printable ASCII is rendered natively by the primary monospace font, so glyph
+        // advances are known to equal _measuredCharWidth and runs stay column-aligned
+        // when drawn as a single string. Anything outside this range may trigger font
+        // fallback with a different advance, so we render those per-cell on the grid.
+        private static bool IsSafeForBatch(char c) => c >= 0x20 && c <= 0x7E;
 
         private char GetCellCharAt(int logicalRow, int col)
         {
