@@ -1,21 +1,18 @@
-﻿using Microsoft.UI;
+﻿
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
-
-using Windows.UI;
 using Windows.Foundation;
-using Windows.Graphics;
 using System.Linq;
 using System.IO;
 using System.Text.Json;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI;
+using Windows.UI;
+using Windows.Graphics;
 
 namespace modterm
 {
@@ -33,13 +30,9 @@ namespace modterm
         // modterm UI controls
         private ControlGroup _titleBarControls = null!;
         private ControlGroup _rightButtonControls = null!;
-        private TextDisplayControl _pathControl = null!;
-        private TextDisplayControl _themeInfoCtrl = null!;
-        private TextDisplayControl _backdropInfoCtrl = null!;
-        private TextDisplayControl _opacityInfoCtrl = null!;
-        private TextDisplayControl _colorInfoCtrl = null!;
-        private TextDisplayControl _linesInfoCtrl = null!;
-        private TextDisplayControl _columnsInfoCtrl = null!;
+        private TextDisplayControl _shellInfoCtrl = null!;
+        private TextDisplayControl _appearanceInfoCtrl = null!;
+        private TextDisplayControl _linesColsInfoCtrl = null!;
         private TextDisplayControl _systemBackdropBtn = null!;
         private TextDisplayControl _backdropColorBtn = null!;
         private TextDisplayControl _backdropOpacityBtn = null!;
@@ -335,16 +328,12 @@ namespace modterm
             }
 
             // path and appearance info labels
-            _pathControl = new TextDisplayControl("", false);
-            _themeInfoCtrl = new TextDisplayControl("", false);
-            _backdropInfoCtrl = new TextDisplayControl("", false);
-            _opacityInfoCtrl = new TextDisplayControl("", false);
-            _colorInfoCtrl = new TextDisplayControl("", false);
-            _linesInfoCtrl = new TextDisplayControl("", false);
-            _columnsInfoCtrl = new TextDisplayControl("", false);
+            _shellInfoCtrl = new TextDisplayControl("", false);
+            _appearanceInfoCtrl = new TextDisplayControl("", false);
+            _linesColsInfoCtrl = new TextDisplayControl("", false);
 
             _titleBarControls.Controls.AddRange(
-                [_pathControl, _themeInfoCtrl, _backdropInfoCtrl, _opacityInfoCtrl, _colorInfoCtrl, _linesInfoCtrl, _columnsInfoCtrl]);
+                [_shellInfoCtrl, _appearanceInfoCtrl, _linesColsInfoCtrl]);
             _rightButtonControls.Controls.AddRange(
                 [_systemBackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn, _shellSelBtn]);
         }
@@ -352,13 +341,9 @@ namespace modterm
         private void UpdateTitleBarLabels()
         {
             // path and appearance info labels
-            _pathControl.TextContent = $"Shell: {_uac.TerminalShell.Name}";
-            _themeInfoCtrl.TextContent = $"Theme: {_uac.ThemeConfiguration.Name}";
-            _backdropInfoCtrl.TextContent = $"System Backdrop: {_uac.ThemeConfiguration.BackdropKind.ToString()}";
-            _opacityInfoCtrl.TextContent = $"Opacity: {_mtd.OpacityPct}%";
-            _colorInfoCtrl.TextContent = $"Color: {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
-            _linesInfoCtrl.TextContent = $"Lines: {_lines}";
-            _columnsInfoCtrl.TextContent = $"Columns: {_columns}";
+            _shellInfoCtrl.TextContent = $"Shell: {_uac.TerminalShell.Name}";
+            _appearanceInfoCtrl.TextContent = $"{_uac.ThemeConfiguration.BackdropKind.ToString()} {_mtd.OpacityPct}% {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
+            _linesColsInfoCtrl.TextContent = $"{_lines}x{_columns}";
 
             ModtermCanvas.Invalidate();
         }
