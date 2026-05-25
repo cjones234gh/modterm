@@ -54,8 +54,8 @@ namespace modterm
         private string _currentFont = "Consolas";
         private string _currentControlFont = "3270 Nerd Font Mono";
         private float _currentFontSize = 12f;
-        private float _controlFontScale = 0.8f;
-        private float _currentControlFontSize = 12f * 0.8f;
+        private float _controlFontScale = 1f;
+        private float _currentControlFontSize = 12f;
         private float _currentBgColorPadding; 
         private int _transparencyPct;
         private byte _alpha;
