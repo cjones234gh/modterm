@@ -9,33 +9,30 @@
                 "build",
                 "${workspaceFolder}/modterm/modterm.csproj",
                 "/property:GenerateFullPaths=true",
+                "/property:Platform=x64",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
-            "command": "dotnet",
+            "label": "run-modterm-exe",
+            "dependsOn": "build",
             "type": "process",
+            "command": "powershell",
             "args": [
-                "publish",
-                "${workspaceFolder}/modterm/modterm.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}/.vscode/start-modterm.ps1",
+                "-WorkspaceFolder",
+                "${workspaceFolder}"
             ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "watch",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "watch",
-                "run",
-                "--project",
-                "${workspaceFolder}/modterm/modterm.csproj"
-            ],
-            "problemMatcher": "$msCompile"
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            },
+            "problemMatcher": []
         }
     ]
 }
