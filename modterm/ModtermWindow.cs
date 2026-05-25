@@ -14,6 +14,7 @@ using Microsoft.UI;
 using Windows.UI;
 using Windows.Graphics;
 using System.ComponentModel;
+using System.Diagnostics;
 
 namespace modterm
 {
@@ -28,6 +29,7 @@ namespace modterm
         private int _scrollOffset = 0;
         private DispatcherQueueTimer _cursorTimer = null!;
         private DispatcherQueueTimer _resizeStopTimer = null!;
+        private DispatcherQueueTimer _configReloadTimer = null!;
         // modterm UI controls
         private ControlGroup _titleBarControls = null!;
         private ControlGroup _rightButtonControls = null!;
@@ -48,6 +50,8 @@ namespace modterm
         private UserAppConfiguration _uac = null!;
         private bool _saveConfiguration = true;
         private bool _showConfigLoadFailureDialog = false;
+        private FileSystemWatcher _configWatcher = null!;
+        private DateTime _ignoreConfigWatcherUntilUtc = DateTime.MinValue;
 
         // theme names from config directory
         private List<string> _themeNames = new List<string>();
@@ -83,6 +87,7 @@ namespace modterm
 
             _cursorTimer = DispatcherQueue.CreateTimer();
             _resizeStopTimer = DispatcherQueue.CreateTimer();
+            _configReloadTimer = DispatcherQueue.CreateTimer();
 
             _terminal = new ConPTYTerminal();
 
@@ -120,6 +125,7 @@ namespace modterm
                 WriteDefaultThemeConfigurations(overwriteExisting: false);
             }
 
+            InitializeConfigurationWatcher();
             LoadThemeNames();
             ApplyCurrentUserConfiguration(applyWindowBounds: true);
 
@@ -133,7 +139,11 @@ namespace modterm
             this.SetTitleBar(AppTitleBar);
 
             this.SizeChanged += MainWindow_SizeChanged;
-            this.Closed += (s, e) => _terminal?.Dispose();
+            this.Closed += (s, e) =>
+            {
+                _configWatcher?.Dispose();
+                _terminal?.Dispose();
+            };
 
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
@@ -163,6 +173,13 @@ namespace modterm
                 await ConfirmResizeRestartAsync();
             };
 
+            _configReloadTimer.Interval = TimeSpan.FromMilliseconds(350);
+            _configReloadTimer.Tick += async (s, e) =>
+            {
+                _configReloadTimer.Stop();
+                await ReloadConfigurationFromDiskAsync();
+            };
+
             this.InitializeFlyouts();
             _lastWindowSize = this.AppWindow.Size;
 
@@ -182,8 +199,10 @@ namespace modterm
 
         private void WriteConfigurationToDisk(UserAppConfiguration configuration)
         {
+            _ignoreConfigWatcherUntilUtc = DateTime.UtcNow.AddMilliseconds(750);
             string json = JsonSerializer.Serialize(configuration, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_userAppConfigPath, json);
+            _ignoreConfigWatcherUntilUtc = DateTime.UtcNow.AddMilliseconds(750);
         }
 
         private void WriteDefaultThemeConfigurations(bool overwriteExisting)
@@ -207,6 +226,38 @@ namespace modterm
             _themeNames = themeFiles
                 .Select(f => Path.GetFileNameWithoutExtension(f).Substring(6))
                 .ToList();
+        }
+
+        private void InitializeConfigurationWatcher()
+        {
+            _configWatcher = new FileSystemWatcher(_userConfigDirectory, Path.GetFileName(_userAppConfigPath))
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.CreationTime | NotifyFilters.FileName
+            };
+
+            _configWatcher.Changed += (_, __) => ScheduleConfigurationReload();
+            _configWatcher.Created += (_, __) => ScheduleConfigurationReload();
+            _configWatcher.Renamed += (_, __) => ScheduleConfigurationReload();
+            _configWatcher.EnableRaisingEvents = true;
+        }
+
+        private void ScheduleConfigurationReload()
+        {
+            if (DateTime.UtcNow <= _ignoreConfigWatcherUntilUtc)
+            {
+                return;
+            }
+
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (DateTime.UtcNow <= _ignoreConfigWatcherUntilUtc)
+                {
+                    return;
+                }
+
+                _configReloadTimer.Stop();
+                _configReloadTimer.Start();
+            });
         }
 
         private bool TryLoadUserConfiguration(out UserAppConfiguration configuration)
@@ -305,6 +356,53 @@ namespace modterm
             UpdateTitleBarLabels();
         }
 
+        private async Task ReloadConfigurationFromDiskAsync()
+        {
+            if (!File.Exists(_userAppConfigPath))
+            {
+                return;
+            }
+
+            var previousConfiguration = _uac;
+            if (TryLoadUserConfiguration(out var loadedConfiguration))
+            {
+                _saveConfiguration = true;
+                SetUserConfiguration(loadedConfiguration);
+                ApplyCurrentUserConfiguration(applyWindowBounds: true);
+                InitializeModtermControls();
+                InitializeFlyouts();
+                UpdateTitleBarLabels();
+
+                if (HasTerminalShellChanged(previousConfiguration, loadedConfiguration))
+                {
+                    RestartTerminalForLayoutChange();
+                }
+
+                return;
+            }
+
+            _saveConfiguration = false;
+            SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+            ApplyCurrentUserConfiguration(applyWindowBounds: true);
+            InitializeModtermControls();
+            InitializeFlyouts();
+            UpdateTitleBarLabels();
+
+            if (HasTerminalShellChanged(previousConfiguration, _uac))
+            {
+                RestartTerminalForLayoutChange();
+            }
+
+            await ShowConfigurationLoadFailureDialogAsync();
+        }
+
+        private static bool HasTerminalShellChanged(UserAppConfiguration previousConfiguration, UserAppConfiguration nextConfiguration)
+        {
+            return previousConfiguration.TerminalShell.Name != nextConfiguration.TerminalShell.Name ||
+                previousConfiguration.TerminalShell.Path != nextConfiguration.TerminalShell.Path ||
+                previousConfiguration.TerminalShell.Arguments != nextConfiguration.TerminalShell.Arguments;
+        }
+
         private void UserConfiguration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             SaveConfig();
@@ -325,6 +423,15 @@ namespace modterm
             }
 
             _showConfigLoadFailureDialog = false;
+            await ShowConfigurationLoadFailureDialogAsync();
+        }
+
+        private async Task ShowConfigurationLoadFailureDialogAsync()
+        {
+            if (RootGrid.XamlRoot is null)
+            {
+                return;
+            }
 
             var dialog = new ContentDialog
             {
@@ -336,6 +443,18 @@ namespace modterm
             };
 
             await dialog.ShowAsync();
+        }
+
+        private void OpenConfigurationInNotepad()
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "notepad.exe",
+                Arguments = $"\"{_userAppConfigPath}\"",
+                UseShellExecute = true
+            };
+
+            Process.Start(startInfo);
         }
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
@@ -674,6 +793,10 @@ namespace modterm
             var resetDefaultsItem = new MenuFlyoutItem { Text = "Reset Default Configuration" };
             resetDefaultsItem.Click += (_, __) => ResetDefaultConfiguration();
             _flyout.Items.Add(resetDefaultsItem);
+
+            var editConfigItem = new MenuFlyoutItem { Text = "Edit Configuration" };
+            editConfigItem.Click += (_, __) => OpenConfigurationInNotepad();
+            _flyout.Items.Add(editConfigItem);
 
             // toggle title bar controls
             var toggleTitleBarControlsItem = new MenuFlyoutItem { Text = "Toggle Title Bar Controls" };
