@@ -71,6 +71,7 @@ namespace modterm
         private bool _isResizeSessionActive = false;
         private bool _isResizeConfirmationInProgress = false;
         private bool _suppressResizeHandling = false;
+        private bool _terminalRestartInProgress = false;
 
         // mouse selection state
         private bool _isSelecting = false;
@@ -89,7 +90,7 @@ namespace modterm
             _resizeStopTimer = DispatcherQueue.CreateTimer();
             _configReloadTimer = DispatcherQueue.CreateTimer();
 
-            _terminal = new ConPTYTerminal();
+            _terminal = CreateTerminalInstance();
 
             // Initialize VtNetCore terminal controller and data consumer
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
@@ -142,7 +143,7 @@ namespace modterm
             this.Closed += (s, e) =>
             {
                 _configWatcher?.Dispose();
-                _terminal?.Dispose();
+                DisposeTerminalInstance(_terminal);
             };
 
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
@@ -576,12 +577,7 @@ namespace modterm
                 var item = new TextDisplayControl(sh.Name.ToUpper(), true);
                 item.Clicked += async (_, __) =>
                 {
-                    _terminal.Started = false;
-                    _terminal.Dispose();
-                    await Task.Delay(1000); // Pauses for 1 second without blocking the UI thread
-                    _terminal = new ConPTYTerminal();
-                    _terminal.OutputReceived += OnOutputReceived;
-                    _terminal.Start(sh, _lines, _columns);
+                    await SwitchTerminalShellAsync(sh);
                     _uac.TerminalShell = sh;
                 };
                 _shellSelBtn.Children.Add(item);
@@ -648,10 +644,7 @@ namespace modterm
 
         private void RestartTerminalForLayoutChange()
         {
-            _terminal.Dispose();
-            _terminal = new ConPTYTerminal();
-            // terminal start is deferred until the first draw pass so we can measure
-            ModtermCanvas.Invalidate();
+            ReplaceTerminalInstance(startImmediately: false);
         }
 
         private void UpdateSelectedText()
@@ -738,11 +731,76 @@ namespace modterm
             if (_terminal.Started)
                 return;
 
-            _terminal.OutputReceived += OnOutputReceived;
             _terminal.Start(_uac.TerminalShell, _lines, _columns);
 
             _vtController.ResizeView(_columns, _lines);
             _terminal?.Resize((short)_columns, (short)_lines);
+        }
+
+        private ConPTYTerminal CreateTerminalInstance()
+        {
+            var terminal = new ConPTYTerminal();
+            terminal.OutputReceived += OnOutputReceived;
+            terminal.TerminalExited += OnTerminalExited;
+            return terminal;
+        }
+
+        private void DisposeTerminalInstance(ConPTYTerminal? terminal)
+        {
+            if (terminal is null)
+                return;
+
+            terminal.OutputReceived -= OnOutputReceived;
+            terminal.TerminalExited -= OnTerminalExited;
+            terminal.Dispose();
+        }
+
+        private void ReplaceTerminalInstance(bool startImmediately, Shell? shellOverride = null)
+        {
+            _terminalRestartInProgress = true;
+            try
+            {
+                var nextShell = shellOverride ?? _uac.TerminalShell;
+                var previousTerminal = _terminal;
+                _terminal = CreateTerminalInstance();
+                DisposeTerminalInstance(previousTerminal);
+
+                if (startImmediately)
+                {
+                    _terminal.Start(nextShell, _lines, _columns);
+                    _vtController.ResizeView(_columns, _lines);
+                    _terminal.Resize((short)_columns, (short)_lines);
+                }
+                else
+                {
+                    // terminal start is deferred until the first draw pass so we can measure
+                    ModtermCanvas.Invalidate();
+                }
+            }
+            finally
+            {
+                _terminalRestartInProgress = false;
+            }
+        }
+
+        private Task SwitchTerminalShellAsync(Shell shell)
+        {
+            ReplaceTerminalInstance(startImmediately: true, shellOverride: shell);
+            return Task.CompletedTask;
+        }
+
+        private void OnTerminalExited(object? sender, EventArgs e)
+        {
+            if (_terminalRestartInProgress || !ReferenceEquals(sender, _terminal))
+                return;
+
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (_terminalRestartInProgress || !ReferenceEquals(sender, _terminal))
+                    return;
+
+                Close();
+            });
         }
 
         private void OnOutputReceived(object? sender, string line)
