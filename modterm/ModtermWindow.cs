@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using System;
 using System.Collections.Generic;
@@ -140,6 +141,7 @@ namespace modterm
             this.SetTitleBar(AppTitleBar);
 
             this.SizeChanged += MainWindow_SizeChanged;
+            this.AppWindow.Changed += AppWindow_Changed;
             this.Closed += (s, e) =>
             {
                 _configWatcher?.Dispose();
@@ -458,6 +460,22 @@ namespace modterm
             Process.Start(startInfo);
         }
 
+        private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
+        {
+            if (!args.DidPositionChange || _suppressResizeHandling || _isResizeConfirmationInProgress)
+            {
+                return;
+            }
+
+            // Size changes are handled by MainWindow_SizeChanged (including position updates during resize).
+            if (args.DidSizeChange)
+            {
+                return;
+            }
+
+            PersistWindowLocation();
+        }
+
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
             _rightButtonControls?.InvalidateExpandableChildMeasureCache();
@@ -477,11 +495,19 @@ namespace modterm
 
             _resizeEndSize = currentSize;
             _lastWindowSize = currentSize;
-            _uac.WindowLocation = new Rect(this.AppWindow.Position.X, this.AppWindow.Position.Y,
-                this.AppWindow.Size.Width, this.AppWindow.Size.Height);
+            PersistWindowLocation();
 
             _resizeStopTimer.Stop();
             _resizeStopTimer.Start();
+        }
+
+        private void PersistWindowLocation()
+        {
+            _uac.WindowLocation = new Rect(
+                this.AppWindow.Position.X,
+                this.AppWindow.Position.Y,
+                this.AppWindow.Size.Width,
+                this.AppWindow.Size.Height);
         }
 
         private void InitializeModtermControls()
