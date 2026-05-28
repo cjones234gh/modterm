@@ -376,6 +376,29 @@ namespace modterm
                         {
                             clds.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
                         }
+                    }
+                }
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
+                _drawSession.DrawImage(blurEffect);
+            }
+
+            // Sharp layer
+            foreach (DrawTextCall call in _effectSequence)
+            {
+                if (!call.BackgroundIsDefault)
+                {
+                    _drawSession.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
+                }
+            }
+
+            // Blurred glow layer
+            using (var commandList = new CanvasCommandList(_sender))
+            {
+                using (var clds = commandList.CreateDrawingSession())
+                {
+                    foreach (DrawTextCall call in _effectSequence)
+                    {
+
                         if (call.ForegroundIsDefault || call.Color == OutputColor)
                         {
                             clds.DrawText(call.Text, call.X, call.Y, OutputGlowColor, call.TextFormat);
@@ -393,10 +416,6 @@ namespace modterm
             // Sharp layer
             foreach (DrawTextCall call in _effectSequence)
             {
-                if (!call.BackgroundIsDefault)
-                {
-                    _drawSession.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
-                }
                 _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);
             }
         }
