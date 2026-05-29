@@ -17,7 +17,8 @@ namespace modterm
         {
             return new UserAppConfiguration()
             {
-                WindowLocation = new Windows.Foundation.Rect(100, 100, 800, 600),
+                LastWindowLocation = new Windows.Foundation.Point(100, 100),
+                WindowSize = new Windows.Foundation.Size(800, 600),
                 TerminalFont = "Consolas",
                 TerminalControlFont = "3270 Nerd Font Mono",
                 TerminalFontSize = 12.0f,

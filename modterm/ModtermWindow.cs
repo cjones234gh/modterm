@@ -141,9 +141,9 @@ namespace modterm
             this.SetTitleBar(AppTitleBar);
 
             this.SizeChanged += MainWindow_SizeChanged;
-            this.AppWindow.Changed += AppWindow_Changed;
             this.Closed += (s, e) =>
             {
+                PersistLastWindowLocation();
                 _configWatcher?.Dispose();
                 DisposeTerminalInstance(_terminal);
             };
@@ -268,13 +268,43 @@ namespace modterm
             try
             {
                 string json = File.ReadAllText(_userAppConfigPath);
-                configuration = ValidateLoadedConfiguration(JsonSerializer.Deserialize<UserAppConfiguration>(json));
+                var loadedConfiguration = JsonSerializer.Deserialize<UserAppConfiguration>(json);
+                MigrateLegacyWindowLocation(json, loadedConfiguration);
+                configuration = ValidateLoadedConfiguration(loadedConfiguration);
                 return true;
             }
             catch
             {
                 configuration = _mtd.GetDefaultAppConfiguration();
                 return false;
+            }
+        }
+
+        private static void MigrateLegacyWindowLocation(string json, UserAppConfiguration? configuration)
+        {
+            if (configuration is null || json.Contains("\"WindowSize\"", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("WindowLocation", out var windowLocation))
+                {
+                    return;
+                }
+
+                configuration.LastWindowLocation = new Point(
+                    windowLocation.GetProperty("X").GetDouble(),
+                    windowLocation.GetProperty("Y").GetDouble());
+                configuration.WindowSize = new Size(
+                    windowLocation.GetProperty("Width").GetDouble(),
+                    windowLocation.GetProperty("Height").GetDouble());
+            }
+            catch
+            {
+                // Keep defaults from deserialization when legacy data is malformed.
             }
         }
 
@@ -327,13 +357,14 @@ namespace modterm
         {
             if (applyWindowBounds)
             {
-                var loc = _uac.WindowLocation;
+                var position = _uac.LastWindowLocation;
+                var size = _uac.WindowSize;
                 var rectInt32 = new Windows.Graphics.RectInt32
                 {
-                    X = (int)loc.X,
-                    Y = (int)loc.Y,
-                    Width = (int)loc.Width,
-                    Height = (int)loc.Height
+                    X = (int)position.X,
+                    Y = (int)position.Y,
+                    Width = (int)size.Width,
+                    Height = (int)size.Height
                 };
                 this.AppWindow.MoveAndResize(rectInt32);
             }
@@ -371,7 +402,7 @@ namespace modterm
             {
                 _saveConfiguration = true;
                 SetUserConfiguration(loadedConfiguration);
-                ApplyCurrentUserConfiguration(applyWindowBounds: true);
+                ApplyCurrentUserConfiguration(applyWindowBounds: false);
                 InitializeModtermControls();
                 InitializeFlyouts();
                 UpdateTitleBarLabels();
@@ -386,7 +417,7 @@ namespace modterm
 
             _saveConfiguration = false;
             SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
-            ApplyCurrentUserConfiguration(applyWindowBounds: true);
+            ApplyCurrentUserConfiguration(applyWindowBounds: false);
             InitializeModtermControls();
             InitializeFlyouts();
             UpdateTitleBarLabels();
@@ -460,22 +491,6 @@ namespace modterm
             Process.Start(startInfo);
         }
 
-        private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
-        {
-            if (!args.DidPositionChange || _suppressResizeHandling || _isResizeConfirmationInProgress)
-            {
-                return;
-            }
-
-            // Size changes are handled by MainWindow_SizeChanged (including position updates during resize).
-            if (args.DidSizeChange)
-            {
-                return;
-            }
-
-            PersistWindowLocation();
-        }
-
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
             _rightButtonControls?.InvalidateExpandableChildMeasureCache();
@@ -495,19 +510,29 @@ namespace modterm
 
             _resizeEndSize = currentSize;
             _lastWindowSize = currentSize;
-            PersistWindowLocation();
+            PersistWindowSize();
 
             _resizeStopTimer.Stop();
             _resizeStopTimer.Start();
         }
 
-        private void PersistWindowLocation()
+        private void PersistWindowSize()
         {
-            _uac.WindowLocation = new Rect(
-                this.AppWindow.Position.X,
-                this.AppWindow.Position.Y,
+            _uac.WindowSize = new Size(
                 this.AppWindow.Size.Width,
                 this.AppWindow.Size.Height);
+        }
+
+        private void PersistLastWindowLocation()
+        {
+            if (!_saveConfiguration)
+            {
+                return;
+            }
+
+            _uac.LastWindowLocation = new Point(
+                this.AppWindow.Position.X,
+                this.AppWindow.Position.Y);
         }
 
         private void InitializeModtermControls()
