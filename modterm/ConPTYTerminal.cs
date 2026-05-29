@@ -33,7 +33,7 @@ namespace modterm
         private bool            _disposeRequested;
         private int             _exitNotified;
 
-        public event EventHandler<string>? OutputReceived;
+        public event EventHandler<byte[]>? OutputReceived;
         public event EventHandler? TerminalExited;
 
         public int GetProcessId()
@@ -264,11 +264,6 @@ namespace modterm
             ResizePseudoConsole(_hPC, new COORD { X = cols, Y = rows });
         }
 
-        // Use UTF-8 decoder that replaces invalid bytes instead of throwing 
-        // (ConPTY may send OEM/code-page or binary)
-        private static readonly Encoding Utf8Relaxed = Encoding.GetEncoding(65001,
-            EncoderFallback.ReplacementFallback, DecoderFallback.ReplacementFallback);
-
         private async Task ReadOutputLoop()
         {
             Debug.WriteLine("Started ConPTY output reader task.");
@@ -295,9 +290,11 @@ namespace modterm
                         await Task.Delay(10);
                         continue;
                     }
-                    // Decode without throwing on invalid UTF-8 (e.g. OEM/code-page or binary from console)
-                    string text = Utf8Relaxed.GetString(buffer, 0, (int)read);
-                    OutputReceived?.Invoke(this, text);
+                    // Pass raw bytes to the VT parser so multi-byte UTF-8 sequences split
+                    // across reads are not corrupted by per-chunk string decoding.
+                    var chunk = new byte[read];
+                    Buffer.BlockCopy(buffer, 0, chunk, 0, (int)read);
+                    OutputReceived?.Invoke(this, chunk);
                 }
                 catch (Exception ex)
                 {

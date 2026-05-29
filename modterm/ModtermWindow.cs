@@ -854,13 +854,13 @@ namespace modterm
             });
         }
 
-        private void OnOutputReceived(object? sender, string line)
+        private void OnOutputReceived(object? sender, byte[] data)
         {
-            // Feed all output directly to the VT parser
+            // Feed raw PTY bytes to the VT parser (preserves UTF-8 split across reads).
             if (_scrollOffset > 0 && !_isSelecting) _scrollOffset = 0;
-            if (!string.IsNullOrEmpty(line))
+            if (data is { Length: > 0 })
             {
-                _vtDataConsumer.Write(line);
+                _vtDataConsumer.Push(data);
                 ModtermCanvas.Invalidate();
             }
         }
