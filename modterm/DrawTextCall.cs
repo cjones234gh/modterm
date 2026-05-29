@@ -27,9 +27,17 @@ namespace modterm
         // VT SGR default background (CSI 49); skip cell background fill.
         public bool BackgroundIsDefault;
         public CanvasTextFormat TextFormat = null!;
-        
+        // When true, the glyph is scaled to fill exactly one grid cell (Width x CellHeight).
+        // Used for glyphs that resolve via font fallback (e.g. braille U+2800-U+28FF) whose
+        // fallback font cell is taller than the terminal row and would otherwise bleed
+        // vertically into adjacent rows.
+        public bool FitToCell;
+        // The grid row height to fit into when FitToCell is set.
+        public float CellHeight;
+
         public DrawTextCall(string text, float x, float y, float width, Color color, Color backgroundColor, 
-                    CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false)
+                    CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false,
+                    bool fitToCell = false, float cellHeight = 0f)
         {
             Text = text;
             X = x;
@@ -41,6 +49,8 @@ namespace modterm
             ForegroundIsDefault = foregroundIsDefault;
             BackgroundIsDefault = backgroundIsDefault;
             TextFormat = textFormat;
+            FitToCell = fitToCell;
+            CellHeight = cellHeight > 0f ? cellHeight : Height;
         }
     }
 }

@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using Windows.Foundation;
 using Windows.UI;
 using WinRT.modtermVtableClasses;
@@ -257,9 +258,9 @@ namespace modterm
             }
         }
 
-        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false)
+        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false, bool fitToCell = false, float cellHeight = 0f)
         {
-            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault));
+            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault, fitToCell, cellHeight));
         }
 
         public void DrawTextDisplayControl(CanvasControl sender, CanvasDrawingSession cds, TextDisplayControl control)
@@ -398,14 +399,17 @@ namespace modterm
                 {
                     foreach (DrawTextCall call in _effectSequence)
                     {
+                        Color glyphColor = (call.ForegroundIsDefault || call.Color == OutputColor)
+                            ? OutputGlowColor
+                            : call.Color;
 
-                        if (call.ForegroundIsDefault || call.Color == OutputColor)
+                        if (call.FitToCell)
                         {
-                            clds.DrawText(call.Text, call.X, call.Y, OutputGlowColor, call.TextFormat);
+                            DrawGlyphFitted(clds, call, glyphColor);
                         }
                         else
                         {
-                            clds.DrawText(call.Text, call.X, call.Y, call.Color, call.TextFormat);
+                            clds.DrawText(call.Text, call.X, call.Y, glyphColor, call.TextFormat);
                         }
                     }
                 }
@@ -416,8 +420,46 @@ namespace modterm
             // Sharp layer
             foreach (DrawTextCall call in _effectSequence)
             {
-                _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);
+                if (call.FitToCell)
+                {
+                    DrawGlyphFitted(_drawSession, call, call.Color);
+                }
+                else
+                {
+                    _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);
+                }
             }
+        }
+
+        // Draws a single glyph scaled to fill exactly one grid cell. Maps the glyph's
+        // layout box (advance width x font line height, which differs for fallback fonts)
+        // onto the terminal cell so braille/graphics glyphs stay confined to their row
+        // instead of overflowing vertically into neighbouring rows.
+        private void DrawGlyphFitted(CanvasDrawingSession ds, DrawTextCall call, Color color)
+        {
+            using var layout = new CanvasTextLayout(ds, call.Text, call.TextFormat, call.Width, call.CellHeight)
+            {
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
+
+            Rect bounds = layout.LayoutBounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                ds.DrawText(call.Text, call.X, call.Y, color, call.TextFormat);
+                return;
+            }
+
+            float scaleX = call.Width / (float)bounds.Width;
+            float scaleY = call.CellHeight / (float)bounds.Height;
+
+            Matrix3x2 prior = ds.Transform;
+            ds.Transform =
+                Matrix3x2.CreateTranslation((float)-bounds.Left, (float)-bounds.Top) *
+                Matrix3x2.CreateScale(scaleX, scaleY) *
+                Matrix3x2.CreateTranslation(call.X, call.Y);
+
+            ds.DrawTextLayout(layout, 0f, 0f, color);
+            ds.Transform = prior;
         }
 
         public string GetHexStringFromColor(Color color)

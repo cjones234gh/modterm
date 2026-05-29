@@ -154,6 +154,11 @@ namespace modterm
                     {
                         string cellText = displayChar.ToString() + combining;
                         float cellX = _leftTextPadding + (col * _measuredCharWidth);
+                        // Braille patterns are absent from typical monospace fonts (Consolas),
+                        // so they resolve through font fallback whose glyph cell is taller than
+                        // our row. Scale those to the grid cell so TUI braille graphs stay within
+                        // their rows instead of bleeding vertically.
+                        bool fitToCell = IsBrailleChar(displayChar);
                         _mtd.DrawText(
                             cellText,
                             cellX,
@@ -163,7 +168,9 @@ namespace modterm
                             bg,
                             cellFormat,
                             attr.DefaultForeground,
-                            attr.DefaultBackground);
+                            attr.DefaultBackground,
+                            fitToCell,
+                            (float)lineHeight);
                     }
                 }
 
@@ -254,6 +261,9 @@ namespace modterm
         // when drawn as a single string. Anything outside this range may trigger font
         // fallback with a different advance, so we render those per-cell on the grid.
         private static bool IsSafeForBatch(char c) => c >= 0x20 && c <= 0x7E;
+
+        // Braille Patterns block (U+2800-U+28FF), used by TUI apps (btop, etc.) for fine graphs.
+        private static bool IsBrailleChar(char c) => c >= '\u2800' && c <= '\u28FF';
 
         private char GetCellCharAt(int logicalRow, int col)
         {
