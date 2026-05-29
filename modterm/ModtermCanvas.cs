@@ -24,7 +24,7 @@ namespace modterm
 
         private int _leftTextPadding = 5;
         private int _topTextPadding = 33;
-        private int _lineHeightPadding = 0;
+        private float _lineHeightPadding = 1.0f;
 
         private bool _showRightButtonControls = true;
         private bool _showTitleBarControls = true;
