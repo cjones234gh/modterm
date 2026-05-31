@@ -431,30 +431,64 @@ namespace modterm
             }
         }
 
-        // Draws a single glyph scaled to fill exactly one grid cell. Maps the glyph's
-        // layout box (advance width x font line height, which differs for fallback fonts)
-        // onto the terminal cell so braille/graphics glyphs stay confined to their row
-        // instead of overflowing vertically into neighbouring rows.
-        private void DrawGlyphFitted(CanvasDrawingSession ds, DrawTextCall call, Color color)
+        // Cache of the rendered ink bounds of a full braille cell (U+28FF) per text format.
+        // The reference is measured from the actually-drawn glyph, so it reflects the font
+        // that really renders braille - whether that is the primary font or a DirectWrite
+        // fallback (e.g. Consolas, which has no braille glyphs of its own).
+        private readonly Dictionary<CanvasTextFormat, Rect> _brailleCellInkBounds = new Dictionary<CanvasTextFormat, Rect>();
+
+        // The full braille cell glyph (all 8 dots set). Its ink bounds define the design
+        // cell that every other braille glyph's dots are positioned within.
+        private const string FullBrailleCell = "\u28FF";
+
+        private Rect GetBrailleCellInkBounds(ICanvasResourceCreator resourceCreator, CanvasTextFormat format)
         {
-            using var layout = new CanvasTextLayout(ds, call.Text, call.TextFormat, call.Width, call.CellHeight)
+            if (_brailleCellInkBounds.TryGetValue(format, out Rect cached))
+                return cached;
+
+            using var refLayout = new CanvasTextLayout(resourceCreator, FullBrailleCell, format, 0f, 0f)
             {
                 WordWrapping = CanvasWordWrapping.NoWrap
             };
 
-            Rect bounds = layout.LayoutBounds;
-            if (bounds.Width <= 0 || bounds.Height <= 0)
+            // DrawBounds is the ink rectangle of the glyph as actually rasterized, including
+            // any fallback substitution - unlike LayoutBounds, which uses the primary font's
+            // (e.g. Consolas) line metrics and underestimates a taller fallback glyph.
+            Rect bounds = refLayout.DrawBounds;
+
+            // Avoid unbounded growth across font/size changes (only ~2 live formats normally).
+            if (_brailleCellInkBounds.Count > 16)
+                _brailleCellInkBounds.Clear();
+
+            _brailleCellInkBounds[format] = bounds;
+            return bounds;
+        }
+
+        // Draws a single braille glyph scaled to fill exactly one grid cell. The full-cell
+        // ink reference (measured from the real, possibly fallback, font) is mapped onto the
+        // terminal cell; because every braille glyph shares the same pen origin and design
+        // cell, each glyph's dots land correctly and stay confined to their row instead of
+        // overflowing vertically into neighbouring rows.
+        private void DrawGlyphFitted(CanvasDrawingSession ds, DrawTextCall call, Color color)
+        {
+            Rect reference = GetBrailleCellInkBounds(ds, call.TextFormat);
+            if (reference.Width <= 0 || reference.Height <= 0)
             {
                 ds.DrawText(call.Text, call.X, call.Y, color, call.TextFormat);
                 return;
             }
 
-            float scaleX = call.Width / (float)bounds.Width;
-            float scaleY = call.CellHeight / (float)bounds.Height;
+            using var layout = new CanvasTextLayout(ds, call.Text, call.TextFormat, 0f, 0f)
+            {
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
+
+            float scaleX = call.Width / (float)reference.Width;
+            float scaleY = call.CellHeight / (float)reference.Height;
 
             Matrix3x2 prior = ds.Transform;
             ds.Transform =
-                Matrix3x2.CreateTranslation((float)-bounds.Left, (float)-bounds.Top) *
+                Matrix3x2.CreateTranslation((float)-reference.Left, (float)-reference.Top) *
                 Matrix3x2.CreateScale(scaleX, scaleY) *
                 Matrix3x2.CreateTranslation(call.X, call.Y);
 
