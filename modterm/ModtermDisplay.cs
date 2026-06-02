@@ -53,7 +53,7 @@ namespace modterm
         public float CurrentFontSizeControlScale { get; set; }
 
         private string _currentFont = "Consolas";
-        private string _currentControlFont = "3270 Nerd Font Mono";
+        private string _currentControlFont = "BlexMono Nerd Font Mono";
         private float _currentFontSize = 12f;
         private float _controlFontScale = 1f;
         private float _currentControlFontSize = 12f;
@@ -104,7 +104,7 @@ namespace modterm
                 _currentControlFontSize = CurrentFontSize * _controlFontScale;
                 CurrentTextFormat.FontSize = _currentFontSize;
                 CurrentControlTextFormat.FontSize = _currentControlFontSize;
-                ControlPadding = _currentControlFontSize / 1.5f;
+                ControlPadding = _currentControlFontSize / 1.75f;
                 ControlMargin = 5;// + (_currentFontSize / 2);
                 ControlMarginRight = 10;
                 _currentBgColorPadding = _currentFontSize / 1.25f; // adjust background rectangle padding based on font size for better fit
@@ -149,10 +149,10 @@ namespace modterm
             _themeConfigIndex = 0;
 
             // internal control defaults
-            CornerRadius = 2f;
-            BlurFillTransparency = 90;
-            SharpBorderTransparency = 150;
-            SharpFillTransparency = 40;
+            CornerRadius = 0.5f;
+            BlurFillTransparency = 25;
+            SharpBorderTransparency = 200;
+            SharpFillTransparency = 10;
             LineWidth = 0.5f;
         }
 
@@ -277,8 +277,8 @@ namespace modterm
                     //if (control.Interactive)
                     //{
                     // Draw a bordered rectangle
-                    //clds.DrawRoundedRectangle(
-                    //    control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
+                    clds.DrawRoundedRectangle(
+                        control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
 
                     // Draw background rectangle except when in hover state
                     if (!control.IsHovered || !control.Interactive)
@@ -290,7 +290,7 @@ namespace modterm
                     
                     // Draw TextContent
                     clds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
-                        (float)control.Location.Y + ControlPadding / 2, controlBlurColor, CurrentControlTextFormat);
+                        (float)control.Location.Y + ControlPadding / 4, controlBlurColor, CurrentControlTextFormat);
                 }
 
                 var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
@@ -300,12 +300,12 @@ namespace modterm
             //
             //
             // sharp layer
-            if (control.Interactive)
-            {
+            //if (control.Interactive)
+            //{
                 // Draw a bordered rectangle
-                // cds.DrawRoundedRectangle(control.Location, CornerRadius, CornerRadius,
-                //    Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
-            }
+                cds.DrawRoundedRectangle(control.Location, CornerRadius, CornerRadius,
+                    Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
+            //}
 
             // Draw background rectangle
             cds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
@@ -313,7 +313,7 @@ namespace modterm
 
             // Draw TextContent
             cds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
-                (float)control.Location.Y + ControlPadding / 2, controlColor, CurrentControlTextFormat);
+                (float)control.Location.Y + ControlPadding / 4, controlColor, CurrentControlTextFormat);
 
             if (control.IsEngaged && control.Children is { Count: > 0 })
             {
