@@ -212,15 +212,20 @@ namespace modterm
         {
             foreach (var themeConfig in _mtd.GetAllColorConfigurations())
             {
-                string themePath = Path.Combine(_userConfigDirectory, $"theme_{themeConfig.Name}.json");
-                if (!overwriteExisting && File.Exists(themePath))
-                {
-                    continue;
-                }
-
-                string themeJson = JsonSerializer.Serialize(themeConfig, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(themePath, themeJson);
+                WriteThemeConfigurationToDisk(themeConfig, overwriteExisting);
             }
+        }
+
+        private void WriteThemeConfigurationToDisk(ThemeConfiguration themeConfig, bool overwriteExisting = true)
+        {
+            string themePath = Path.Combine(_userConfigDirectory, $"theme_{themeConfig.Name}.json");
+            if (!overwriteExisting && File.Exists(themePath))
+            {
+                return;
+            }
+
+            string themeJson = JsonSerializer.Serialize(themeConfig, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(themePath, themeJson);
         }
 
         private void LoadThemeNames()
@@ -471,6 +476,79 @@ namespace modterm
             {
                 Title = "Configuration Load Failed",
                 Content = "Your configration failed to load. Using the default, any visual changes won't be saved.",
+                CloseButtonText = "OK",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = RootGrid.XamlRoot
+            };
+
+            await dialog.ShowAsync();
+        }
+
+        private async Task SaveCurrentLookAsNewThemeAsync()
+        {
+            if (RootGrid.XamlRoot is null)
+            {
+                return;
+            }
+
+            var nameBox = new TextBox
+            {
+                PlaceholderText = "Theme name",
+                AcceptsReturn = false
+            };
+
+            var dialog = new ContentDialog
+            {
+                Title = "Make Current Look a New Theme",
+                Content = nameBox,
+                PrimaryButtonText = "Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = RootGrid.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result != ContentDialogResult.Primary)
+            {
+                return;
+            }
+
+            string themeName = nameBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(themeName))
+            {
+                return;
+            }
+
+            if (themeName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                await ShowSimpleDialogAsync("Invalid Theme Name", "Theme name contains characters that cannot be used in a file name.");
+                return;
+            }
+
+            string themeJson = JsonSerializer.Serialize(_uac.ThemeConfiguration);
+            var themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(themeJson);
+            if (themeConfig is null)
+            {
+                return;
+            }
+
+            themeConfig.Name = themeName;
+            WriteThemeConfigurationToDisk(themeConfig);
+            LoadThemeNames();
+            InitializeFlyouts();
+        }
+
+        private async Task ShowSimpleDialogAsync(string title, string content)
+        {
+            if (RootGrid.XamlRoot is null)
+            {
+                return;
+            }
+
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = content,
                 CloseButtonText = "OK",
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = RootGrid.XamlRoot
@@ -898,6 +976,10 @@ namespace modterm
                 themeItem.Items.Add(item);
             }
             _flyout.Items.Add(themeItem);
+
+            var saveThemeItem = new MenuFlyoutItem { Text = "Make Current Look a New Theme" };
+            saveThemeItem.Click += async (_, __) => await SaveCurrentLookAsNewThemeAsync();
+            _flyout.Items.Add(saveThemeItem);
 
             var resetDefaultsItem = new MenuFlyoutItem { Text = "Reset Default Configuration" };
             resetDefaultsItem.Click += (_, __) => ResetDefaultConfiguration();
