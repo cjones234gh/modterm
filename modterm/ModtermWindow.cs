@@ -30,7 +30,6 @@ namespace modterm
         private int _scrollOffset = 0;
         private DispatcherQueueTimer _cursorTimer = null!;
         private DispatcherQueueTimer _resizeStopTimer = null!;
-        private DispatcherQueueTimer _configReloadTimer = null!;
         // modterm UI controls
         private ControlGroup _titleBarControls = null!;
         private ControlGroup _rightButtonControls = null!;
@@ -51,8 +50,6 @@ namespace modterm
         private UserAppConfiguration _uac = null!;
         private bool _saveConfiguration = true;
         private bool _showConfigLoadFailureDialog = false;
-        private FileSystemWatcher _configWatcher = null!;
-        private DateTime _ignoreConfigWatcherUntilUtc = DateTime.MinValue;
 
         // theme names from config directory
         private List<string> _themeNames = new List<string>();
@@ -89,7 +86,6 @@ namespace modterm
 
             _cursorTimer = DispatcherQueue.CreateTimer();
             _resizeStopTimer = DispatcherQueue.CreateTimer();
-            _configReloadTimer = DispatcherQueue.CreateTimer();
 
             _terminal = CreateTerminalInstance();
 
@@ -127,7 +123,6 @@ namespace modterm
                 WriteDefaultThemeConfigurations(overwriteExisting: false);
             }
 
-            InitializeConfigurationWatcher();
             LoadThemeNames();
             ApplyCurrentUserConfiguration(applyWindowBounds: true);
 
@@ -144,7 +139,7 @@ namespace modterm
             this.Closed += (s, e) =>
             {
                 PersistLastWindowLocation();
-                _configWatcher?.Dispose();
+                SaveConfig();
                 DisposeTerminalInstance(_terminal);
             };
 
@@ -176,13 +171,6 @@ namespace modterm
                 await ConfirmResizeRestartAsync();
             };
 
-            _configReloadTimer.Interval = TimeSpan.FromMilliseconds(350);
-            _configReloadTimer.Tick += async (s, e) =>
-            {
-                _configReloadTimer.Stop();
-                await ReloadConfigurationFromDiskAsync();
-            };
-
             this.InitializeFlyouts();
             _lastWindowSize = this.AppWindow.Size;
 
@@ -202,10 +190,8 @@ namespace modterm
 
         private void WriteConfigurationToDisk(UserAppConfiguration configuration)
         {
-            _ignoreConfigWatcherUntilUtc = DateTime.UtcNow.AddMilliseconds(750);
             string json = JsonSerializer.Serialize(configuration, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_userAppConfigPath, json);
-            _ignoreConfigWatcherUntilUtc = DateTime.UtcNow.AddMilliseconds(750);
         }
 
         private void WriteDefaultThemeConfigurations(bool overwriteExisting)
@@ -234,38 +220,6 @@ namespace modterm
             _themeNames = themeFiles
                 .Select(f => Path.GetFileNameWithoutExtension(f).Substring(6))
                 .ToList();
-        }
-
-        private void InitializeConfigurationWatcher()
-        {
-            _configWatcher = new FileSystemWatcher(_userConfigDirectory, Path.GetFileName(_userAppConfigPath))
-            {
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.CreationTime | NotifyFilters.FileName
-            };
-
-            _configWatcher.Changed += (_, __) => ScheduleConfigurationReload();
-            _configWatcher.Created += (_, __) => ScheduleConfigurationReload();
-            _configWatcher.Renamed += (_, __) => ScheduleConfigurationReload();
-            _configWatcher.EnableRaisingEvents = true;
-        }
-
-        private void ScheduleConfigurationReload()
-        {
-            if (DateTime.UtcNow <= _ignoreConfigWatcherUntilUtc)
-            {
-                return;
-            }
-
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                if (DateTime.UtcNow <= _ignoreConfigWatcherUntilUtc)
-                {
-                    return;
-                }
-
-                _configReloadTimer.Stop();
-                _configReloadTimer.Start();
-            });
         }
 
         private bool TryLoadUserConfiguration(out UserAppConfiguration configuration)
@@ -388,7 +342,6 @@ namespace modterm
             ApplyCurrentUserConfiguration(applyWindowBounds: false);
             InitializeModtermControls();
             RestartTerminalForLayoutChange();
-            WriteConfigurationToDisk(_uac);
             WriteDefaultThemeConfigurations(overwriteExisting: true);
             LoadThemeNames();
             InitializeFlyouts();
@@ -409,6 +362,7 @@ namespace modterm
                 SetUserConfiguration(loadedConfiguration);
                 ApplyCurrentUserConfiguration(applyWindowBounds: false);
                 InitializeModtermControls();
+                LoadThemeNames();
                 InitializeFlyouts();
                 UpdateTitleBarLabels();
 
@@ -424,6 +378,7 @@ namespace modterm
             SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
             ApplyCurrentUserConfiguration(applyWindowBounds: false);
             InitializeModtermControls();
+            LoadThemeNames();
             InitializeFlyouts();
             UpdateTitleBarLabels();
 
@@ -444,13 +399,11 @@ namespace modterm
 
         private void UserConfiguration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            SaveConfig();
             UpdateTitleBarLabels();
         }
 
         private void ThemeConfiguration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            SaveConfig();
             UpdateTitleBarLabels();
         }
 
@@ -988,6 +941,10 @@ namespace modterm
             var editConfigItem = new MenuFlyoutItem { Text = "Edit Configuration" };
             editConfigItem.Click += (_, __) => OpenConfigurationInNotepad();
             _flyout.Items.Add(editConfigItem);
+
+            var reloadConfigItem = new MenuFlyoutItem { Text = "Reload Configuration" };
+            reloadConfigItem.Click += async (_, __) => await ReloadConfigurationFromDiskAsync();
+            _flyout.Items.Add(reloadConfigItem);
 
             // toggle title bar controls
             var toggleTitleBarControlsItem = new MenuFlyoutItem { Text = "Toggle Title Bar Controls" };
