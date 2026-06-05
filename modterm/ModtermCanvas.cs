@@ -92,9 +92,9 @@ namespace modterm
                             : sourceChar.Attributes);
 
                     char displayChar = sourceChar == null ? ' ' : sourceChar.Char;
-                    bool wasResolved = TryResolveMissingGlyph(logicalRow, col, displayChar, out char resolvedDisplay);
-                    if (wasResolved)
-                        displayChar = resolvedDisplay;
+                    // bool wasResolved = TryResolveMissingGlyph(logicalRow, col, displayChar, out char resolvedDisplay);
+                    // if (wasResolved)
+                    //     displayChar = resolvedDisplay;
 
                     string combining = sourceChar?.CombiningCharacters ?? string.Empty;
 
@@ -119,7 +119,7 @@ namespace modterm
                     // font's natural advance (printable ASCII). Box-drawing, braille,
                     // resolved missing glyphs, and combining sequences are drawn per-cell
                     // at the measured grid so they stay column-aligned.
-                    bool canBatch = !wasResolved
+                    bool canBatch = /*wasResolved*/ true    
                         && combining.Length == 0
                         && IsSafeForBatch(displayChar);
 
