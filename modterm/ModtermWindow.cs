@@ -576,8 +576,8 @@ namespace modterm
         private void UpdateTitleBarLabels()
         {
             // path and appearance info labels
-            _shellInfoCtrl.TextContent = $"Shell: {_uac.TerminalShell.Name}";
-            _appearanceInfoCtrl.TextContent = $"{_uac.ThemeConfiguration.BackdropKind.ToString()} {_mtd.OpacityPct}% {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
+            _shellInfoCtrl.TextContent = $"MODTERM - Shell: {_uac.TerminalShell.Name}";
+            _appearanceInfoCtrl.TextContent = $"Backdrop: {_uac.ThemeConfiguration.BackdropKind.ToString()} {_mtd.OpacityPct}% {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
             _linesColsInfoCtrl.TextContent = $"{_lines}x{_columns}";
 
             ModtermCanvas.Invalidate();

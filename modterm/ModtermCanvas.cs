@@ -48,6 +48,7 @@ namespace modterm
                 _measuredCharWidth = measuredCharWidth;
                 _vtController.VisibleRows = _lines;
                 _vtController.VisibleColumns = _columns;
+                UpdateTitleBarLabels();
                 StartConPTY();
             }
 
