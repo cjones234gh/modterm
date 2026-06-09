@@ -23,7 +23,7 @@ namespace modterm
         private float _measuredCharWidth;
 
         private int _leftTextPadding = 5;
-        private int _topTextPadding = 33;
+        private int _topTextPadding = 28;//33;
         private float _lineHeightPadding = 1.0f;
 
         private bool _showTitleBarControls = true;

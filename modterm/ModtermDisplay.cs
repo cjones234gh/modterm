@@ -268,27 +268,11 @@ namespace modterm
             Color controlColor = GetControlColor(control);
             Color controlBlurColor = GetControlGlowColor(control);
 
-            //
-            // blur layer
+            // blur layer - draw text content
             using (var commandList = new CanvasCommandList(sender))
             {
                 using (var clds = commandList.CreateDrawingSession())
                 {
-                    //if (control.Interactive)
-                    //{
-                    // Draw a bordered rectangle
-                    clds.DrawRoundedRectangle(
-                        control.Location, CornerRadius, CornerRadius, controlBlurColor, LineWidth);
-
-                    // Draw background rectangle except when in hover state
-                    if (!control.IsHovered || !control.Interactive)
-                    {
-                        clds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
-                            Color.FromArgb(BlurFillTransparency, controlBlurColor.R, controlBlurColor.G, controlBlurColor.B));
-                    }
-                    //}
-                    
-                    // Draw TextContent
                     clds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
                         (float)control.Location.Y + ControlPadding / 4, controlBlurColor, CurrentControlTextFormat);
                 }
@@ -297,21 +281,8 @@ namespace modterm
                 cds.DrawImage(blurEffect);
             }
 
-            //
-            //
-            // sharp layer
-            //if (control.Interactive)
-            //{
-                // Draw a bordered rectangle
-                cds.DrawRoundedRectangle(control.Location, CornerRadius, CornerRadius,
-                    Color.FromArgb(SharpBorderTransparency, controlColor.R, controlColor.G, controlColor.B), LineWidth);
-            //}
-
-            // Draw background rectangle
-            cds.FillRoundedRectangle(control.Location, CornerRadius, CornerRadius,
-                Color.FromArgb(SharpFillTransparency, controlColor.R, controlColor.G, controlColor.B));
-
-            // Draw TextContent
+            
+            // sharp layer - draw text content
             cds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
                 (float)control.Location.Y + ControlPadding / 4, controlColor, CurrentControlTextFormat);
 
