@@ -26,7 +26,6 @@ namespace modterm
         private int _topTextPadding = 33;
         private float _lineHeightPadding = 1.0f;
 
-        private bool _showRightButtonControls = true;
         private bool _showTitleBarControls = true;
 
         private CanvasTextFormat? _normalTextFormat;
@@ -187,10 +186,6 @@ namespace modterm
             _mtd.EndEffectSequence();
 
             // draw all UI controls
-            if (_showRightButtonControls)
-            {
-                _rightButtonControls?.DrawControls(sender, args.DrawingSession, _mtd);
-            }
             if (_showTitleBarControls)
             {
                 _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
@@ -339,9 +334,6 @@ namespace modterm
             ModtermCanvas.Invalidate();
         }
 
-        private static bool HasExpandableFlyout(ModtermControl control)
-            => control.Children is { Count: > 0 };
-
         private void ModtermCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
@@ -352,77 +344,8 @@ namespace modterm
             _selectionRange = null;
             _selectedText = "";
 
-            // Flyout child (expanded parent)
-            foreach (var control in _rightButtonControls.Controls)
-            {
-                if (!HasExpandableFlyout(control) || !control.IsEngaged)
-                    continue;
-                foreach (var child in control.Children)
-                {
-                    if (!child.Location.Contains(currentPoint) || !child.Interactive)
-                        continue;
-
-                    ClearRightDockExceptFlyoutChild(control, child);
-                    child.IsPressed = true;
-                    ModtermCanvas.Invalidate();
-                    return;
-                }
-            }
-
-            // Top-level right-dock controls
-            foreach (var control in _rightButtonControls.Controls)
-            {
-                if (!control.Location.Contains(currentPoint) || !control.Interactive)
-                    continue;
-
-                foreach (var other in _rightButtonControls.Controls)
-                {
-                    if (other == control)
-                        continue;
-                    other.IsPressed = false;
-                    if (HasExpandableFlyout(other))
-                    {
-                        other.IsEngaged = false;
-                        foreach (var ch in other.Children)
-                        {
-                            ch.IsPressed = false;
-                            ch.IsEngaged = false;
-                        }
-                    }
-                    else
-                        other.IsEngaged = false;
-                }
-
-                control.IsPressed = true;
-                if (!HasExpandableFlyout(control))
-                    control.IsEngaged = true;
-
-                ModtermCanvas.Invalidate();
-                return;
-            }
-
-            // Click outside controls: dismiss flyouts
-            foreach (var c in _rightButtonControls.Controls)
-            {
-                c.IsPressed = false;
-                if (HasExpandableFlyout(c))
-                {
-                    c.IsEngaged = false;
-                    foreach (var ch in c.Children)
-                    {
-                        ch.IsPressed = false;
-                        ch.IsEngaged = false;
-                    }
-                }
-                else
-                    c.IsEngaged = false;
-            }
-
             if (!IsInTextArea(currentPoint))
-            {
-                ModtermCanvas.Invalidate();
                 return;
-            }
 
             _isSelecting = true;
             _selectionStart = currentPoint;
@@ -432,128 +355,25 @@ namespace modterm
             ModtermCanvas.Invalidate();
         }
 
-        private void ClearRightDockExceptFlyoutChild(ModtermControl flyoutParent, ModtermControl activeChild)
-        {
-            foreach (var c in _rightButtonControls.Controls)
-            {
-                if (c == flyoutParent)
-                {
-                    foreach (var ch in c.Children)
-                    {
-                        if (ch != activeChild)
-                        {
-                            ch.IsPressed = false;
-                            ch.IsEngaged = false;
-                        }
-                    }
-                    continue;
-                }
-
-                c.IsPressed = false;
-                if (HasExpandableFlyout(c))
-                {
-                    c.IsEngaged = false;
-                    foreach (var ch in c.Children)
-                    {
-                        ch.IsPressed = false;
-                        ch.IsEngaged = false;
-                    }
-                }
-                else
-                    c.IsEngaged = false;
-            }
-        }
-
         private void ModtermCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
+            if (!_isSelecting)
+                return;
 
-            if (_isSelecting)
-            {
-                _selectionEnd = currentPoint;
-                UpdateSelectedText();
-                ModtermCanvas.Invalidate();
-            }
-
-            foreach (var control in _rightButtonControls.Controls)
-            {
-                control.IsHovered = control.Location.Contains(currentPoint);
-                if (HasExpandableFlyout(control) && control.IsEngaged)
-                {
-                    foreach (var child in control.Children)
-                        child.IsHovered = child.Location.Contains(currentPoint);
-                }
-                else if (HasExpandableFlyout(control))
-                {
-                    foreach (var child in control.Children)
-                        child.IsHovered = false;
-                }
-            }
-
+            _selectionEnd = e.GetCurrentPoint(ModtermCanvas).Position;
+            UpdateSelectedText();
             ModtermCanvas.Invalidate();
         }
 
         private void ModtermCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
-
-            bool wasSelecting = _isSelecting;
-            if (wasSelecting)
-            {
-                _selectionEnd = currentPoint;
-                UpdateSelectedText();
-                _isSelecting = false;
-                CopySelectedTextToClipboard();
-                ModtermCanvas.Invalidate();
+            if (!_isSelecting)
                 return;
-            }
 
-            // Finish flyout child click
-            foreach (var control in _rightButtonControls.Controls)
-            {
-                if (!HasExpandableFlyout(control) || !control.IsEngaged)
-                    continue;
-                foreach (var child in control.Children)
-                {
-                    if (!child.IsPressed)
-                        continue;
-                    bool over = child.Location.Contains(currentPoint);
-                    child.IsPressed = false;
-                    child.IsEngaged = false;
-                    if (over)
-                        child.HandleClick();
-                    control.IsEngaged = false;
-                    ModtermCanvas.Invalidate();
-                    return;
-                }
-            }
-
-            // Expandable anchor: toggle flyout or cancel press outside own bounds
-            foreach (var control in _rightButtonControls.Controls)
-            {
-                if (!HasExpandableFlyout(control) || !control.IsPressed)
-                    continue;
-                control.IsPressed = false;
-                if (control.Location.Contains(currentPoint))
-                    control.IsEngaged = !control.IsEngaged;
-                else
-                    control.IsEngaged = false;
-                ModtermCanvas.Invalidate();
-                return;
-            }
-
-            foreach (var control in _rightButtonControls.Controls)
-            {
-                if (HasExpandableFlyout(control))
-                    continue;
-                if (control.IsEngaged)
-                {
-                    control.IsPressed = false;
-                    control.IsEngaged = false;
-                    if (control.Location.Contains(currentPoint))
-                        control.HandleClick();
-                }
-            }
+            _selectionEnd = e.GetCurrentPoint(ModtermCanvas).Position;
+            UpdateSelectedText();
+            _isSelecting = false;
+            CopySelectedTextToClipboard();
             ModtermCanvas.Invalidate();
         }
 

@@ -32,15 +32,9 @@ namespace modterm
         private DispatcherQueueTimer _resizeStopTimer = null!;
         // modterm UI controls
         private ControlGroup _titleBarControls = null!;
-        private ControlGroup _rightButtonControls = null!;
         private TextDisplayControl _shellInfoCtrl = null!;
         private TextDisplayControl _appearanceInfoCtrl = null!;
         private TextDisplayControl _linesColsInfoCtrl = null!;
-        private TextDisplayControl _systemBackdropBtn = null!;
-        private TextDisplayControl _backdropColorBtn = null!;
-        private TextDisplayControl _backdropOpacityBtn = null!;
-        private TextDisplayControl _glowBtn = null!;
-        private TextDisplayControl _shellSelBtn = null!;
 
         // user storage for configs, themes, etc.
         private string _userConfigDirectory = string.Empty;
@@ -524,8 +518,6 @@ namespace modterm
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
-            _rightButtonControls?.InvalidateExpandableChildMeasureCache();
-
             if (_suppressResizeHandling || _isResizeConfirmationInProgress)
             {
                 _lastWindowSize = this.AppWindow.Size;
@@ -571,99 +563,6 @@ namespace modterm
             // ui control groups
             _titleBarControls = new ControlGroup(
                 ControlGroup.ControlDock.Top, _mtd.ControlPadding);
-            _rightButtonControls = new ControlGroup(
-                ControlGroup.ControlDock.Right, _mtd.ControlPadding);
-
-            // font glow
-            _glowBtn = new TextDisplayControl("GLOW", true);
-            var glowSubAmts = new[] { 0F, 1F, 2F, 3F, 5F, 7F, 10F, 15F };
-            foreach (var s in glowSubAmts)
-            {
-                var item = new TextDisplayControl(s.ToString(), true);
-                item.Clicked += (_, __) =>
-                {
-                    _mtd.BlurAmount = s;
-                    _uac.ThemeConfiguration.BlurAmount = s;
-                };
-                _glowBtn.Children.Add(item);
-            }
-
-            // window transparency
-            _backdropOpacityBtn = new TextDisplayControl("WINDOW OPACITY", true);
-            for (int i = 0; i <= 10; i++)
-            {
-                int pct = i * 10;
-                var item = new TextDisplayControl(pct.ToString(), true);
-                item.Clicked += (_, __) =>
-                {
-                    _mtd.OpacityPct = pct;
-                    _uac.ThemeConfiguration.WindowOpacityPct = pct;
-                };
-                _backdropOpacityBtn.Children.Add(item);
-            }
-
-            // system backdrop (Mica / Acrylic / custom blurred host backdrop)
-            _systemBackdropBtn = new TextDisplayControl("SYSTEM BACKDROP", true);
-            var blurredBackdropItem = new TextDisplayControl("BLURRED", true);
-            blurredBackdropItem.Clicked += (_, __) =>
-            {
-                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Blurred;
-                _mtd.ApplySystemBackdrop(BackdropKind.Blurred, this);
-            };
-            _systemBackdropBtn.Children.Add(blurredBackdropItem);
-            var micaBackdropItem = new TextDisplayControl("MICA", true);
-            micaBackdropItem.Clicked += (_, __) =>
-            {
-                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Mica;
-                _mtd.ApplySystemBackdrop(BackdropKind.Mica, this);
-            };
-            _systemBackdropBtn.Children.Add(micaBackdropItem);
-            var acrylicBackdropItem = new TextDisplayControl("ACRYLIC", true);
-            acrylicBackdropItem.Clicked += (_, __) =>
-            {
-                _uac.ThemeConfiguration.BackdropKind = BackdropKind.Acrylic;
-                _mtd.ApplySystemBackdrop(BackdropKind.Acrylic, this);
-            };
-            _systemBackdropBtn.Children.Add(acrylicBackdropItem);
-
-            // window tint
-            _backdropColorBtn = new TextDisplayControl("WINDOW COLOR", true);
-            var colorOptions = new (string, Color)[] {
-                ("Dark Blue", Colors.DarkBlue),
-                ("Dark Green", Colors.DarkGreen),
-                ("Dark Red", Colors.DarkRed),
-                ("Dark Violet", Colors.DarkViolet),
-                ("Dark Goldenrod", Colors.DarkGoldenrod),
-                ("Dark Orange", Colors.DarkOrange),
-                ("Deep Pink", Colors.DeepPink),
-                ("Saddle Brown", Colors.SaddleBrown),
-                ("Dim Gray", Colors.DimGray),
-                ("White", Colors.White),
-                ("Black", Colors.Black)
-            };
-            foreach (var (label, tint) in colorOptions)
-            {
-                var item = new TextDisplayControl(label, true);
-                item.Clicked += (_, __) =>
-                {
-                    _mtd.TintColor = tint;
-                    _uac.ThemeConfiguration.WindowColor = tint;
-                };
-                _backdropColorBtn.Children.Add(item);
-            }
-
-            // shell selection
-            _shellSelBtn = new TextDisplayControl("SHELL", true);
-            foreach (Shell sh in _uac.ShellConfigurations)
-            {
-                var item = new TextDisplayControl(sh.Name.ToUpper(), true);
-                item.Clicked += async (_, __) =>
-                {
-                    await SwitchTerminalShellAsync(sh);
-                    _uac.TerminalShell = sh;
-                };
-                _shellSelBtn.Children.Add(item);
-            }
 
             // path and appearance info labels
             _shellInfoCtrl = new TextDisplayControl("", false);
@@ -672,8 +571,6 @@ namespace modterm
 
             _titleBarControls.Controls.AddRange(
                 [_shellInfoCtrl, _appearanceInfoCtrl, _linesColsInfoCtrl]);
-            _rightButtonControls.Controls.AddRange(
-                [_systemBackdropBtn, _backdropOpacityBtn, _backdropColorBtn, _glowBtn, _shellSelBtn]);
         }
 
         private void UpdateTitleBarLabels()
@@ -913,6 +810,27 @@ namespace modterm
 
             _flyout.Items.Add(new MenuFlyoutSeparator());
 
+            var windowOpacityItem = new MenuFlyoutSubItem { Text = "Window Opacity" };
+            for (int i = 0; i <= 10; i++)
+            {
+                int pct = i * 10;
+                string label = pct switch
+                {
+                    0 => "0 (transparent)",
+                    100 => "100 (opaque)",
+                    _ => pct.ToString()
+                };
+                var item = new MenuFlyoutItem { Text = label };
+                item.Click += (_, __) =>
+                {
+                    _mtd.OpacityPct = pct;
+                    _uac.ThemeConfiguration.WindowOpacityPct = pct;
+                    UpdateTitleBarLabels();
+                };
+                windowOpacityItem.Items.Add(item);
+            }
+            _flyout.Items.Add(windowOpacityItem);
+
             // theme
             var themeItem = new MenuFlyoutSubItem { Text = "Theme" };
             foreach (var preset in _themeNames)
@@ -950,12 +868,6 @@ namespace modterm
             var toggleTitleBarControlsItem = new MenuFlyoutItem { Text = "Toggle Title Bar Controls" };
             toggleTitleBarControlsItem.Click += (_, __) => { _showTitleBarControls = !_showTitleBarControls; ModtermCanvas.Invalidate(); };
             _flyout.Items.Add(toggleTitleBarControlsItem);
-
-            // toggle right button controls
-            var toggleControlsItem = new MenuFlyoutItem { Text = "Toggle Right Controls" };
-            toggleControlsItem.Click += (_, __) => { _showRightButtonControls = !_showRightButtonControls; ModtermCanvas.Invalidate(); };
-            _flyout.Items.Add(toggleControlsItem);
-            
         }
     }
 }
