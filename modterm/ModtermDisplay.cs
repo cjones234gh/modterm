@@ -52,7 +52,7 @@ namespace modterm
         // control scale based on font size to maintain consistent proportions
         public float CurrentFontSizeControlScale { get; set; }
 
-        private string _currentFont = "Consolas";
+        private string _currentFont = "BlexMono Nerd Font Mono";
         private string _currentControlFont = "BlexMono Nerd Font Mono";
         private float _currentFontSize = 12f;
         private float _controlFontScale = 1f;
