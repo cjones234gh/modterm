@@ -16,6 +16,10 @@
     <WindowsPackageType>None</WindowsPackageType>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Assets\Fonts\BlexMonoNerdFontMono-Bold.ttf" />
+    <None Remove="Assets\Fonts\BlexMonoNerdFontMono-Regular.ttf" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -48,6 +52,14 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\VtNetCore\VtNetCore\VtNetCore.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="Assets\Fonts\BlexMonoNerdFontMono-Bold.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Assets\Fonts\BlexMonoNerdFontMono-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Update="test-bash.sh">
