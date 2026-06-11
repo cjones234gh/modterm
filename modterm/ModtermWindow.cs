@@ -31,10 +31,10 @@ namespace modterm
         private DispatcherQueueTimer _cursorTimer = null!;
         private DispatcherQueueTimer _resizeStopTimer = null!;
         // modterm UI controls
-        private DisplayLabel _titleBarControls = null!;
-        private TextDisplayControl _shellInfoCtrl = null!;
-        private TextDisplayControl _appearanceInfoCtrl = null!;
-        private TextDisplayControl _linesColsInfoCtrl = null!;
+        private DisplayLabelGroup _titleBarControls = null!;
+        private ModtermLabel _shellInfoLabel = null!;
+        private ModtermLabel _appearanceInfoLabel = null!;
+        private ModtermLabel _linesColsInfoLabel = null!;
 
         // user storage for configs, themes, etc.
         private string _userConfigDirectory = string.Empty;
@@ -333,7 +333,7 @@ namespace modterm
             }
 
             _mtd.CurrentFont = _uac.TerminalFont;
-            _mtd.CurrentControlFont = _uac.TerminalControlFont;
+            _mtd.CurrentControlFont = _uac.LabelFont;
             _mtd.CurrentFontSize = _uac.TerminalFontSize;
             _mtd.SetColorConfiguration(_uac.ThemeConfiguration, this);
             RootGrid.Background = _mtd.GetBackgroundBrush();
@@ -520,24 +520,24 @@ namespace modterm
         private void InitializeModtermControls()
         {
             // ui control groups
-            _titleBarControls = new DisplayLabel(
-                DisplayLabel.ControlDock.Top, _mtd.ControlPadding);
+            _titleBarControls = new DisplayLabelGroup(
+                DisplayLabelGroup.LabelDock.Top, _mtd.ControlPadding);
 
             // path and appearance info labels
-            _shellInfoCtrl = new TextDisplayControl("", false);
-            _appearanceInfoCtrl = new TextDisplayControl("", false);
-            _linesColsInfoCtrl = new TextDisplayControl("", false);
+            _shellInfoLabel = new ModtermLabel("", true);
+            _appearanceInfoLabel = new ModtermLabel("", true);
+            _linesColsInfoLabel = new ModtermLabel("", true);
 
-            _titleBarControls.Controls.AddRange(
-                [_shellInfoCtrl, _appearanceInfoCtrl, _linesColsInfoCtrl]);
+            _titleBarControls.Labels.AddRange(
+                [_shellInfoLabel, _appearanceInfoLabel, _linesColsInfoLabel]);
         }
 
         private void UpdateTitleBarLabels()
         {
             // path and appearance info labels
-            _shellInfoCtrl.TextContent = $"MODTERM - Shell: {_uac.TerminalShell.Name}";
-            _appearanceInfoCtrl.TextContent = $"Backdrop: {_uac.ThemeConfiguration.BackdropKind.ToString()} {_mtd.OpacityPct}% {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
-            _linesColsInfoCtrl.TextContent = $"{_lines}x{_columns}";
+            _shellInfoLabel.TextContent = $"MODTERM - Shell: {_uac.TerminalShell.Name}";
+            _appearanceInfoLabel.TextContent = $"Backdrop: {_uac.ThemeConfiguration.BackdropKind.ToString()} {_mtd.OpacityPct}% {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
+            _linesColsInfoLabel.TextContent = $"{_lines}x{_columns}";
 
             ModtermCanvas.Invalidate();
         }

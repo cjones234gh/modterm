@@ -20,7 +20,7 @@ namespace modterm
                 LastWindowLocation = new Windows.Foundation.Point(100, 100),
                 WindowSize = new Windows.Foundation.Size(800, 600),
                 TerminalFont = "BlexMono Nerd Font Mono",
-                TerminalControlFont = "BlexMono Nerd Font Mono",
+                LabelFont = "BlexMono Nerd Font Mono",
                 TerminalFontSize = 12.0f,
                 TerminalShell = new Shell
                 {
@@ -34,13 +34,11 @@ namespace modterm
                     Name = "Purpleser",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = GetColorFromHexString("#ff4fc1"),
-                    ControlBlurColor = GetColorFromHexString("#3333ff"),
+                    LabelColor = GetColorFromHexString("#ff4fc1"),
+                    LabelBlurColor = GetColorFromHexString("#3333ff"),
                     BlurAmount = 12.0f,
                     WindowOpacityPct = 20,
                     WindowColor = GetColorFromHexString("#000066"),
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Blurred
                 },
                 ShellConfigurations = new List<Shell>()
@@ -62,13 +60,11 @@ namespace modterm
                     Name = "Purpleser",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = GetColorFromHexString("#ff4fc1"),
-                    ControlBlurColor = GetColorFromHexString("#3333ff"),
+                    LabelColor = GetColorFromHexString("#ff4fc1"),
+                    LabelBlurColor = GetColorFromHexString("#3333ff"),
                     BlurAmount = 7.0f,
                     WindowOpacityPct = 20,
                     WindowColor = GetColorFromHexString("#000066"),
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration()
@@ -76,13 +72,11 @@ namespace modterm
                     Name = "Matrix",
                     OutputColor = Color.FromArgb(255, 100, 255, 0), // <- nice green
                     OutputBlurColor = Color.FromArgb(255, 100, 255, 0),
-                    ControlColor = Color.FromArgb(255, 100, 255, 0),
-                    ControlBlurColor = Color.FromArgb(255, 100, 255, 0),
+                    LabelColor = Color.FromArgb(255, 100, 255, 0),
+                    LabelBlurColor = Color.FromArgb(255, 100, 255, 0),
                     BlurAmount = 7.0f,
                     WindowOpacityPct = 80,
                     WindowColor = Colors.Black,
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Mica
                 },
                 new ThemeConfiguration()
@@ -90,13 +84,11 @@ namespace modterm
                     Name = "BluePrism",
                     OutputColor = Color.FromArgb(255, 0, 0, 255),
                     OutputBlurColor = Colors.Cyan,
-                    ControlColor = Color.FromArgb(255, 0, 0, 255),
-                    ControlBlurColor = Colors.Cyan,
+                    LabelColor = Color.FromArgb(255, 0, 0, 255),
+                    LabelBlurColor = Colors.Cyan,
                     BlurAmount = 12.0f,
                     WindowOpacityPct = 20,
                     WindowColor = GetColorFromHexString("#000066"),
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration()
@@ -104,13 +96,11 @@ namespace modterm
                     Name = "BlueMatrice",
                     OutputColor = Color.FromArgb(255, 90, 255, 90),
                     OutputBlurColor = Color.FromArgb(255, 90, 45, 240),
-                    ControlColor = Color.FromArgb(255, 100, 255, 0),
-                    ControlBlurColor = Color.FromArgb(255, 90, 45, 240),
+                    LabelColor = Color.FromArgb(255, 100, 255, 0),
+                    LabelBlurColor = Color.FromArgb(255, 90, 45, 240),
                     BlurAmount = 12.0f,
                     WindowOpacityPct = 40,
                     WindowColor = GetColorFromHexString("#000000"),
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration
@@ -118,13 +108,11 @@ namespace modterm
                     Name = "CyberEggplant",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = Colors.Cyan,
-                    ControlBlurColor = Colors.Magenta,
+                    LabelColor = Colors.Cyan,
+                    LabelBlurColor = Colors.Magenta,
                     BlurAmount = 15.0f,
                     WindowOpacityPct = 60,
                     WindowColor = GetColorFromHexString("#280654"),
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.DarkRed,
                     BackdropKind = BackdropKind.Mica
                 },
                 new ThemeConfiguration()
@@ -132,13 +120,11 @@ namespace modterm
                     Name = "Blurromancer",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = Colors.Cyan,
-                    ControlBlurColor = Colors.Blue,
+                    LabelColor = Colors.Cyan,
+                    LabelBlurColor = Colors.Blue,
                     BlurAmount = 5.0f,
                     WindowOpacityPct = 30,
                     WindowColor = Colors.DarkBlue,
-                    ControlEngagedColor = Colors.Orange,
-                    ControlEngagedHoverColor = Colors.Orange,
                     BackdropKind = BackdropKind.Acrylic
                 },
                 new ThemeConfiguration
@@ -146,13 +132,11 @@ namespace modterm
                     Name = "Cyberpunk",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = Colors.Cyan,
-                    ControlBlurColor = Colors.Magenta,
+                    LabelColor = Colors.Cyan,
+                    LabelBlurColor = Colors.Magenta,
                     BlurAmount = 3.0f,
                     WindowOpacityPct = 20,
                     WindowColor = Color.FromArgb(255, 153, 0, 255),
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.DarkRed,
                     BackdropKind = BackdropKind.Acrylic
                 },
                 new ThemeConfiguration
@@ -160,13 +144,11 @@ namespace modterm
                     Name = "Aqua",
                     OutputColor = GetColorFromHexString("#50ff8c"),
                     OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    ControlColor = Colors.Cyan,
-                    ControlBlurColor = Colors.Magenta,
+                    LabelColor = Colors.Cyan,
+                    LabelBlurColor = Colors.Magenta,
                     BlurAmount = 8.0f,
                     WindowOpacityPct = 10,
                     WindowColor = Colors.Aqua,
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration
@@ -174,13 +156,11 @@ namespace modterm
                     Name = "Cut Paper",
                     OutputColor = Colors.DimGray,
                     OutputBlurColor = Colors.DarkGray,
-                    ControlColor = Colors.DarkGray,
-                    ControlBlurColor = Colors.AliceBlue,
+                    LabelColor = Colors.DarkGray,
+                    LabelBlurColor = Colors.AliceBlue,
                     BlurAmount = 2.0f,
                     WindowOpacityPct = 100,
                     WindowColor = Colors.LightGoldenrodYellow,
-                    ControlEngagedColor = Colors.Navy,
-                    ControlEngagedHoverColor = Colors.Navy,
                     BackdropKind = BackdropKind.Blurred
                 }
             };

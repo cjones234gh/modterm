@@ -185,7 +185,7 @@ namespace modterm
             _mtd.EndEffectSequence();
 
             // draw all UI controls
-            _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
+            _titleBarControls?.DrawLabels(sender, args.DrawingSession, _mtd);
         }
         
         private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)

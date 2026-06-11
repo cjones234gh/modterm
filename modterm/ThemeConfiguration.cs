@@ -11,10 +11,10 @@ namespace modterm
         private Color _outputColor;
         public Color OutputBlurColor { get => _outputBlurColor; set { _outputBlurColor = value; OnPropertyChanged(nameof(OutputBlurColor)); } }
         private Color _outputBlurColor;
-        public Color ControlColor { get => _controlColor; set { _controlColor = value; OnPropertyChanged(nameof(ControlColor)); } }
-        private Color _controlColor;
-        public Color ControlBlurColor { get => _controlBlurColor; set { _controlBlurColor = value; OnPropertyChanged(nameof(ControlBlurColor)); } }
-        private Color _controlBlurColor;
+        public Color LabelColor { get => _labelColor; set { _labelColor = value; OnPropertyChanged(nameof(LabelColor)); } }
+        private Color _labelColor;
+        public Color LabelBlurColor { get => _labelBlueColor; set { _labelBlueColor = value; OnPropertyChanged(nameof(LabelBlurColor)); } }
+        private Color _labelBlueColor;
         public float BlurAmount { get => _blurAmount; set { _blurAmount = value; OnPropertyChanged(nameof(BlurAmount)); } }
         private float _blurAmount;
         public int WindowOpacityPct { get => _windowOpacityPct; set { _windowOpacityPct = value; OnPropertyChanged(nameof(WindowOpacityPct)); } }
@@ -23,10 +23,6 @@ namespace modterm
         private Color _windowColor;
         public BackdropKind BackdropKind { get => _backdropKind; set { _backdropKind = value; OnPropertyChanged(nameof(BackdropKind)); } }
         private BackdropKind _backdropKind;
-        public Color ControlEngagedColor { get => _controlEngagedColor; set { _controlEngagedColor = value; OnPropertyChanged(nameof(ControlEngagedColor)); } }
-        private Color _controlEngagedColor;
-        public Color ControlEngagedHoverColor { get => _controlEngagedHoverColor; set { _controlEngagedHoverColor = value; OnPropertyChanged(nameof(ControlEngagedHoverColor)); } }
-        private Color _controlEngagedHoverColor;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

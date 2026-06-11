@@ -13,8 +13,8 @@ namespace modtermTE
             {
                 LastWindowLocation = new Point(100, 100),
                 WindowSize = new Size(800, 600),
-                TerminalFont = "Blex",
-                TerminalControlFont = "Blex",
+                TerminalFont = "BlexMono Nerd Font Mono",
+                LabelFont = "BlexMono Nerd Font Mono",
                 TerminalFontSize = 12.0f,
                 TerminalShell = new Shell
                 {
@@ -28,13 +28,11 @@ namespace modtermTE
                     Name = "Purpleser",
                     OutputColor = ColorFromHex("#50ff8c"),
                     OutputBlurColor = ColorFromHex("#00eeff"),
-                    ControlColor = ColorFromHex("#ff4fc1"),
-                    ControlBlurColor = ColorFromHex("#3333ff"),
+                    LabelColor = ColorFromHex("#ff4fc1"),
+                    LabelBlurColor = ColorFromHex("#3333ff"),
                     BlurAmount = 12.0f,
                     WindowOpacityPct = 20,
                     WindowColor = ColorFromHex("#000066"),
-                    ControlEngagedColor = Colors.Red,
-                    ControlEngagedHoverColor = Colors.Red,
                     BackdropKind = BackdropKind.Blurred
                 },
                 ShellConfigurations =

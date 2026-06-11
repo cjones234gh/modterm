@@ -12,8 +12,8 @@ namespace modtermTE
         private Point _lastWindowLocation;
         public string TerminalFont { get => _terminalFont; set { _terminalFont = value; OnPropertyChanged(nameof(TerminalFont)); } }
         private string _terminalFont = string.Empty;
-        public string TerminalControlFont { get => _terminalControlFont; set { _terminalControlFont = value; OnPropertyChanged(nameof(TerminalControlFont)); } }
-        private string _terminalControlFont = string.Empty;
+        public string LabelFont { get => _labelFont; set { _labelFont = value; OnPropertyChanged(nameof(LabelFont)); } }
+        private string _labelFont = string.Empty;
         public float TerminalFontSize { get => _terminalFontSize; set { _terminalFontSize = value; OnPropertyChanged(nameof(TerminalFontSize)); } }
         private float _terminalFontSize;
         public Shell TerminalShell { get => _terminalShell; set { _terminalShell = value; OnPropertyChanged(nameof(TerminalShell)); } }

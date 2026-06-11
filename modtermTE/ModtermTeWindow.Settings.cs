@@ -18,7 +18,7 @@ namespace modtermTE
         private readonly UserConfigurationStore _configurationStore = new();
         private UserAppConfiguration _configuration = null!;
         private ComboBox? _terminalFontCombo;
-        private ComboBox? _controlFontCombo;
+        private ComboBox? _labelFontCombo;
         private ComboBox? _shellCombo;
         private NumberBox? _blurAmountBox;
         private Slider? _opacitySlider;
@@ -56,10 +56,10 @@ namespace modtermTE
                 CreateColorPickerButton(theme.OutputColor, color => theme.OutputColor = color)));
             SettingsPanel.Children.Add(CreateSettingRow("Blur Color",
                 CreateColorPickerButton(theme.OutputBlurColor, color => theme.OutputBlurColor = color)));
-            SettingsPanel.Children.Add(CreateSettingRow("Control Color",
-                CreateColorPickerButton(theme.ControlColor, color => theme.ControlColor = color)));
-            SettingsPanel.Children.Add(CreateSettingRow("Control Blur",
-                CreateColorPickerButton(theme.ControlBlurColor, color => theme.ControlBlurColor = color)));
+            SettingsPanel.Children.Add(CreateSettingRow("Label Color",
+                CreateColorPickerButton(theme.LabelColor, color => theme.LabelColor = color)));
+            SettingsPanel.Children.Add(CreateSettingRow("Label Blur",
+                CreateColorPickerButton(theme.LabelBlurColor, color => theme.LabelBlurColor = color)));
             SettingsPanel.Children.Add(CreateSettingRow("Blur Amount", CreateBlurAmountBox(theme.BlurAmount)));
             SettingsPanel.Children.Add(CreateSettingRow("Opacity", CreateOpacitySlider(theme.WindowOpacityPct)));
             SettingsPanel.Children.Add(CreateSettingRow("Window Color",
@@ -90,12 +90,12 @@ namespace modtermTE
 
         private ComboBox CreateControlFontCombo()
         {
-            _controlFontCombo = CreateFontCombo(_configuration.TerminalControlFont, font =>
+            _labelFontCombo = CreateFontCombo(_configuration.LabelFont, font =>
             {
-                _configuration.TerminalControlFont = font;
+                _configuration.LabelFont = font;
                 NotifyConfigurationChanged();
             });
-            return _controlFontCombo;
+            return _labelFontCombo;
         }
 
         private ComboBox CreateFontCombo(string selectedFont, Action<string> onSelected)

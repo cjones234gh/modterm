@@ -28,10 +28,8 @@ namespace modterm
         // normal colors for terminal and control text
         public Color OutputColor { get; set; }
         // control colors (normal, engaged, hovered, etc.)
-        public Color ControlColor { get; set; }
-        public Color ControlGlowColor { get; set; }
-        public Color ControlEngagedColor { get; set; }
-        public Color ControlEngagedHoverColor { get; set; }
+        public Color LabelColor { get; set; }
+        public Color LabelGlowColor { get; set; }
         // control rendering details (rounded corners, line width, etc.)
         public float CornerRadius { get; set; }
         public float LineWidth { get; set; }
@@ -174,33 +172,6 @@ namespace modterm
             return _namedColorConfigurations;
         }
 
-        public Color GetControlColor(ModtermControl control)
-        {
-            if (control.IsPressed)
-                return Color.FromArgb(180, ControlColor.R, ControlColor.G, ControlColor.B);
-            else if (control.IsEngaged)
-                return control.IsHovered ? ControlEngagedHoverColor : ControlEngagedColor;
-            else if (control.IsHovered)
-                return ControlColor;
-            else
-                return ControlColor;
-        }
-
-        public Color GetControlGlowColor(ModtermControl control)
-        {
-            if (control.IsPressed)
-                // return output glow
-                return ControlGlowColor;
-            else if (control.IsEngaged)
-                return control.IsHovered ? ControlEngagedHoverColor : ControlEngagedColor;
-            else if (control.IsHovered)
-                // return output glow at hover
-                return ControlGlowColor;
-            else
-                // return output glow when not engaged or hovered
-                return ControlGlowColor;
-        }
-
         private Color GetBackgroundArgb()
         {
             return TintColor == Colors.Transparent
@@ -212,13 +183,11 @@ namespace modterm
         {
             OutputColor = config.OutputColor;
             OutputGlowColor = config.OutputBlurColor;
-            ControlColor = config.ControlColor;
-            ControlGlowColor = config.ControlBlurColor;
+            LabelColor = config.LabelColor;
+            LabelGlowColor = config.LabelBlurColor;
             BlurAmount = config.BlurAmount;
             OpacityPct = config.WindowOpacityPct;
             TintColor = config.WindowColor;
-            ControlEngagedColor = config.ControlEngagedColor;
-            ControlEngagedHoverColor = config.ControlEngagedHoverColor;
             ApplySystemBackdrop(config.BackdropKind, wInstance);
             _backgroundBrush.Color = GetBackgroundArgb();
         }
@@ -263,18 +232,18 @@ namespace modterm
             _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault, fitToCell, cellHeight));
         }
 
-        public void DrawTextDisplayControl(CanvasControl sender, CanvasDrawingSession cds, TextDisplayControl control)
+        public void DrawModtermLabel(CanvasControl sender, CanvasDrawingSession cds, ModtermLabel label)
         {
-            Color controlColor = GetControlColor(control);
-            Color controlBlurColor = GetControlGlowColor(control);
+            Color labelColor = LabelColor;
+            Color labelBlurColor = LabelGlowColor;
 
             // blur layer - draw text content
             using (var commandList = new CanvasCommandList(sender))
             {
                 using (var clds = commandList.CreateDrawingSession())
                 {
-                    clds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
-                        (float)control.Location.Y + ControlPadding / 4, controlBlurColor, CurrentControlTextFormat);
+                    clds.DrawText(label.TextContent, (float)label.Location.X + ControlPadding,
+                        (float)label.Location.Y + ControlPadding / 4, labelBlurColor, CurrentControlTextFormat);
                 }
 
                 var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
@@ -283,14 +252,9 @@ namespace modterm
 
             
             // sharp layer - draw text content
-            cds.DrawText(control.TextContent, (float)control.Location.X + ControlPadding,
-                (float)control.Location.Y + ControlPadding / 4, controlColor, CurrentControlTextFormat);
+            cds.DrawText(label.TextContent, (float)label.Location.X + ControlPadding,
+                (float)label.Location.Y + ControlPadding / 4, labelColor, CurrentControlTextFormat);
 
-            if (control.IsEngaged && control.Children is { Count: > 0 })
-            {
-                foreach (var child in control.Children)
-                    child.Draw(sender, cds, this);
-            }
         }
 
         public List<Color> GetColorWheelProgression(double StepDegrees, double Saturation, int NumColors)
