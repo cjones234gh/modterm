@@ -8,15 +8,41 @@
         Title="modtermTE">
 
     <Grid x:Name="RootGrid" Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="33" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <Grid x:Name="AppTitleBar"
+              Grid.Row="0"
               Height="33"
               VerticalAlignment="Top"
               Background="Transparent" />
 
-        <TextBlock Text="Theme Editor"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   Style="{StaticResource SubtitleTextBlockStyle}"
-                   Opacity="0.8" />
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="32,8,32,24">
+            <StackPanel x:Name="SettingsPanel"
+                        Spacing="0"
+                        MaxWidth="760"
+                        HorizontalAlignment="Stretch" />
+        </ScrollViewer>
+
+        <Border Grid.Row="2"
+                BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="32,16">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button x:Name="SaveConfigurationButton"
+                        Content="Save Configuration"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Click="SaveConfigurationButton_Click" />
+                <Button x:Name="SaveAsNewThemeButton"
+                        Content="Save as New Theme"
+                        Click="SaveAsNewThemeButton_Click" />
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

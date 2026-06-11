@@ -16,6 +16,8 @@ namespace modtermTE
             AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
             AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             SetTitleBar(AppTitleBar);
+
+            InitializeSettings();
         }
     }
 }
