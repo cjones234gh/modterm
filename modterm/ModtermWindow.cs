@@ -31,7 +31,7 @@ namespace modterm
         private DispatcherQueueTimer _cursorTimer = null!;
         private DispatcherQueueTimer _resizeStopTimer = null!;
         // modterm UI controls
-        private ControlGroup _titleBarControls = null!;
+        private DisplayLabel _titleBarControls = null!;
         private TextDisplayControl _shellInfoCtrl = null!;
         private TextDisplayControl _appearanceInfoCtrl = null!;
         private TextDisplayControl _linesColsInfoCtrl = null!;
@@ -463,79 +463,6 @@ namespace modterm
             await dialog.ShowAsync();
         }
 
-        private async Task SaveCurrentLookAsNewThemeAsync()
-        {
-            if (RootGrid.XamlRoot is null)
-            {
-                return;
-            }
-
-            var nameBox = new TextBox
-            {
-                PlaceholderText = "Theme name",
-                AcceptsReturn = false
-            };
-
-            var dialog = new ContentDialog
-            {
-                Title = "Make Current Look a New Theme",
-                Content = nameBox,
-                PrimaryButtonText = "Save",
-                CloseButtonText = "Cancel",
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = RootGrid.XamlRoot
-            };
-
-            var result = await dialog.ShowAsync();
-            if (result != ContentDialogResult.Primary)
-            {
-                return;
-            }
-
-            string themeName = nameBox.Text.Trim();
-            if (string.IsNullOrWhiteSpace(themeName))
-            {
-                return;
-            }
-
-            if (themeName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            {
-                await ShowSimpleDialogAsync("Invalid Theme Name", "Theme name contains characters that cannot be used in a file name.");
-                return;
-            }
-
-            string themeJson = JsonSerializer.Serialize(_uac.ThemeConfiguration);
-            var themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(themeJson);
-            if (themeConfig is null)
-            {
-                return;
-            }
-
-            themeConfig.Name = themeName;
-            WriteThemeConfigurationToDisk(themeConfig);
-            LoadThemeNames();
-            InitializeFlyouts();
-        }
-
-        private async Task ShowSimpleDialogAsync(string title, string content)
-        {
-            if (RootGrid.XamlRoot is null)
-            {
-                return;
-            }
-
-            var dialog = new ContentDialog
-            {
-                Title = title,
-                Content = content,
-                CloseButtonText = "OK",
-                DefaultButton = ContentDialogButton.Close,
-                XamlRoot = RootGrid.XamlRoot
-            };
-
-            await dialog.ShowAsync();
-        }
-
         private void OpenConfigurationInNotepad()
         {
             var startInfo = new ProcessStartInfo
@@ -593,8 +520,8 @@ namespace modterm
         private void InitializeModtermControls()
         {
             // ui control groups
-            _titleBarControls = new ControlGroup(
-                ControlGroup.ControlDock.Top, _mtd.ControlPadding);
+            _titleBarControls = new DisplayLabel(
+                DisplayLabel.ControlDock.Top, _mtd.ControlPadding);
 
             // path and appearance info labels
             _shellInfoCtrl = new TextDisplayControl("", false);
@@ -880,10 +807,6 @@ namespace modterm
             }
             _flyout.Items.Add(themeItem);
 
-            var saveThemeItem = new MenuFlyoutItem { Text = "Make Current Look a New Theme" };
-            saveThemeItem.Click += async (_, __) => await SaveCurrentLookAsNewThemeAsync();
-            _flyout.Items.Add(saveThemeItem);
-
             var resetDefaultsItem = new MenuFlyoutItem { Text = "Reset Default Configuration" };
             resetDefaultsItem.Click += (_, __) => ResetDefaultConfiguration();
             _flyout.Items.Add(resetDefaultsItem);
@@ -895,11 +818,6 @@ namespace modterm
             var reloadConfigItem = new MenuFlyoutItem { Text = "Reload Configuration" };
             reloadConfigItem.Click += async (_, __) => await ReloadConfigurationFromDiskAsync();
             _flyout.Items.Add(reloadConfigItem);
-
-            // toggle title bar controls
-            var toggleTitleBarControlsItem = new MenuFlyoutItem { Text = "Toggle Title Bar Controls" };
-            toggleTitleBarControlsItem.Click += (_, __) => { _showTitleBarControls = !_showTitleBarControls; ModtermCanvas.Invalidate(); };
-            _flyout.Items.Add(toggleTitleBarControlsItem);
         }
     }
 }

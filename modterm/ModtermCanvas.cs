@@ -26,8 +26,6 @@ namespace modterm
         private int _topTextPadding = 28;//33;
         private float _lineHeightPadding = 1.0f;
 
-        private bool _showTitleBarControls = true;
-
         private CanvasTextFormat? _normalTextFormat;
         private CanvasTextFormat? _boldTextFormat;
         private string? _cachedFontFamily;
@@ -187,10 +185,7 @@ namespace modterm
             _mtd.EndEffectSequence();
 
             // draw all UI controls
-            if (_showTitleBarControls)
-            {
-                _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
-            } 
+            _titleBarControls?.DrawControls(sender, args.DrawingSession, _mtd);
         }
         
         private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)

@@ -10,7 +10,7 @@ using Windows.Foundation;
 
 namespace modterm
 {
-    public class ControlGroup
+    public class DisplayLabel
     {
         private float _widthPadding;
         private float _heightPadding;
@@ -35,7 +35,7 @@ namespace modterm
             _expandableMeasureCanvasSize = new Size(1, 1);
         }
 
-        public ControlGroup(ControlDock dock, float mtdPadding)
+        public DisplayLabel(ControlDock dock, float mtdPadding)
         {
             Dock = dock;
             _padding = mtdPadding;
