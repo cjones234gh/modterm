@@ -318,10 +318,14 @@ namespace modterm
                     vtSeq = "\x1B";
                     break;
                 default:
-                    var keyChar = GetCharFromVirtualKey(e.Key, e);
-                    if (keyChar != null)
+                    vtSeq = GetFunctionKeySequence(e.Key) ?? string.Empty;
+                    if (string.IsNullOrEmpty(vtSeq))
                     {
-                        vtSeq = keyChar.ToString() ?? "";
+                        var keyChar = GetCharFromVirtualKey(e.Key, e);
+                        if (keyChar != null)
+                        {
+                            vtSeq = keyChar.ToString() ?? "";
+                        }
                     }
                     //Debug.WriteLine($"Key: {e.Key}, Char: {keyChar}, Ctrl: {isCtrlPressed}");
                     break;
@@ -413,6 +417,27 @@ namespace modterm
             _scrollOffset = Math.Clamp(_scrollOffset, 0, maxScrollOffset);
         }
 
+
+        // xterm / Windows Console VT sequences for function keys.
+        private static string? GetFunctionKeySequence(VirtualKey key)
+        {
+            return key switch
+            {
+                VirtualKey.F1 => "\x1BOP",
+                VirtualKey.F2 => "\x1BOQ",
+                VirtualKey.F3 => "\x1BOR",
+                VirtualKey.F4 => "\x1BOS",
+                VirtualKey.F5 => "\x1B[15~",
+                VirtualKey.F6 => "\x1B[17~",
+                VirtualKey.F7 => "\x1B[18~",
+                VirtualKey.F8 => "\x1B[19~",
+                VirtualKey.F9 => "\x1B[20~",
+                VirtualKey.F10 => "\x1B[21~",
+                VirtualKey.F11 => "\x1B[23~",
+                VirtualKey.F12 => "\x1B[24~",
+                _ => null
+            };
+        }
 
         private char? GetCharFromVirtualKey(Windows.System.VirtualKey key, KeyRoutedEventArgs e)
         {
