@@ -55,6 +55,10 @@ namespace modterm
         private bool _cursorVisible = true;
         private int _cursorSpeed = 500;
 
+        // live reload from modtermTE
+        private ConfigurationReloadListener? _configurationReloadListener;
+        private DispatcherQueueTimer? _configurationReloadTimer;
+
         // context menu flyout for right-click
         private MenuFlyout _flyout = null!;
         private SizeInt32 _lastWindowSize;
@@ -132,10 +136,16 @@ namespace modterm
             this.SizeChanged += MainWindow_SizeChanged;
             this.Closed += (s, e) =>
             {
+                _configurationReloadListener?.Dispose();
+                _configurationReloadListener = null;
                 PersistLastWindowLocation();
                 SaveConfig();
                 DisposeTerminalInstance(_terminal);
             };
+
+            _configurationReloadListener = new ConfigurationReloadListener(
+                DispatcherQueue,
+                RequestConfigurationReload);
 
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
@@ -342,6 +352,22 @@ namespace modterm
             UpdateTitleBarLabels();
         }
 
+        private void RequestConfigurationReload()
+        {
+            _configurationReloadTimer ??= DispatcherQueue.CreateTimer();
+            _configurationReloadTimer.Interval = TimeSpan.FromMilliseconds(150);
+            _configurationReloadTimer.Tick -= ConfigurationReloadTimer_Tick;
+            _configurationReloadTimer.Tick += ConfigurationReloadTimer_Tick;
+            _configurationReloadTimer.Stop();
+            _configurationReloadTimer.Start();
+        }
+
+        private async void ConfigurationReloadTimer_Tick(DispatcherQueueTimer sender, object args)
+        {
+            sender.Stop();
+            await ReloadConfigurationFromDiskAsync();
+        }
+
         private async Task ReloadConfigurationFromDiskAsync()
         {
             if (!File.Exists(_userAppConfigPath))
@@ -350,10 +376,14 @@ namespace modterm
             }
 
             var previousConfiguration = _uac;
+            var currentWindowSize = new Size(this.AppWindow.Size.Width, this.AppWindow.Size.Height);
+            var currentWindowLocation = new Point(this.AppWindow.Position.X, this.AppWindow.Position.Y);
             if (TryLoadUserConfiguration(out var loadedConfiguration))
             {
                 _saveConfiguration = true;
                 SetUserConfiguration(loadedConfiguration);
+                _uac.WindowSize = currentWindowSize;
+                _uac.LastWindowLocation = currentWindowLocation;
                 ApplyCurrentUserConfiguration(applyWindowBounds: false);
                 InitializeModtermControls();
                 LoadThemeNames();
@@ -370,6 +400,8 @@ namespace modterm
 
             _saveConfiguration = false;
             SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+            _uac.WindowSize = currentWindowSize;
+            _uac.LastWindowLocation = currentWindowLocation;
             ApplyCurrentUserConfiguration(applyWindowBounds: false);
             InitializeModtermControls();
             LoadThemeNames();

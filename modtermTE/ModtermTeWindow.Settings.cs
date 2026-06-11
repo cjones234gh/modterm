@@ -24,6 +24,7 @@ namespace modtermTE
         private Slider? _opacitySlider;
         private TextBlock? _opacityValueText;
         private ComboBox? _backdropCombo;
+        private bool _settingsUiReady;
 
         private void InitializeSettings()
         {
@@ -40,6 +41,7 @@ namespace modtermTE
 
         private void BuildSettingsUi()
         {
+            _settingsUiReady = false;
             SettingsPanel.Children.Clear();
 
             SettingsPanel.Children.Add(CreateSectionHeader("Terminal"));
@@ -63,17 +65,36 @@ namespace modtermTE
             SettingsPanel.Children.Add(CreateSettingRow("Window Color",
                 CreateColorPickerButton(theme.WindowColor, color => theme.WindowColor = color)));
             SettingsPanel.Children.Add(CreateSettingRow("Backdrop", CreateBackdropCombo(theme.BackdropKind)));
+            _settingsUiReady = true;
+        }
+
+        private void NotifyConfigurationChanged()
+        {
+            if (!_settingsUiReady || _liveConfigurationPublisher is null)
+            {
+                return;
+            }
+
+            _liveConfigurationPublisher.SchedulePublish(_configuration);
         }
 
         private ComboBox CreateTerminalFontCombo()
         {
-            _terminalFontCombo = CreateFontCombo(_configuration.TerminalFont, font => _configuration.TerminalFont = font);
+            _terminalFontCombo = CreateFontCombo(_configuration.TerminalFont, font =>
+            {
+                _configuration.TerminalFont = font;
+                NotifyConfigurationChanged();
+            });
             return _terminalFontCombo;
         }
 
         private ComboBox CreateControlFontCombo()
         {
-            _controlFontCombo = CreateFontCombo(_configuration.TerminalControlFont, font => _configuration.TerminalControlFont = font);
+            _controlFontCombo = CreateFontCombo(_configuration.TerminalControlFont, font =>
+            {
+                _configuration.TerminalControlFont = font;
+                NotifyConfigurationChanged();
+            });
             return _controlFontCombo;
         }
 
@@ -125,6 +146,7 @@ namespace modtermTE
                 if (_shellCombo.SelectedItem is Shell shell)
                 {
                     _configuration.TerminalShell = shell;
+                    NotifyConfigurationChanged();
                 }
             };
 
@@ -161,6 +183,7 @@ namespace modtermTE
                 if (args.NewValue is double value)
                 {
                     _configuration.ThemeConfiguration.BlurAmount = (float)value;
+                    NotifyConfigurationChanged();
                 }
             };
 
@@ -192,6 +215,7 @@ namespace modtermTE
                 int value = (int)_opacitySlider.Value;
                 _configuration.ThemeConfiguration.WindowOpacityPct = value;
                 _opacityValueText.Text = $"{value}%";
+                NotifyConfigurationChanged();
             };
 
             var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch, MaxWidth = 360 };
@@ -227,6 +251,7 @@ namespace modtermTE
                 if (_backdropCombo.SelectedItem is BackdropOption option)
                 {
                     _configuration.ThemeConfiguration.BackdropKind = option.Kind;
+                    NotifyConfigurationChanged();
                 }
             };
 
@@ -259,6 +284,7 @@ namespace modtermTE
             {
                 onColorChanged(args.NewColor);
                 preview.Background = new SolidColorBrush(args.NewColor);
+                NotifyConfigurationChanged();
             };
 
             var button = new Button
@@ -318,8 +344,8 @@ namespace modtermTE
 
         private void SaveConfigurationButton_Click(object sender, RoutedEventArgs e)
         {
-            _configurationStore.Save(_configuration);
-            _ = ShowSimpleDialogAsync("Configuration Saved", "Your settings were saved to userAppConfig.json.");
+            _liveConfigurationPublisher?.PublishNow(_configuration);
+            _ = ShowSimpleDialogAsync("Configuration Saved", "Your settings were saved to userAppConfig.json and applied to modterm.");
         }
 
         private async void SaveAsNewThemeButton_Click(object sender, RoutedEventArgs e)
