@@ -49,7 +49,7 @@ namespace modterm
         private List<string> _themeNames = new List<string>();
 
         // modterm display
-        private ModtermDisplay _mtd = new ModtermDisplay();
+        private ModtermRender _mtr = new ModtermRender();
 
         // VT mode: cursor visibility only
         private bool _cursorVisible = true;
@@ -91,11 +91,11 @@ namespace modterm
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
             _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
 
-            _vtController.SetRgbForegroundColor(_mtd.OutputColor.R,
-                _mtd.OutputColor.G, _mtd.OutputColor.B);
+            _vtController.SetRgbForegroundColor(_mtr.OutputColor.R,
+                _mtr.OutputColor.G, _mtr.OutputColor.B);
 
             // init modterm display and set default appearance config
-            _mtd.Initialize();
+            _mtr.Initialize();
 
             _userConfigDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "modterm");
             Directory.CreateDirectory(_userConfigDirectory);
@@ -111,12 +111,12 @@ namespace modterm
                 {
                     _saveConfiguration = false;
                     _showConfigLoadFailureDialog = true;
-                    SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+                    SetUserConfiguration(_mtr.GetDefaultAppConfiguration());
                 }
             }
             else
             {
-                SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+                SetUserConfiguration(_mtr.GetDefaultAppConfiguration());
                 WriteConfigurationToDisk(_uac);
                 WriteDefaultThemeConfigurations(overwriteExisting: false);
             }
@@ -200,7 +200,7 @@ namespace modterm
 
         private void WriteDefaultThemeConfigurations(bool overwriteExisting)
         {
-            foreach (var themeConfig in _mtd.GetAllThemeConfigurations())
+            foreach (var themeConfig in _mtr.GetAllThemeConfigurations())
             {
                 WriteThemeConfigurationToDisk(themeConfig, overwriteExisting);
             }
@@ -237,7 +237,7 @@ namespace modterm
             }
             catch
             {
-                configuration = _mtd.GetDefaultAppConfiguration();
+                configuration = _mtr.GetDefaultAppConfiguration();
                 return false;
             }
         }
@@ -303,17 +303,17 @@ namespace modterm
                 this.AppWindow.MoveAndResize(rectInt32);
             }
 
-            _mtd.CurrentFont = _uac.TerminalFont;
-            _mtd.CurrentControlFont = _uac.LabelFont;
-            _mtd.CurrentFontSize = _uac.TerminalFontSize;
-            _mtd.SetColorConfiguration(_uac.ThemeConfiguration, this);
-            RootGrid.Background = _mtd.GetBackgroundBrush();
+            _mtr.CurrentFont = _uac.TerminalFont;
+            _mtr.CurrentControlFont = _uac.LabelFont;
+            _mtr.CurrentFontSize = _uac.TerminalFontSize;
+            _mtr.SetColorConfiguration(_uac.ThemeConfiguration, this);
+            RootGrid.Background = _mtr.GetBackgroundBrush();
         }
 
         private void ResetDefaultConfiguration()
         {
             _saveConfiguration = true;
-            SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+            SetUserConfiguration(_mtr.GetDefaultAppConfiguration());
             ApplyCurrentUserConfiguration(applyWindowBounds: false);
             InitializeModtermControls();
             RestartTerminalForLayoutChange();
@@ -370,7 +370,7 @@ namespace modterm
             }
 
             _saveConfiguration = false;
-            SetUserConfiguration(_mtd.GetDefaultAppConfiguration());
+            SetUserConfiguration(_mtr.GetDefaultAppConfiguration());
             _uac.WindowSize = currentWindowSize;
             _uac.LastWindowLocation = currentWindowLocation;
             ApplyCurrentUserConfiguration(applyWindowBounds: false);
@@ -492,7 +492,7 @@ namespace modterm
         {
             // ui control groups
             _titleBarControls = new DisplayLabelGroup(
-                DisplayLabelGroup.LabelDock.Top, _mtd.ControlPadding);
+                DisplayLabelGroup.LabelDock.Top, _mtr.ControlPadding);
 
             // path and appearance info labels
             _shellInfoLabel = new DisplayLabel("", true);
@@ -507,7 +507,7 @@ namespace modterm
         {
             // path and appearance info labels
             _shellInfoLabel.TextContent = $"MODTERM - Shell: {_uac.TerminalShell.Name}";
-            _appearanceInfoLabel.TextContent = $"Backdrop: {_uac.ThemeConfiguration.BackdropKind.ToString()} {_mtd.OpacityPct}% {_mtd.GetHexStringFromColor(_mtd.GetBackgroundBrush().Color)}";
+            _appearanceInfoLabel.TextContent = $"Backdrop: {_uac.ThemeConfiguration.BackdropKind.ToString()} {_mtr.OpacityPct}% {_mtr.GetHexStringFromColor(_mtr.GetBackgroundBrush().Color)}";
             _linesColsInfoLabel.TextContent = $"{_lines}x{_columns}";
 
             ModtermCanvas.Invalidate();
@@ -582,7 +582,7 @@ namespace modterm
             if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
                 return false;
 
-            double lineHeight = _mtd.CurrentFontSize + _lineHeightPadding;
+            double lineHeight = _mtr.CurrentFontSize + _lineHeightPadding;
             double textRight = _leftTextPadding + (_columns * _measuredCharWidth);
             double textBottom = _topTextPadding + (_lines * lineHeight);
 
@@ -594,7 +594,7 @@ namespace modterm
 
         private VtNetCore.VirtualTerminal.TextPosition GetTextPositionFromPoint(Point point)
         {
-            double lineHeight = _mtd.CurrentFontSize + _lineHeightPadding;
+            double lineHeight = _mtr.CurrentFontSize + _lineHeightPadding;
             int column = (int)Math.Floor((point.X - _leftTextPadding) / _measuredCharWidth);
             int visibleRow = (int)Math.Floor((point.Y - _topTextPadding) / lineHeight);
             int topRow = _isSelecting ? _selectionTopRow : _vtController.ViewPort.TopRow - _scrollOffset;
@@ -753,7 +753,7 @@ namespace modterm
                 var item = new MenuFlyoutItem { Text = label };
                 item.Click += (_, __) =>
                 {
-                    _mtd.OpacityPct = pct;
+                    _mtr.OpacityPct = pct;
                     _uac.ThemeConfiguration.WindowOpacityPct = pct;
                     UpdateTitleBarLabels();
                 };
@@ -771,7 +771,7 @@ namespace modterm
                     // deserialize the theme config from disk and apply it
                     string themePath = Path.Combine(_userConfigDirectory, $"theme_{preset}.json");
                     ThemeConfiguration themeConfig = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath)) ?? _uac.ThemeConfiguration;
-                    _mtd.SetColorConfiguration(themeConfig, this);
+                    _mtr.SetColorConfiguration(themeConfig, this);
                     SetThemeConfiguration(themeConfig);
                 };
                 themeItem.Items.Add(item);

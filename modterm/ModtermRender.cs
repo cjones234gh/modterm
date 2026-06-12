@@ -21,7 +21,7 @@ namespace modterm
         Glow,
     }
 
-    public partial class ModtermDisplay
+    public partial class ModtermRender
     {
         // glow colors for terminal and control text
         public Color OutputGlowColor { get; set; }

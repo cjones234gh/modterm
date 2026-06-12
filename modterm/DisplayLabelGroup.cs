@@ -36,7 +36,7 @@ namespace modterm
             _topControlPadding = 45; // Adjust this value as needed
         }
 
-        public void DrawLabels(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd)
+        public void DrawLabels(CanvasControl sender, CanvasDrawingSession cds, ModtermRender mtd)
         {
             ArrangeLabels(sender, cds, mtd);
             foreach (var label in Labels)
@@ -46,7 +46,7 @@ namespace modterm
             
         }
 
-        private void ArrangeLabels(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd)
+        private void ArrangeLabels(CanvasControl sender, CanvasDrawingSession cds, ModtermRender mtd)
         {
             float canvasWidth = (float)sender.ActualWidth;
             float canvasHeight = (float)sender.ActualHeight;

@@ -38,8 +38,8 @@ namespace modterm
             // Do not spawn the conhost until we can measure the canvas during drawing and determine how many rows/columns we can fit
             if (!_terminal.Started)
             {
-                int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (_mtd.CurrentFontSize + _lineHeightPadding));
-                float measuredCharWidth = MeasureCellAdvance(args.DrawingSession, _mtd.CurrentTextFormat);
+                int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (_mtr.CurrentFontSize + _lineHeightPadding));
+                float measuredCharWidth = MeasureCellAdvance(args.DrawingSession, _mtr.CurrentTextFormat);
                 int measuredCols = (int)((sender.ActualWidth - _leftTextPadding) / measuredCharWidth);
                 _lines = measuredRows;
                 _columns = measuredCols;
@@ -50,13 +50,13 @@ namespace modterm
                 StartConPTY();
             }
 
-            _mtd.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
+            _mtr.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
 
             // Keep the VT controller's TopRow as the live screen position; scrollback only changes what we render.
             ClampScrollOffset();
             int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
             var selectionRange = _isSelecting ? _selectionRange : null;
-            double lineHeight = _mtd.CurrentFontSize + _lineHeightPadding;
+            double lineHeight = _mtr.CurrentFontSize + _lineHeightPadding;
 
             EnsureTextFormats();
 
@@ -93,16 +93,16 @@ namespace modterm
 
                     string combining = sourceChar?.CombiningCharacters ?? string.Empty;
 
-                    Color fg = _mtd.OutputColor;
+                    Color fg = _mtr.OutputColor;
                     if (!attr.DefaultForeground)
                     {
-                        try { fg = _mtd.GetColorFromHexString(attr.WebColor); } catch { }
+                        try { fg = _mtr.GetColorFromHexString(attr.WebColor); } catch { }
                     }
 
                     Color bg = Colors.Black;
                     if (!attr.DefaultBackground)
                     {
-                        try { bg = _mtd.GetColorFromHexString(attr.BackgroundWebColor); } catch { }
+                        try { bg = _mtr.GetColorFromHexString(attr.BackgroundWebColor); } catch { }
                     }
 
                     if (attr.Hidden)
@@ -152,7 +152,7 @@ namespace modterm
                         // our row. Scale those to the grid cell so TUI braille graphs stay within
                         // their rows instead of bleeding vertically.
                         bool fitToCell = IsBrailleChar(displayChar);
-                        _mtd.DrawText(
+                        _mtr.DrawText(
                             cellText,
                             cellX,
                             y,
@@ -178,14 +178,14 @@ namespace modterm
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
                 float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
-                float cursorY = (float)(cursor.Row * (_mtd.CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
-                args.DrawingSession.DrawText("|", cursorX, cursorY, _mtd.OutputColor, _mtd.CurrentTextFormat);
+                float cursorY = (float)(cursor.Row * (_mtr.CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
+                args.DrawingSession.DrawText("|", cursorX, cursorY, _mtr.OutputColor, _mtr.CurrentTextFormat);
             }
 
-            _mtd.EndEffectSequence();
+            _mtr.EndEffectSequence();
 
             // draw all UI controls
-            _titleBarControls?.DrawLabels(sender, args.DrawingSession, _mtd);
+            _titleBarControls?.DrawLabels(sender, args.DrawingSession, _mtr);
         }
         
         private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
@@ -201,35 +201,35 @@ namespace modterm
         private void EnsureTextFormats()
         {
             if (_normalTextFormat != null
-                && _cachedFontFamily == _mtd.CurrentFont
-                && _cachedFontSize == _mtd.CurrentFontSize)
+                && _cachedFontFamily == _mtr.CurrentFont
+                && _cachedFontSize == _mtr.CurrentFontSize)
             {
                 return;
             }
 
             _normalTextFormat = new CanvasTextFormat
             {
-                FontFamily = _mtd.CurrentFont,
-                FontSize = _mtd.CurrentFontSize,
+                FontFamily = _mtr.CurrentFont,
+                FontSize = _mtr.CurrentFontSize,
                 FontWeight = FontWeights.Normal,
                 WordWrapping = CanvasWordWrapping.NoWrap
             };
             _boldTextFormat = new CanvasTextFormat
             {
-                FontFamily = _mtd.CurrentFont,
-                FontSize = _mtd.CurrentFontSize,
+                FontFamily = _mtr.CurrentFont,
+                FontSize = _mtr.CurrentFontSize,
                 FontWeight = FontWeights.Bold,
                 WordWrapping = CanvasWordWrapping.NoWrap
             };
-            _cachedFontFamily = _mtd.CurrentFont;
-            _cachedFontSize = _mtd.CurrentFontSize;
+            _cachedFontFamily = _mtr.CurrentFont;
+            _cachedFontSize = _mtr.CurrentFontSize;
         }
 
         private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format)
         {
             float x = _leftTextPadding + (startCol * _measuredCharWidth);
             float width = _runBuffer.Length * _measuredCharWidth;
-            _mtd.DrawText(
+            _mtr.DrawText(
                 _runBuffer.ToString(),
                 x,
                 y,

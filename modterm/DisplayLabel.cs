@@ -20,7 +20,7 @@ namespace modterm
         public Rect Location { get; set; }
         public string TextContent { get; set; } = string.Empty;
         public bool ContentSizing { get; set; }
-        public void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermDisplay mtd)
+        public void Draw(CanvasControl sender, CanvasDrawingSession cds, ModtermRender mtd)
         {
             mtd.DrawModtermLabel(sender, cds, this);
         }

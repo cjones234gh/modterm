@@ -11,7 +11,7 @@ using Windows.UI;
 
 namespace modterm
 {
-    public partial class ModtermDisplay
+    public partial class ModtermRender
     {
         public UserAppConfiguration GetDefaultAppConfiguration()
         {
