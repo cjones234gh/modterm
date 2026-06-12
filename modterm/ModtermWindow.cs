@@ -32,9 +32,9 @@ namespace modterm
         private DispatcherQueueTimer _resizeStopTimer = null!;
         // modterm UI controls
         private DisplayLabelGroup _titleBarControls = null!;
-        private ModtermLabel _shellInfoLabel = null!;
-        private ModtermLabel _appearanceInfoLabel = null!;
-        private ModtermLabel _linesColsInfoLabel = null!;
+        private DisplayLabel _shellInfoLabel = null!;
+        private DisplayLabel _appearanceInfoLabel = null!;
+        private DisplayLabel _linesColsInfoLabel = null!;
 
         // user storage for configs, themes, etc.
         private string _userConfigDirectory = string.Empty;
@@ -495,9 +495,9 @@ namespace modterm
                 DisplayLabelGroup.LabelDock.Top, _mtd.ControlPadding);
 
             // path and appearance info labels
-            _shellInfoLabel = new ModtermLabel("", true);
-            _appearanceInfoLabel = new ModtermLabel("", true);
-            _linesColsInfoLabel = new ModtermLabel("", true);
+            _shellInfoLabel = new DisplayLabel("", true);
+            _appearanceInfoLabel = new DisplayLabel("", true);
+            _linesColsInfoLabel = new DisplayLabel("", true);
 
             _titleBarControls.Labels.AddRange(
                 [_shellInfoLabel, _appearanceInfoLabel, _linesColsInfoLabel]);

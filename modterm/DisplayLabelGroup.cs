@@ -25,7 +25,7 @@ namespace modterm
             Bottom
         }
         public LabelDock Dock { get; set; }
-        public List<ModtermLabel> Labels { get; set; } = new List<ModtermLabel>();
+        public List<DisplayLabel> Labels { get; set; } = new List<DisplayLabel>();
 
         public DisplayLabelGroup(LabelDock dock, float mtdPadding)
         {

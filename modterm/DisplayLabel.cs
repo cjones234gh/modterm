@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace modterm
 {
-    public class ModtermLabel
+    public class DisplayLabel
     {
-        public ModtermLabel(string textContent, bool contentSizing = true, Rect location = new Rect())
+        public DisplayLabel(string textContent, bool contentSizing = true, Rect location = new Rect())
         {
             TextContent = textContent;
             ContentSizing = contentSizing;

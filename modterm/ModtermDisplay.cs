@@ -232,7 +232,7 @@ namespace modterm
             _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault, fitToCell, cellHeight));
         }
 
-        public void DrawModtermLabel(CanvasControl sender, CanvasDrawingSession cds, ModtermLabel label)
+        public void DrawModtermLabel(CanvasControl sender, CanvasDrawingSession cds, DisplayLabel label)
         {
             Color labelColor = LabelColor;
             Color labelBlurColor = LabelGlowColor;
