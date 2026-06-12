@@ -167,7 +167,7 @@ namespace modterm
             SystemBackdropInfo = $"{kind}";
         }
 
-        public List<ThemeConfiguration> GetAllColorConfigurations()
+        public List<ThemeConfiguration> GetAllThemeConfigurations()
         {
             return _namedColorConfigurations;
         }

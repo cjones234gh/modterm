@@ -200,7 +200,7 @@ namespace modterm
 
         private void WriteDefaultThemeConfigurations(bool overwriteExisting)
         {
-            foreach (var themeConfig in _mtd.GetAllColorConfigurations())
+            foreach (var themeConfig in _mtd.GetAllThemeConfigurations())
             {
                 WriteThemeConfigurationToDisk(themeConfig, overwriteExisting);
             }
@@ -232,7 +232,6 @@ namespace modterm
             {
                 string json = File.ReadAllText(_userAppConfigPath);
                 var loadedConfiguration = JsonSerializer.Deserialize<UserAppConfiguration>(json);
-                MigrateLegacyWindowLocation(json, loadedConfiguration);
                 configuration = ValidateLoadedConfiguration(loadedConfiguration);
                 return true;
             }
@@ -240,34 +239,6 @@ namespace modterm
             {
                 configuration = _mtd.GetDefaultAppConfiguration();
                 return false;
-            }
-        }
-
-        private static void MigrateLegacyWindowLocation(string json, UserAppConfiguration? configuration)
-        {
-            if (configuration is null || json.Contains("\"WindowSize\"", StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                if (!doc.RootElement.TryGetProperty("WindowLocation", out var windowLocation))
-                {
-                    return;
-                }
-
-                configuration.LastWindowLocation = new Point(
-                    windowLocation.GetProperty("X").GetDouble(),
-                    windowLocation.GetProperty("Y").GetDouble());
-                configuration.WindowSize = new Size(
-                    windowLocation.GetProperty("Width").GetDouble(),
-                    windowLocation.GetProperty("Height").GetDouble());
-            }
-            catch
-            {
-                // Keep defaults from deserialization when legacy data is malformed.
             }
         }
 
