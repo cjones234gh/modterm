@@ -257,47 +257,6 @@ namespace modterm
 
         }
 
-        public List<Color> GetColorWheelProgression(double StepDegrees, double Saturation, int NumColors)
-        {
-            List<Color> colors = new List<Color>();
-            var rand = new Random();
-            // Pick a random starting hue (0-360)
-            double startHue = rand.NextDouble() * 360.0;
-            double lightness = 0.55; // 55% lightness for good visibility
-
-            for (int i = 0; i < NumColors; i++)
-            {
-                double hue = (startHue + i * StepDegrees) % 360.0;
-                colors.Add(HslToColor(hue, Saturation, lightness));
-            }
-            return colors;
-        }
-
-        public Color HslToColor(double h, double s, double l)
-        {
-            h = h / 360.0;
-            double r = l, g = l, b = l;
-            if (s != 0)
-            {
-                double q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                double p = 2 * l - q;
-                r = HueToRgb(p, q, h + 1.0 / 3.0);
-                g = HueToRgb(p, q, h);
-                b = HueToRgb(p, q, h - 1.0 / 3.0);
-            }
-            return Color.FromArgb(255, (byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
-        }
-
-        public double HueToRgb(double p, double q, double t)
-        {
-            if (t < 0) t += 1;
-            if (t > 1) t -= 1;
-            if (t < 1.0 / 6.0) return p + (q - p) * 6 * t;
-            if (t < 1.0 / 2.0) return q;
-            if (t < 2.0 / 3.0) return p + (q - p) * (2.0 / 3.0 - t) * 6;
-            return p;
-        }
-
         private void DrawEffectSequence()
         {
             // Blurred glow layer
