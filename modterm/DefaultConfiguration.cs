@@ -11,7 +11,7 @@ using Windows.UI;
 
 namespace modterm
 {
-    public partial class ModtermRender
+    public partial class ModtermWindow
     {
         public UserAppConfiguration GetDefaultAppConfiguration()
         {
@@ -32,13 +32,13 @@ namespace modterm
                 ThemeConfiguration = new ThemeConfiguration()
                 {
                     Name = "Purpleser",
-                    OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    LabelColor = GetColorFromHexString("#ff4fc1"),
-                    LabelBlurColor = GetColorFromHexString("#3333ff"),
+                    OutputColor = ModtermRender.GetColorFromHexString("#50ff8c"),
+                    OutputBlurColor = ModtermRender.GetColorFromHexString("#00eeff"),
+                    LabelColor = ModtermRender.GetColorFromHexString("#ff4fc1"),
+                    LabelBlurColor = ModtermRender.GetColorFromHexString("#3333ff"),
                     BlurAmount = 12.0f,
                     WindowOpacityPct = 20,
-                    WindowColor = GetColorFromHexString("#000066"),
+                    WindowColor = ModtermRender.GetColorFromHexString("#000066"),
                     BackdropKind = BackdropKind.Blurred
                 },
                 ShellConfigurations = new List<Shell>()
@@ -58,13 +58,13 @@ namespace modterm
                 new ThemeConfiguration()
                 {
                     Name = "Purpleser",
-                    OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputBlurColor = GetColorFromHexString("#00eeff"),
-                    LabelColor = GetColorFromHexString("#ff4fc1"),
-                    LabelBlurColor = GetColorFromHexString("#3333ff"),
+                    OutputColor = ModtermRender.GetColorFromHexString("#50ff8c"),
+                    OutputBlurColor = ModtermRender.GetColorFromHexString("#00eeff"),
+                    LabelColor = ModtermRender.GetColorFromHexString("#ff4fc1"),
+                    LabelBlurColor = ModtermRender.GetColorFromHexString("#3333ff"),
                     BlurAmount = 7.0f,
                     WindowOpacityPct = 20,
-                    WindowColor = GetColorFromHexString("#000066"),
+                    WindowColor = ModtermRender.GetColorFromHexString("#000066"),
                     BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration()
@@ -88,7 +88,7 @@ namespace modterm
                     LabelBlurColor = Colors.Cyan,
                     BlurAmount = 12.0f,
                     WindowOpacityPct = 20,
-                    WindowColor = GetColorFromHexString("#000066"),
+                    WindowColor = ModtermRender.GetColorFromHexString("#000066"),
                     BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration()
@@ -100,26 +100,26 @@ namespace modterm
                     LabelBlurColor = Color.FromArgb(255, 90, 45, 240),
                     BlurAmount = 12.0f,
                     WindowOpacityPct = 40,
-                    WindowColor = GetColorFromHexString("#000000"),
+                    WindowColor = ModtermRender.GetColorFromHexString("#000000"),
                     BackdropKind = BackdropKind.Blurred
                 },
                 new ThemeConfiguration
                 {
                     Name = "CyberEggplant",
-                    OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputBlurColor = GetColorFromHexString("#00eeff"),
+                    OutputColor = ModtermRender.GetColorFromHexString("#50ff8c"),
+                    OutputBlurColor = ModtermRender.GetColorFromHexString("#00eeff"),
                     LabelColor = Colors.Cyan,
                     LabelBlurColor = Colors.Magenta,
                     BlurAmount = 15.0f,
                     WindowOpacityPct = 60,
-                    WindowColor = GetColorFromHexString("#280654"),
+                    WindowColor = ModtermRender.GetColorFromHexString("#280654"),
                     BackdropKind = BackdropKind.Mica
                 },
                 new ThemeConfiguration()
                 {
                     Name = "Blurromancer",
-                    OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputBlurColor = GetColorFromHexString("#00eeff"),
+                    OutputColor = ModtermRender.GetColorFromHexString("#50ff8c"),
+                    OutputBlurColor = ModtermRender.GetColorFromHexString("#00eeff"),
                     LabelColor = Colors.Cyan,
                     LabelBlurColor = Colors.Blue,
                     BlurAmount = 5.0f,
@@ -130,8 +130,8 @@ namespace modterm
                 new ThemeConfiguration
                 {
                     Name = "Cyberpunk",
-                    OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputBlurColor = GetColorFromHexString("#00eeff"),
+                    OutputColor = ModtermRender.GetColorFromHexString("#50ff8c"),
+                    OutputBlurColor = ModtermRender.GetColorFromHexString("#00eeff"),
                     LabelColor = Colors.Cyan,
                     LabelBlurColor = Colors.Magenta,
                     BlurAmount = 3.0f,
@@ -142,8 +142,8 @@ namespace modterm
                 new ThemeConfiguration
                 {
                     Name = "Aqua",
-                    OutputColor = GetColorFromHexString("#50ff8c"),
-                    OutputBlurColor = GetColorFromHexString("#00eeff"),
+                    OutputColor = ModtermRender.GetColorFromHexString("#50ff8c"),
+                    OutputBlurColor = ModtermRender.GetColorFromHexString("#00eeff"),
                     LabelColor = Colors.Cyan,
                     LabelBlurColor = Colors.Magenta,
                     BlurAmount = 8.0f,

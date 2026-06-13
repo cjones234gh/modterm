@@ -33,7 +33,7 @@ namespace modterm
             _padding = mtdPadding;
             _widthPadding = 2 * _padding;
             _heightPadding = 1.6f * _padding;
-            _topControlPadding = 45; // Adjust this value as needed
+            _topControlPadding = 5; // Adjust this value as needed
         }
 
         public void DrawLabels(CanvasControl sender, CanvasDrawingSession cds, ModtermRender mtd)
@@ -46,12 +46,10 @@ namespace modterm
             
         }
 
-        private void ArrangeLabels(CanvasControl sender, CanvasDrawingSession cds, ModtermRender mtd)
+        private void ArrangeLabels(CanvasControl sender, CanvasDrawingSession cds, ModtermRender mtr)
         {
             float canvasWidth = (float)sender.ActualWidth;
             float canvasHeight = (float)sender.ActualHeight;
-
-            float y = 0;
 
             switch (Dock)
             {
@@ -62,18 +60,18 @@ namespace modterm
                     foreach (var control in Labels)
                     { 
                         totalWidth += control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.CurrentControlTextFormat, 9999, 9999).DrawBounds.Width + _widthPadding)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtr.CurrentControlTextFormat, 9999, 9999).DrawBounds.Width + _widthPadding)
                             : (float)control.Location.Width + _padding;
                     }
                     float startX = (canvasWidth - totalWidth) / 2;
-                    float yy = mtd.ControlMargin;
+                    float yy = _topControlPadding;
                     foreach (var control in Labels)
                     {
                         float width = control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.CurrentControlTextFormat, 9999, 9999).DrawBounds.Width + _widthPadding)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtr.CurrentControlTextFormat, 9999, 9999).DrawBounds.Width + _widthPadding)
                             : (float)control.Location.Width;
                         float height = control.ContentSizing
-                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtd.CurrentControlTextFormat, 9999, 9999).DrawBounds.Height + _heightPadding)
+                            ? (float)(new CanvasTextLayout(sender, control.TextContent, mtr.CurrentControlTextFormat, 9999, 9999).DrawBounds.Height + _heightPadding)
                             : (float)control.Location.Height;
                         control.Location = new Windows.Foundation.Rect(startX, yy, width, height);
                         startX += width + _padding;

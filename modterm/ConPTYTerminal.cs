@@ -18,6 +18,7 @@ namespace modterm
     {
         public string ShellPath { get; private set; } = string.Empty;
         public bool Started { get; set; } = false;
+        public bool IsDisposed => _disposed;
 
         private IntPtr          _hPC;
         private IntPtr          _hPCPtr = IntPtr.Zero;

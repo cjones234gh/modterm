@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Windows.ApplicationModel.DataTransfer;
+
 using Windows.Foundation;
 using System.Linq;
 using System.IO;
@@ -21,20 +21,9 @@ namespace modterm
 {
     public sealed partial class ModtermWindow : Window
     {
-        // VtNetCore terminal state
-        private VtNetCore.VirtualTerminal.VirtualTerminalController _vtController = null!;
-        private VtNetCore.XTermParser.DataConsumer _vtDataConsumer = null!;
-
         // main terminal logic and state
-        private ConPTYTerminal _terminal = null!;
-        private int _scrollOffset = 0;
-        private DispatcherQueueTimer _cursorTimer = null!;
+        public ConPTYTerminal ConPtyTerminal { get; private set; } = null!;
         private DispatcherQueueTimer _resizeStopTimer = null!;
-        // modterm UI controls
-        private DisplayLabelGroup _titleBarControls = null!;
-        private DisplayLabel _shellInfoLabel = null!;
-        private DisplayLabel _appearanceInfoLabel = null!;
-        private DisplayLabel _linesColsInfoLabel = null!;
 
         // user storage for configs, themes, etc.
         private string _userConfigDirectory = string.Empty;
@@ -48,12 +37,8 @@ namespace modterm
         // theme names from config directory
         private List<string> _themeNames = new List<string>();
 
-        // modterm display
+        // modterm render
         private ModtermRender _mtr = new ModtermRender();
-
-        // VT mode: cursor visibility only
-        private bool _cursorVisible = true;
-        private int _cursorSpeed = 500;
 
         // live reload from modtermTE
         private ConfigurationReloadListener? _configurationReloadListener;
@@ -69,33 +54,35 @@ namespace modterm
         private bool _suppressResizeHandling = false;
         private bool _terminalRestartInProgress = false;
 
-        // mouse selection state
-        private bool _isSelecting = false;
-        private Windows.Foundation.Point _selectionStart;
-        private Windows.Foundation.Point _selectionEnd;
-        private int _selectionTopRow = 0;
-        private VtNetCore.VirtualTerminal.TextRange? _selectionRange;
-        private string _selectedText = "";
+        public void InvalidateModtermCanvas()
+        {
+            ModtermCanvas.Invalidate();
+        }
+
+        public ConPTYTerminal EnsureTerminalInstanceForStart()
+        {
+            if (ConPtyTerminal.IsDisposed)
+            {
+                var previousTerminal = ConPtyTerminal;
+                ConPtyTerminal = CreateTerminalInstance();
+                DisposeTerminalInstance(previousTerminal);
+            }
+
+            return ConPtyTerminal;
+        }
 
         private void InitializeApplication()
         {
+            // wait for debugger to attach
+            while (!Debugger.IsAttached)
+            {
+                Task.Delay(100).Wait();
+            }
             _flyout = new MenuFlyout();
             RootGrid.Loaded += RootGrid_Loaded;
 
-            _cursorTimer = DispatcherQueue.CreateTimer();
             _resizeStopTimer = DispatcherQueue.CreateTimer();
-
-            _terminal = CreateTerminalInstance();
-
-            // Initialize VtNetCore terminal controller and data consumer
-            _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
-            _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
-
-            _vtController.SetRgbForegroundColor(_mtr.OutputColor.R,
-                _mtr.OutputColor.G, _mtr.OutputColor.B);
-
-            // init modterm display and set default appearance config
-            _mtr.Initialize();
+            
 
             _userConfigDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "modterm");
             Directory.CreateDirectory(_userConfigDirectory);
@@ -111,21 +98,27 @@ namespace modterm
                 {
                     _saveConfiguration = false;
                     _showConfigLoadFailureDialog = true;
-                    SetUserConfiguration(_mtr.GetDefaultAppConfiguration());
+                    SetUserConfiguration(GetDefaultAppConfiguration());
                 }
             }
             else
             {
-                SetUserConfiguration(_mtr.GetDefaultAppConfiguration());
+                SetUserConfiguration(GetDefaultAppConfiguration());
                 WriteConfigurationToDisk(_uac);
                 WriteDefaultThemeConfigurations(overwriteExisting: false);
             }
 
             LoadThemeNames();
+
+            // init modterm render and set default appearance config
+            _mtr = new ModtermRender();
+            _mtr.ModtermWinInstance = this;
+            _mtr.UserAppConfiguration = _uac;
+            _mtr.Initialize();
+            
             ApplyCurrentUserConfiguration(applyWindowBounds: true);
 
-            // all modterm-style labels and flyout controls
-            InitializeModtermControls();
+            ConPtyTerminal = CreateTerminalInstance();
 
             // window setup
             this.AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
@@ -140,7 +133,7 @@ namespace modterm
                 _configurationReloadListener = null;
                 PersistLastWindowLocation();
                 SaveConfig();
-                DisposeTerminalInstance(_terminal);
+                DisposeTerminalInstance(ConPtyTerminal);
             };
 
             _configurationReloadListener = new ConfigurationReloadListener(
@@ -149,23 +142,15 @@ namespace modterm
 
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
 
-            ModtermCanvas.Draw += this.ModtermCanvas_Draw;
-            ModtermCanvas.RightTapped += this.ModtermCanvas_RightTapped;
+            ModtermCanvas.Draw += _mtr.ModtermCanvas_Draw;
+            
 
             // Mouse support
             ModtermCanvas.PointerWheelChanged += this.ModtermCanvas_PointerWheelChanged;
             ModtermCanvas.PointerPressed += this.ModtermCanvas_PointerPressed;
             ModtermCanvas.PointerMoved += this.ModtermCanvas_PointerMoved;
             ModtermCanvas.PointerReleased += this.ModtermCanvas_PointerReleased;
-
-            // Blinking cursor
-            _cursorTimer.Interval = TimeSpan.FromMilliseconds(_cursorSpeed);
-            _cursorTimer.Tick += (s, e) =>
-            {
-                _cursorVisible = !_cursorVisible;
-                ModtermCanvas.Invalidate();
-            };
-            _cursorTimer.Start();
+            ModtermCanvas.RightTapped += this.ModtermCanvas_RightTapped;
 
             // Detect "resize finished" by waiting for a brief pause in size events.
             _resizeStopTimer.Interval = TimeSpan.FromMilliseconds(350);
@@ -179,7 +164,7 @@ namespace modterm
             _lastWindowSize = this.AppWindow.Size;
 
             // Update labels and ensure a draw pass runs so deferred ConPTY start can measure the canvas.
-            UpdateTitleBarLabels();
+            _mtr.UpdateTitleBarLabels();
         }
 
         private void SaveConfig()
@@ -200,7 +185,7 @@ namespace modterm
 
         private void WriteDefaultThemeConfigurations(bool overwriteExisting)
         {
-            foreach (var themeConfig in _mtr.GetAllThemeConfigurations())
+            foreach (var themeConfig in GetDefaultThemeConfigurations())
             {
                 WriteThemeConfigurationToDisk(themeConfig, overwriteExisting);
             }
@@ -237,7 +222,7 @@ namespace modterm
             }
             catch
             {
-                configuration = _mtr.GetDefaultAppConfiguration();
+                configuration = GetDefaultAppConfiguration();
                 return false;
             }
         }
@@ -313,14 +298,14 @@ namespace modterm
         private void ResetDefaultConfiguration()
         {
             _saveConfiguration = true;
-            SetUserConfiguration(_mtr.GetDefaultAppConfiguration());
+            SetUserConfiguration(GetDefaultAppConfiguration());
             ApplyCurrentUserConfiguration(applyWindowBounds: false);
-            InitializeModtermControls();
+            _mtr.InitializeDisplayLabels();
             RestartTerminalForLayoutChange();
             WriteDefaultThemeConfigurations(overwriteExisting: true);
             LoadThemeNames();
             InitializeFlyouts();
-            UpdateTitleBarLabels();
+            _mtr.UpdateTitleBarLabels();
         }
 
         private void RequestConfigurationReload()
@@ -356,10 +341,10 @@ namespace modterm
                 _uac.WindowSize = currentWindowSize;
                 _uac.LastWindowLocation = currentWindowLocation;
                 ApplyCurrentUserConfiguration(applyWindowBounds: false);
-                InitializeModtermControls();
+                _mtr.InitializeDisplayLabels();
                 LoadThemeNames();
                 InitializeFlyouts();
-                UpdateTitleBarLabels();
+                _mtr.UpdateTitleBarLabels();
 
                 if (HasTerminalShellChanged(previousConfiguration, loadedConfiguration))
                 {
@@ -370,14 +355,14 @@ namespace modterm
             }
 
             _saveConfiguration = false;
-            SetUserConfiguration(_mtr.GetDefaultAppConfiguration());
+            SetUserConfiguration(GetDefaultAppConfiguration());
             _uac.WindowSize = currentWindowSize;
             _uac.LastWindowLocation = currentWindowLocation;
             ApplyCurrentUserConfiguration(applyWindowBounds: false);
-            InitializeModtermControls();
+            _mtr.InitializeDisplayLabels();
             LoadThemeNames();
             InitializeFlyouts();
-            UpdateTitleBarLabels();
+            _mtr.UpdateTitleBarLabels();
 
             if (HasTerminalShellChanged(previousConfiguration, _uac))
             {
@@ -396,12 +381,12 @@ namespace modterm
 
         private void UserConfiguration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            UpdateTitleBarLabels();
+            _mtr.UpdateTitleBarLabels();
         }
 
         private void ThemeConfiguration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            UpdateTitleBarLabels();
+            _mtr.UpdateTitleBarLabels();
         }
 
         private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
@@ -488,30 +473,7 @@ namespace modterm
                 this.AppWindow.Position.Y);
         }
 
-        private void InitializeModtermControls()
-        {
-            // ui control groups
-            _titleBarControls = new DisplayLabelGroup(
-                DisplayLabelGroup.LabelDock.Top, _mtr.ControlPadding);
 
-            // path and appearance info labels
-            _shellInfoLabel = new DisplayLabel("", true);
-            _appearanceInfoLabel = new DisplayLabel("", true);
-            _linesColsInfoLabel = new DisplayLabel("", true);
-
-            _titleBarControls.Labels.AddRange(
-                [_shellInfoLabel, _appearanceInfoLabel, _linesColsInfoLabel]);
-        }
-
-        private void UpdateTitleBarLabels()
-        {
-            // path and appearance info labels
-            _shellInfoLabel.TextContent = $"MODTERM - Shell: {_uac.TerminalShell.Name}";
-            _appearanceInfoLabel.TextContent = $"Backdrop: {_uac.ThemeConfiguration.BackdropKind.ToString()} {_mtr.OpacityPct}% {_mtr.GetHexStringFromColor(_mtr.GetBackgroundBrush().Color)}";
-            _linesColsInfoLabel.TextContent = $"{_lines}x{_columns}";
-
-            ModtermCanvas.Invalidate();
-        }
 
         private async Task ConfirmResizeRestartAsync()
         {
@@ -556,100 +518,10 @@ namespace modterm
             ReplaceTerminalInstance(startImmediately: false);
         }
 
-        private void UpdateSelectedText()
-        {
-            _selectionRange = null;
-            _selectedText = string.Empty;
-
-            if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
-                return;
-
-            if (Math.Abs(_selectionStart.X - _selectionEnd.X) < 2 &&
-                Math.Abs(_selectionStart.Y - _selectionEnd.Y) < 2)
-                return;
-
-            _selectionRange = new VtNetCore.VirtualTerminal.TextRange
-            {
-                Start = GetTextPositionFromPoint(_selectionStart),
-                End = GetTextPositionFromPoint(_selectionEnd)
-            };
-
-            _selectedText = _vtController.GetText(_selectionRange);
-        }
-
-        private bool IsInTextArea(Point point)
-        {
-            if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
-                return false;
-
-            double lineHeight = _mtr.CurrentFontSize + _lineHeightPadding;
-            double textRight = _leftTextPadding + (_columns * _measuredCharWidth);
-            double textBottom = _topTextPadding + (_lines * lineHeight);
-
-            return point.X >= _leftTextPadding &&
-                point.X <= textRight &&
-                point.Y >= _topTextPadding &&
-                point.Y <= textBottom;
-        }
-
-        private VtNetCore.VirtualTerminal.TextPosition GetTextPositionFromPoint(Point point)
-        {
-            double lineHeight = _mtr.CurrentFontSize + _lineHeightPadding;
-            int column = (int)Math.Floor((point.X - _leftTextPadding) / _measuredCharWidth);
-            int visibleRow = (int)Math.Floor((point.Y - _topTextPadding) / lineHeight);
-            int topRow = _isSelecting ? _selectionTopRow : _vtController.ViewPort.TopRow - _scrollOffset;
-
-            column = Math.Clamp(column, 0, Math.Max(0, _columns - 1));
-            visibleRow = Math.Clamp(visibleRow, 0, Math.Max(0, _lines - 1));
-
-            return new VtNetCore.VirtualTerminal.TextPosition
-            {
-                Column = column,
-                Row = topRow + visibleRow
-            };
-        }
-
-        private void CopySelectedTextToClipboard()
-        {
-            if (string.IsNullOrEmpty(_selectedText))
-                return;
-
-            DataPackage dataPackage = new DataPackage();
-            dataPackage.SetText(_selectedText.Replace("\n", Environment.NewLine));
-            Clipboard.SetContent(dataPackage);
-            Clipboard.Flush();
-        }
-
-        private async void PasteFromClipboard()
-        {
-            var dataPackageView = Clipboard.GetContent();
-            if (dataPackageView.Contains(StandardDataFormats.Text))
-            {
-                string text = await dataPackageView.GetTextAsync();
-                if (!string.IsNullOrEmpty(text))
-                {
-                    _scrollOffset = 0;
-                    _terminal?.WriteInput(text);
-                }
-                ModtermCanvas.Invalidate();
-            }
-        }
-
-        private void StartConPTY()
-        {
-            if (_terminal.Started)
-                return;
-
-            _terminal.Start(_uac.TerminalShell, _lines, _columns);
-
-            _vtController.ResizeView(_columns, _lines);
-            _terminal?.Resize((short)_columns, (short)_lines);
-        }
-
         private ConPTYTerminal CreateTerminalInstance()
         {
             var terminal = new ConPTYTerminal();
-            terminal.OutputReceived += OnOutputReceived;
+            terminal.OutputReceived += _mtr.OnOutputReceived;
             terminal.TerminalExited += OnTerminalExited;
             return terminal;
         }
@@ -659,7 +531,7 @@ namespace modterm
             if (terminal is null)
                 return;
 
-            terminal.OutputReceived -= OnOutputReceived;
+            terminal.OutputReceived -= _mtr.OnOutputReceived;
             terminal.TerminalExited -= OnTerminalExited;
             terminal.Dispose();
         }
@@ -670,15 +542,15 @@ namespace modterm
             try
             {
                 var nextShell = shellOverride ?? _uac.TerminalShell;
-                var previousTerminal = _terminal;
-                _terminal = CreateTerminalInstance();
+                var previousTerminal = ConPtyTerminal;
+                ConPtyTerminal = CreateTerminalInstance();
                 DisposeTerminalInstance(previousTerminal);
 
                 if (startImmediately)
                 {
-                    _terminal.Start(nextShell, _lines, _columns);
-                    _vtController.ResizeView(_columns, _lines);
-                    _terminal.Resize((short)_columns, (short)_lines);
+                    ConPtyTerminal.Start(nextShell, _mtr.Lines, _mtr.Columns);
+                    _mtr.VtController.ResizeView(_mtr.Columns, _mtr.Lines);
+                    ConPtyTerminal.Resize((short)_mtr.Columns, (short)_mtr.Lines);
                 }
                 else
                 {
@@ -700,28 +572,19 @@ namespace modterm
 
         private void OnTerminalExited(object? sender, EventArgs e)
         {
-            if (_terminalRestartInProgress || !ReferenceEquals(sender, _terminal))
+            if (_terminalRestartInProgress || !ReferenceEquals(sender, ConPtyTerminal))
                 return;
 
             DispatcherQueue.TryEnqueue(() =>
             {
-                if (_terminalRestartInProgress || !ReferenceEquals(sender, _terminal))
+                if (_terminalRestartInProgress || !ReferenceEquals(sender, ConPtyTerminal))
                     return;
 
                 Close();
             });
         }
 
-        private void OnOutputReceived(object? sender, byte[] data)
-        {
-            // Feed raw PTY bytes to the VT parser (preserves UTF-8 split across reads).
-            if (_scrollOffset > 0 && !_isSelecting) _scrollOffset = 0;
-            if (data is { Length: > 0 })
-            {
-                _vtDataConsumer.Push(data);
-                ModtermCanvas.Invalidate();
-            }
-        }
+
 
         private void InitializeFlyouts()
         {
@@ -730,12 +593,12 @@ namespace modterm
             var copyItem = new MenuFlyoutItem { Text = "Copy" };
             copyItem.Click += (_, __) =>
             {
-                CopySelectedTextToClipboard();
+                _mtr.CopySelectedTextToClipboard();
             };
             _flyout.Items.Add(copyItem);
 
             var pasteItem = new MenuFlyoutItem { Text = "Paste" };
-            pasteItem.Click += (_, __) => PasteFromClipboard();
+            pasteItem.Click += (_, __) => _mtr.PasteFromClipboard();
             _flyout.Items.Add(pasteItem);
 
             _flyout.Items.Add(new MenuFlyoutSeparator());
@@ -755,7 +618,7 @@ namespace modterm
                 {
                     _mtr.OpacityPct = pct;
                     _uac.ThemeConfiguration.WindowOpacityPct = pct;
-                    UpdateTitleBarLabels();
+                    _mtr.UpdateTitleBarLabels();
                 };
                 windowOpacityItem.Items.Add(item);
             }

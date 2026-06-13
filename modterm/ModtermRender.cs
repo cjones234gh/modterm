@@ -7,11 +7,17 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using VtNetCore.VirtualTerminal;
+using VtNetCore.XTermParser;
+using System.Text;
 using System.Numerics;
 using Windows.Foundation;
 using Windows.UI;
+using Windows.ApplicationModel.DataTransfer;
 using WinRT.modtermVtableClasses;
+using Microsoft.UI.Dispatching;
+using System.Windows;
+using Microsoft.UI.Text;
 
 namespace modterm
 {
@@ -27,49 +33,75 @@ namespace modterm
         public Color OutputGlowColor { get; set; }
         // normal colors for terminal and control text
         public Color OutputColor { get; set; }
-        // control colors (normal, engaged, hovered, etc.)
-        public Color LabelColor { get; set; }
-        public Color LabelGlowColor { get; set; }
-        // control rendering details (rounded corners, line width, etc.)
-        public float CornerRadius { get; set; }
-        public float LineWidth { get; set; }
-        public byte BlurFillTransparency { get; set; }
-        public byte SharpBorderTransparency { get; set; }
-        public byte SharpFillTransparency { get; set; }
-        // blur amount for text and control boxes
-        public float BlurAmount { get; set; }
-        // theme
-        public string CurrentConfigurationName { get; set; } = string.Empty;
-        // system backdrop info
-        public string SystemBackdropInfo { get; private set; } = string.Empty;
-        // space between content and control borders
-        public float ControlPadding { get; set; }
-        // space between controls and canvas edges/other controls
-        public float ControlMargin { get; set; }
-        public float ControlMarginRight { get; set; }
-        // control scale based on font size to maintain consistent proportions
-        public float CurrentFontSizeControlScale { get; set; }
 
+        public ModtermWindow ModtermWinInstance { get; set; } = null!;
+        public int Lines { get { return _lines; } }
+        public int Columns { get { return _columns; } }
+        public int ScrollOffset { get { return _scrollOffset; } set { _scrollOffset = value; } }
+        public VirtualTerminalController VtController { get { return _vtController; } }
+        public UserAppConfiguration UserAppConfiguration { get; set; } = null!;
+        public bool IsSelecting { get { return _isSelecting; } set { _isSelecting = value; } }
+        public TextRange? SelectionRange { get { return _selectionRange; } set { _selectionRange = value; } }
+        public string SelectedText { get { return _selectedText; } set { _selectedText = value; } }
+        public Point SelectionStart { get { return _selectionStart; } set { _selectionStart = value; } }
+        public Point SelectionEnd { get { return _selectionEnd; } set { _selectionEnd = value; } }
+        public int SelectionTopRow { get { return _selectionTopRow; } set { _selectionTopRow = value; } }
+
+        private DisplayLabelGroup _titleBarLabels = null!;
+        private DisplayLabel _shellInfoLabel = null!;
+        private DisplayLabel _appearanceInfoLabel = null!;
+        private DisplayLabel _linesColsInfoLabel = null!;
+        private DispatcherQueueTimer _cursorTimer = null!;
+        private int _cursorSpeed = 500;
+        private bool _cursorVisible = true;
+        private VirtualTerminalController _vtController = null!;
+        private DataConsumer _vtDataConsumer = null!;
         private string _currentFont = "BlexMono Nerd Font Mono";
         private string _currentControlFont = "BlexMono Nerd Font Mono";
         private float _currentFontSize = 12f;
         private float _controlFontScale = 1f;
         private float _currentControlFontSize = 12f;
         private float _currentBgColorPadding; 
+        private float _controlPadding;
+        private float _controlMargin;
+        private float _controlMarginRight;
+        private Color _labelColor;
+        private Color _labelBlurColor;
         private int _transparencyPct;
+        private int _scrollOffset = 0;
+        private bool _isSelecting = false;
+        private float _blurAmount;
+        private TextRange? _selectionRange;
+        private string _selectedText = string.Empty;
+        private Point _selectionStart;
+        private Point _selectionEnd;
+        private int _selectionTopRow = 0;
         private byte _alpha;
-        private Color _tintColor;
+        private Color _windowColor;
         private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.Red);
-        private List<ThemeConfiguration> _namedColorConfigurations = new List<ThemeConfiguration>();
-        private int _themeConfigIndex = 0;
         private bool _effectSequenceStarted = false;
         private List<DrawTextCall> _effectSequence = new List<DrawTextCall>();
-        private CanvasControl _sender = null!;
         private CanvasDrawingSession _drawSession = null!;
         private Effects _effect = Effects.None;
+        private CanvasControl _sender = null!;
 
-        public CanvasTextFormat CurrentTextFormat { get; set; } = null!;
-        public CanvasTextFormat CurrentControlTextFormat { get; set; } = null!;
+        private CanvasTextFormat _currentTextFormat = null!;
+        private CanvasTextFormat _currentControlTextFormat = null!;
+
+        private int _lines = 0;
+        private int _columns = 0;
+        private float _measuredCharWidth;
+
+        private int _leftTextPadding = 5;
+        private int _topTextPadding = 28;//33;
+        private float _lineHeightPadding = 1.0f;
+
+        private CanvasTextFormat? _normalTextFormat;
+        private CanvasTextFormat? _boldTextFormat;
+        private string? _cachedFontFamily;
+        private float _cachedFontSize;
+
+        private readonly StringBuilder _runBuffer = new StringBuilder(256);
 
         public string CurrentFont 
         { 
@@ -80,14 +112,14 @@ namespace modterm
             set 
             {
                 _currentFont = value; 
-                CurrentTextFormat.FontFamily = _currentFont; 
+                _currentTextFormat.FontFamily = _currentFont; 
             }
         }
 
         public string CurrentControlFont 
         { 
             get { return _currentControlFont; }
-            set { _currentControlFont = value; CurrentControlTextFormat.FontFamily = _currentControlFont; }
+            set { _currentControlFont = value; _currentControlTextFormat.FontFamily = _currentControlFont; }
         }
         
         public float CurrentFontSize
@@ -100,14 +132,20 @@ namespace modterm
             {
                 _currentFontSize = value;
                 _currentControlFontSize = CurrentFontSize * _controlFontScale;
-                CurrentTextFormat.FontSize = _currentFontSize;
-                CurrentControlTextFormat.FontSize = _currentControlFontSize;
-                ControlPadding = _currentControlFontSize / 1.75f;
-                ControlMargin = 5;// + (_currentFontSize / 2);
-                ControlMarginRight = 10;
+                _currentTextFormat.FontSize = _currentFontSize;
+                _currentControlTextFormat.FontSize = _currentControlFontSize;
+                _controlPadding = _currentControlFontSize / 1.75f;
+                _controlMargin = 5;// + (_currentFontSize / 2);
+                _controlMarginRight = 10;
                 _currentBgColorPadding = _currentFontSize / 1.25f; // adjust background rectangle padding based on font size for better fit
             }
         }
+
+        public CanvasTextFormat CurrentControlTextFormat { get { return _currentControlTextFormat; } set { _currentControlTextFormat = value; } }
+        public float ControlPadding { get { return _controlPadding; } set { _controlPadding = value; } }
+        public float ControlMargin { get { return _controlMargin; } set { _controlMargin = value; } }
+        public float ControlMarginRight { get { return _controlMarginRight; } set { _controlMarginRight = value; } }
+        public float CurrentBgColorPadding { get { return _currentBgColorPadding; } set { _currentBgColorPadding = value; } }
 
         public int OpacityPct
         {
@@ -123,35 +161,69 @@ namespace modterm
             }
         }
 
-        public Color TintColor
+        public Color WindowColor
         {
             get
             {
-                return _tintColor;
+                return _windowColor;
             }
             set
             {
-                _tintColor = value;
+                _windowColor = value;
                 _backgroundBrush.Color = GetBackgroundArgb();
             }
         }
 
         public void Initialize()
         {
-            // set default values
-            CurrentTextFormat = new CanvasTextFormat { FontFamily = _currentFont,
-                FontSize = _currentFontSize, WordWrapping = CanvasWordWrapping.NoWrap };
-            CurrentControlTextFormat = new CanvasTextFormat { FontFamily = _currentControlFont,
-                FontSize = _currentControlFontSize, WordWrapping = CanvasWordWrapping.NoWrap };
-            _namedColorConfigurations = GetDefaultThemeConfigurations();
-            _themeConfigIndex = 0;
+            
+            // Initialize VtNetCore terminal controller and data consumer
+            _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
+            _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
 
-            // internal control defaults
-            CornerRadius = 0.5f;
-            BlurFillTransparency = 25;
-            SharpBorderTransparency = 200;
-            SharpFillTransparency = 10;
-            LineWidth = 0.5f;
+            _vtController.SetRgbForegroundColor(OutputColor.R,
+                OutputColor.G, OutputColor.B);
+
+            // set default values
+            _currentTextFormat = new CanvasTextFormat { FontFamily = _currentFont,
+                FontSize = _currentFontSize, WordWrapping = CanvasWordWrapping.NoWrap };
+            _currentControlTextFormat = new CanvasTextFormat { FontFamily = _currentControlFont,
+                FontSize = _currentControlFontSize, WordWrapping = CanvasWordWrapping.NoWrap };
+
+            _cursorTimer = ModtermWinInstance.DispatcherQueue!.CreateTimer();
+            _cursorTimer.Interval = TimeSpan.FromMilliseconds(_cursorSpeed);
+            _cursorTimer.Tick += (s, e) =>
+            {
+                _cursorVisible = !_cursorVisible;
+                ModtermWinInstance.InvalidateModtermCanvas();
+            };
+            _cursorTimer.Start();
+
+            InitializeDisplayLabels();
+        }
+
+        public void InitializeDisplayLabels()
+        {
+            // title bar labels
+            _titleBarLabels = new DisplayLabelGroup(
+                DisplayLabelGroup.LabelDock.Top, _controlPadding);
+
+            _shellInfoLabel = new DisplayLabel("", true);
+            _appearanceInfoLabel = new DisplayLabel("", true);
+            _linesColsInfoLabel = new DisplayLabel("", true);
+
+            _titleBarLabels.Labels.AddRange(
+                [_shellInfoLabel, _appearanceInfoLabel, _linesColsInfoLabel]);
+        }
+
+        public void UpdateTitleBarLabels()
+        {
+            // path and appearance info labels
+            _shellInfoLabel.TextContent = $"MODTERM - Shell: {UserAppConfiguration.TerminalShell.Name ?? "Unknown"}";
+            _appearanceInfoLabel.TextContent = $"Backdrop: {UserAppConfiguration.ThemeConfiguration.BackdropKind.ToString() ?? "Unknown"} {OpacityPct}% {GetHexStringFromColor(GetBackgroundBrush().Color)}";
+            _linesColsInfoLabel.TextContent = $"{_lines}x{_columns}";
+
+            ModtermWinInstance.InvalidateModtermCanvas();
         }
 
         public void ApplySystemBackdrop(BackdropKind kind, Window wInstance)
@@ -164,30 +236,25 @@ namespace modterm
                 _ => new BlurredBackdrop()
             };
             wInstance.SystemBackdrop = backdrop;
-            SystemBackdropInfo = $"{kind}";
-        }
-
-        public List<ThemeConfiguration> GetAllThemeConfigurations()
-        {
-            return _namedColorConfigurations;
         }
 
         private Color GetBackgroundArgb()
         {
-            return TintColor == Colors.Transparent
+            return WindowColor == Colors.Transparent
                 ? Colors.Transparent
-                : Color.FromArgb(_alpha, TintColor.R, TintColor.G, TintColor.B);
+                : Color.FromArgb(_alpha, WindowColor.R, WindowColor.G, WindowColor.B);
         }
 
         public void SetColorConfiguration(ThemeConfiguration config, Window wInstance)
         {
             OutputColor = config.OutputColor;
+            _vtController.SetRgbForegroundColor(OutputColor.R, OutputColor.G, OutputColor.B);
             OutputGlowColor = config.OutputBlurColor;
-            LabelColor = config.LabelColor;
-            LabelGlowColor = config.LabelBlurColor;
-            BlurAmount = config.BlurAmount;
+            _labelColor = config.LabelColor;
+            _labelBlurColor = config.LabelBlurColor;
+            _blurAmount = config.BlurAmount;
             OpacityPct = config.WindowOpacityPct;
-            TintColor = config.WindowColor;
+            WindowColor = config.WindowColor;
             ApplySystemBackdrop(config.BackdropKind, wInstance);
             _backgroundBrush.Color = GetBackgroundArgb();
         }
@@ -197,9 +264,117 @@ namespace modterm
             return _backgroundBrush;
         }
 
+        public void UpdateSelectedText()
+        {
+            _selectionRange = null;
+            _selectedText = string.Empty;
+
+            if (Lines <= 0 || Columns <= 0 || _measuredCharWidth <= 0)
+                return;
+
+            if (Math.Abs(_selectionStart.X - _selectionEnd.X) < 2 &&
+                Math.Abs(_selectionStart.Y - _selectionEnd.Y) < 2)
+                return;
+
+            _selectionRange = new VtNetCore.VirtualTerminal.TextRange
+            {
+                Start = GetTextPositionFromPoint(_selectionStart),
+                End = GetTextPositionFromPoint(_selectionEnd)
+            };
+
+            _selectedText = _vtController.GetText(_selectionRange);
+        }
+
+        public bool IsInTextArea(Point point)
+        {
+            if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
+                return false;
+
+            double lineHeight = CurrentFontSize + _lineHeightPadding;
+            double textRight = _leftTextPadding + (_columns * _measuredCharWidth);
+            double textBottom = _topTextPadding + (_lines * lineHeight);
+
+            return point.X >= _leftTextPadding &&
+                point.X <= textRight &&
+                point.Y >= _topTextPadding &&
+                point.Y <= textBottom;
+        }
+
+        public VtNetCore.VirtualTerminal.TextPosition GetTextPositionFromPoint(Point point)
+        {
+            double lineHeight = CurrentFontSize + _lineHeightPadding;
+            int column = (int)Math.Floor((point.X - _leftTextPadding) / _measuredCharWidth);
+            int visibleRow = (int)Math.Floor((point.Y - _topTextPadding) / lineHeight);
+            int topRow = _isSelecting ? _selectionTopRow : _vtController.ViewPort.TopRow - _scrollOffset;
+
+            column = Math.Clamp(column, 0, Math.Max(0, Columns - 1));
+            visibleRow = Math.Clamp(visibleRow, 0, Math.Max(0, Lines - 1));
+
+            return new VtNetCore.VirtualTerminal.TextPosition
+            {
+                Column = column,
+                Row = topRow + visibleRow
+            };
+        }
+
+        public void CopySelectedTextToClipboard()
+        {
+            if (string.IsNullOrEmpty(_selectedText))
+                return;
+
+            DataPackage dataPackage = new DataPackage();
+            dataPackage.SetText(_selectedText.Replace("\n", Environment.NewLine));
+            Clipboard.SetContent(dataPackage);
+            Clipboard.Flush();
+        }
+
+        public async void PasteFromClipboard()
+        {
+            var dataPackageView = Clipboard.GetContent();
+            if (dataPackageView.Contains(StandardDataFormats.Text))
+            {
+                string text = await dataPackageView.GetTextAsync();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    _scrollOffset = 0;
+                    ModtermWinInstance.ConPtyTerminal?.WriteInput(text);
+                }
+                ModtermWinInstance.InvalidateModtermCanvas();
+            }
+        }
+
+        public void OnOutputReceived(object? sender, byte[] data)
+        {
+            // Feed raw PTY bytes to the VT parser (preserves UTF-8 split across reads).
+            if (_scrollOffset > 0 && !_isSelecting) _scrollOffset = 0;
+            if (data is { Length: > 0 })
+            {
+                _vtDataConsumer.Push(data);
+                ModtermWinInstance.InvalidateModtermCanvas();
+            }
+        }
+
+        public void ScrollBackBy(int rows)
+        {
+            if (rows == 0)
+                return;
+
+            int previousOffset = _scrollOffset;
+            _scrollOffset += rows;
+            ClampScrollOffset();
+
+            if (_scrollOffset != previousOffset)
+                ModtermWinInstance.InvalidateModtermCanvas();
+        }
+
+        private void ClampScrollOffset()
+        {
+            int maxScrollOffset = Math.Max(0, _vtController.ViewPort.TopRow);
+            _scrollOffset = Math.Clamp(_scrollOffset, 0, maxScrollOffset);
+        }
+
         public void BeginEffectSequence(CanvasControl sender, CanvasDrawingSession ds, Effects effect)
         {
-            _sender = sender;
             _drawSession = ds;
             _effect = effect;
             if (_effectSequenceStarted)
@@ -232,28 +407,197 @@ namespace modterm
             _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault, fitToCell, cellHeight));
         }
 
+        public void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
+        {
+            _sender = sender;
+            // Do not spawn the conhost until we can measure the canvas during drawing and determine how many rows/columns we can fit
+            if (!ModtermWinInstance.ConPtyTerminal.Started)
+            {
+                int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (CurrentFontSize + _lineHeightPadding));
+                float measuredCharWidth = MeasureCellAdvance(args.DrawingSession, _currentTextFormat);
+                if (measuredRows <= 0 || measuredCharWidth <= 0 || float.IsNaN(measuredCharWidth) || float.IsInfinity(measuredCharWidth))
+                    return;
+
+                int measuredCols = (int)((sender.ActualWidth - _leftTextPadding) / measuredCharWidth);
+                if (measuredCols <= 0)
+                    return;
+
+                _lines = measuredRows;
+                _columns = measuredCols;
+                _measuredCharWidth = measuredCharWidth;
+                _vtController.VisibleRows = _lines;
+                _vtController.VisibleColumns = _columns;
+
+                var terminal = ModtermWinInstance.EnsureTerminalInstanceForStart();
+                if (terminal.Started)
+                    return;
+
+                terminal.Start(UserAppConfiguration.TerminalShell, Lines, Columns);
+
+                _vtController.ResizeView(Columns, Lines);
+                terminal.Resize((short)Columns, (short)Lines);
+            }
+
+            BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
+
+            // Keep the VT controller's TopRow as the live screen position; scrollback only changes what we render.
+            ClampScrollOffset();
+            int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
+            var selectionRange = _isSelecting ? _selectionRange : null;
+            double lineHeight = CurrentFontSize + _lineHeightPadding;
+
+            EnsureTextFormats();
+
+            for (int visibleRow = 0; visibleRow < _lines; visibleRow++)
+            {
+                int logicalRow = topRow + visibleRow;
+                float y = _topTextPadding + (float)(visibleRow * lineHeight);
+                var sourceLine = _vtController.ViewPort.GetLine(logicalRow);
+
+                // Run-batching state: accumulate contiguous cells with identical SGR
+                // attributes so the row can be drawn as a small number of DrawText calls
+                // instead of one per cell. Unsafe glyphs (box-drawing, combining marks,
+                // etc.) break the run and are drawn individually to preserve alignment.
+                bool runActive = false;
+                int runStartCol = 0;
+                Color runFg = default;
+                Color runBg = default;
+                bool runFgDefault = false;
+                bool runBgDefault = false;
+                CanvasTextFormat? runFormat = null;
+                _runBuffer.Clear();
+
+                for (int col = 0; col < _columns; col++)
+                {
+                    var sourceChar = sourceLine != null && col < sourceLine.Count ? sourceLine[col] : null;
+                    bool inverted = selectionRange != null && selectionRange.Contains(col, logicalRow);
+                    var attr = sourceChar == null
+                        ? _vtController.NullAttribute
+                        : ((_vtController.CursorState.ReverseVideoMode ^ inverted ^ sourceChar.Attributes.Reverse)
+                            ? sourceChar.Attributes.Inverse
+                            : sourceChar.Attributes);
+
+                    char displayChar = sourceChar == null ? ' ' : sourceChar.Char;
+
+                    string combining = sourceChar?.CombiningCharacters ?? string.Empty;
+
+                    Color fg = OutputColor;
+                    if (!attr.DefaultForeground)
+                    {
+                        try { fg = string.IsNullOrEmpty(attr.WebColor) ? OutputColor : GetColorFromHexString(attr.WebColor); } catch { }
+                    }
+
+                    Color bg = Colors.Black;
+                    if (!attr.DefaultBackground)
+                    {
+                        try { bg = string.IsNullOrEmpty(attr.BackgroundWebColor) ? Colors.Black : GetColorFromHexString(attr.BackgroundWebColor); } catch { }
+                    }
+
+                    if (attr.Hidden)
+                        fg = bg;
+
+                    CanvasTextFormat cellFormat = attr.Bright ? _boldTextFormat! : _normalTextFormat!;
+
+                    // Only batch cells whose glyph is known to use the primary monospace
+                    // font's natural advance (printable ASCII). Box-drawing, braille,
+                    // resolved missing glyphs, and combining sequences are drawn per-cell
+                    // at the measured grid so they stay column-aligned.
+                    bool canBatch = combining.Length == 0 && IsSafeForBatch(displayChar);
+
+                    bool matchesRun = runActive
+                        && ReferenceEquals(runFormat, cellFormat)
+                        && runFg == fg
+                        && runBg == bg
+                        && runFgDefault == attr.DefaultForeground
+                        && runBgDefault == attr.DefaultBackground;
+
+                    if (runActive && (!canBatch || !matchesRun))
+                    {
+                        FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!);
+                        runActive = false;
+                    }
+
+                    if (canBatch)
+                    {
+                        if (!runActive)
+                        {
+                            runActive = true;
+                            runStartCol = col;
+                            runFg = fg;
+                            runBg = bg;
+                            runFgDefault = attr.DefaultForeground;
+                            runBgDefault = attr.DefaultBackground;
+                            runFormat = cellFormat;
+                        }
+                        _runBuffer.Append(displayChar);
+                    }
+                    else
+                    {
+                        string cellText = displayChar.ToString() + combining;
+                        float cellX = _leftTextPadding + (col * _measuredCharWidth);
+                        // Braille patterns are absent from typical monospace fonts (Consolas),
+                        // so they resolve through font fallback whose glyph cell is taller than
+                        // our row. Scale those to the grid cell so TUI braille graphs stay within
+                        // their rows instead of bleeding vertically.
+                        bool fitToCell = IsBrailleChar(displayChar);
+                        DrawText(
+                            cellText,
+                            cellX,
+                            y,
+                            _measuredCharWidth,
+                            fg,
+                            bg,
+                            cellFormat,
+                            attr.DefaultForeground,
+                            attr.DefaultBackground,
+                            fitToCell,
+                            (float)lineHeight);
+                    }
+                }
+
+                if (runActive)
+                {
+                    FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!);
+                }
+            }
+
+            // Draw blinking cursor only on the live viewport.
+            if (_cursorVisible && _scrollOffset == 0)
+            {
+                var cursor = _vtController.ViewPort.CursorPosition;
+                float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
+                float cursorY = (float)(cursor.Row * (CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
+                args.DrawingSession.DrawText("|", cursorX, cursorY, OutputColor, _currentTextFormat);
+            }
+
+            EndEffectSequence();
+
+            // draw all UI controls
+            _titleBarLabels?.DrawLabels(sender, args.DrawingSession, this);
+        }
+
         public void DrawModtermLabel(CanvasControl sender, CanvasDrawingSession cds, DisplayLabel label)
         {
-            Color labelColor = LabelColor;
-            Color labelBlurColor = LabelGlowColor;
+            Color labelColor = _labelColor;
+            Color labelBlurColor = _labelBlurColor;
 
             // blur layer - draw text content
             using (var commandList = new CanvasCommandList(sender))
             {
                 using (var clds = commandList.CreateDrawingSession())
                 {
-                    clds.DrawText(label.TextContent, (float)label.Location.X + ControlPadding,
-                        (float)label.Location.Y + ControlPadding / 4, labelBlurColor, CurrentControlTextFormat);
+                    clds.DrawText(label.TextContent, (float)label.Location.X + _controlPadding,
+                        (float)label.Location.Y + _controlPadding / 4, labelBlurColor, _currentControlTextFormat);
                 }
 
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = _blurAmount };
                 cds.DrawImage(blurEffect);
             }
 
             
             // sharp layer - draw text content
-            cds.DrawText(label.TextContent, (float)label.Location.X + ControlPadding,
-                (float)label.Location.Y + ControlPadding / 4, labelColor, CurrentControlTextFormat);
+            cds.DrawText(label.TextContent, (float)label.Location.X + _controlPadding,
+                (float)label.Location.Y + _controlPadding / 4, labelColor, _currentControlTextFormat);
 
         }
 
@@ -273,7 +617,7 @@ namespace modterm
                         }
                     }
                 }
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = _blurAmount };
                 _drawSession.DrawImage(blurEffect);
             }
 
@@ -307,7 +651,7 @@ namespace modterm
                         }
                     }
                 }
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = BlurAmount };
+                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = _blurAmount };
                 _drawSession.DrawImage(blurEffect);
             }
 
@@ -334,6 +678,69 @@ namespace modterm
         // The full braille cell glyph (all 8 dots set). Its ink bounds define the design
         // cell that every other braille glyph's dots are positioned within.
         private const string FullBrailleCell = "\u28FF";
+
+         private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
+        {
+            const int sampleLength = 32;
+            using var layout = new CanvasTextLayout(ds, new string('0', sampleLength), format, 9999, 9999);
+            float total = 0;
+            foreach (var cluster in layout.ClusterMetrics)
+                total += cluster.Width;
+            return total / sampleLength;
+        }
+
+        private void EnsureTextFormats()
+        {
+            if (_normalTextFormat != null
+                && _cachedFontFamily == CurrentFont
+                && _cachedFontSize == CurrentFontSize)
+            {
+                return;
+            }
+
+            _normalTextFormat = new CanvasTextFormat
+            {
+                FontFamily = CurrentFont,
+                FontSize = CurrentFontSize,
+                FontWeight = FontWeights.Normal,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
+            _boldTextFormat = new CanvasTextFormat
+            {
+                FontFamily = CurrentFont,
+                FontSize = CurrentFontSize,
+                FontWeight = FontWeights.Bold,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
+            _cachedFontFamily = CurrentFont;
+            _cachedFontSize = CurrentFontSize;
+        }
+
+        private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format)
+        {
+            float x = _leftTextPadding + (startCol * _measuredCharWidth);
+            float width = _runBuffer.Length * _measuredCharWidth;
+            DrawText(
+                _runBuffer.ToString(),
+                x,
+                y,
+                width,
+                fg,
+                bg,
+                format,
+                fgDefault,
+                bgDefault);
+            _runBuffer.Clear();
+        }
+
+        // Printable ASCII is rendered natively by the primary monospace font, so glyph
+        // advances are known to equal _measuredCharWidth and runs stay column-aligned
+        // when drawn as a single string. Anything outside this range may trigger font
+        // fallback with a different advance, so we render those per-cell on the grid.
+        private static bool IsSafeForBatch(char c) => c >= 0x20 && c <= 0x7E;
+
+        // Braille Patterns block (U+2800-U+28FF), used by TUI apps (btop, etc.) for fine graphs.
+        private static bool IsBrailleChar(char c) => c >= '\u2800' && c <= '\u28FF';      
 
         private Rect GetBrailleCellInkBounds(ICanvasResourceCreator resourceCreator, CanvasTextFormat format)
         {
@@ -390,14 +797,13 @@ namespace modterm
             ds.Transform = prior;
         }
 
-        public string GetHexStringFromColor(Color color)
+        public static string GetHexStringFromColor(Color color)
         {
             return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
         }
 
-        public Color GetColorFromHexString(string hex)
+        public static Color GetColorFromHexString(string hex)
         {
-            if (string.IsNullOrEmpty(hex)) return OutputColor;
             if (hex.StartsWith("#")) hex = hex.Substring(1);
             byte a = 255, r = 0, g = 0, b = 0;
             if (hex.Length == 8)

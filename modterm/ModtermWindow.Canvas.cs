@@ -18,238 +18,11 @@ namespace modterm
 {
     public sealed partial class  ModtermWindow : Window
     {
-        private int _lines = 0;
-        private int _columns = 0;
-        private float _measuredCharWidth;
 
-        private int _leftTextPadding = 5;
-        private int _topTextPadding = 28;//33;
-        private float _lineHeightPadding = 1.0f;
 
-        private CanvasTextFormat? _normalTextFormat;
-        private CanvasTextFormat? _boldTextFormat;
-        private string? _cachedFontFamily;
-        private float _cachedFontSize;
-
-        private readonly StringBuilder _runBuffer = new StringBuilder(256);
-
-        private void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
-        {
-            // Do not spawn the conhost until we can measure the canvas during drawing and determine how many rows/columns we can fit
-            if (!_terminal.Started)
-            {
-                int measuredRows = (int)((sender.ActualHeight - _topTextPadding) / (_mtr.CurrentFontSize + _lineHeightPadding));
-                float measuredCharWidth = MeasureCellAdvance(args.DrawingSession, _mtr.CurrentTextFormat);
-                int measuredCols = (int)((sender.ActualWidth - _leftTextPadding) / measuredCharWidth);
-                _lines = measuredRows;
-                _columns = measuredCols;
-                _measuredCharWidth = measuredCharWidth;
-                _vtController.VisibleRows = _lines;
-                _vtController.VisibleColumns = _columns;
-                UpdateTitleBarLabels();
-                StartConPTY();
-            }
-
-            _mtr.BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
-
-            // Keep the VT controller's TopRow as the live screen position; scrollback only changes what we render.
-            ClampScrollOffset();
-            int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
-            var selectionRange = _isSelecting ? _selectionRange : null;
-            double lineHeight = _mtr.CurrentFontSize + _lineHeightPadding;
-
-            EnsureTextFormats();
-
-            for (int visibleRow = 0; visibleRow < _lines; visibleRow++)
-            {
-                int logicalRow = topRow + visibleRow;
-                float y = _topTextPadding + (float)(visibleRow * lineHeight);
-                var sourceLine = _vtController.ViewPort.GetLine(logicalRow);
-
-                // Run-batching state: accumulate contiguous cells with identical SGR
-                // attributes so the row can be drawn as a small number of DrawText calls
-                // instead of one per cell. Unsafe glyphs (box-drawing, combining marks,
-                // etc.) break the run and are drawn individually to preserve alignment.
-                bool runActive = false;
-                int runStartCol = 0;
-                Color runFg = default;
-                Color runBg = default;
-                bool runFgDefault = false;
-                bool runBgDefault = false;
-                CanvasTextFormat? runFormat = null;
-                _runBuffer.Clear();
-
-                for (int col = 0; col < _columns; col++)
-                {
-                    var sourceChar = sourceLine != null && col < sourceLine.Count ? sourceLine[col] : null;
-                    bool inverted = selectionRange != null && selectionRange.Contains(col, logicalRow);
-                    var attr = sourceChar == null
-                        ? _vtController.NullAttribute
-                        : ((_vtController.CursorState.ReverseVideoMode ^ inverted ^ sourceChar.Attributes.Reverse)
-                            ? sourceChar.Attributes.Inverse
-                            : sourceChar.Attributes);
-
-                    char displayChar = sourceChar == null ? ' ' : sourceChar.Char;
-
-                    string combining = sourceChar?.CombiningCharacters ?? string.Empty;
-
-                    Color fg = _mtr.OutputColor;
-                    if (!attr.DefaultForeground)
-                    {
-                        try { fg = _mtr.GetColorFromHexString(attr.WebColor); } catch { }
-                    }
-
-                    Color bg = Colors.Black;
-                    if (!attr.DefaultBackground)
-                    {
-                        try { bg = _mtr.GetColorFromHexString(attr.BackgroundWebColor); } catch { }
-                    }
-
-                    if (attr.Hidden)
-                        fg = bg;
-
-                    CanvasTextFormat cellFormat = attr.Bright ? _boldTextFormat! : _normalTextFormat!;
-
-                    // Only batch cells whose glyph is known to use the primary monospace
-                    // font's natural advance (printable ASCII). Box-drawing, braille,
-                    // resolved missing glyphs, and combining sequences are drawn per-cell
-                    // at the measured grid so they stay column-aligned.
-                    bool canBatch = combining.Length == 0 && IsSafeForBatch(displayChar);
-
-                    bool matchesRun = runActive
-                        && ReferenceEquals(runFormat, cellFormat)
-                        && runFg == fg
-                        && runBg == bg
-                        && runFgDefault == attr.DefaultForeground
-                        && runBgDefault == attr.DefaultBackground;
-
-                    if (runActive && (!canBatch || !matchesRun))
-                    {
-                        FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!);
-                        runActive = false;
-                    }
-
-                    if (canBatch)
-                    {
-                        if (!runActive)
-                        {
-                            runActive = true;
-                            runStartCol = col;
-                            runFg = fg;
-                            runBg = bg;
-                            runFgDefault = attr.DefaultForeground;
-                            runBgDefault = attr.DefaultBackground;
-                            runFormat = cellFormat;
-                        }
-                        _runBuffer.Append(displayChar);
-                    }
-                    else
-                    {
-                        string cellText = displayChar.ToString() + combining;
-                        float cellX = _leftTextPadding + (col * _measuredCharWidth);
-                        // Braille patterns are absent from typical monospace fonts (Consolas),
-                        // so they resolve through font fallback whose glyph cell is taller than
-                        // our row. Scale those to the grid cell so TUI braille graphs stay within
-                        // their rows instead of bleeding vertically.
-                        bool fitToCell = IsBrailleChar(displayChar);
-                        _mtr.DrawText(
-                            cellText,
-                            cellX,
-                            y,
-                            _measuredCharWidth,
-                            fg,
-                            bg,
-                            cellFormat,
-                            attr.DefaultForeground,
-                            attr.DefaultBackground,
-                            fitToCell,
-                            (float)lineHeight);
-                    }
-                }
-
-                if (runActive)
-                {
-                    FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!);
-                }
-            }
-
-            // Draw blinking cursor only on the live viewport.
-            if (_cursorVisible && _scrollOffset == 0)
-            {
-                var cursor = _vtController.ViewPort.CursorPosition;
-                float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
-                float cursorY = (float)(cursor.Row * (_mtr.CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
-                args.DrawingSession.DrawText("|", cursorX, cursorY, _mtr.OutputColor, _mtr.CurrentTextFormat);
-            }
-
-            _mtr.EndEffectSequence();
-
-            // draw all UI controls
-            _titleBarControls?.DrawLabels(sender, args.DrawingSession, _mtr);
-        }
         
-        private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
-        {
-            const int sampleLength = 32;
-            using var layout = new CanvasTextLayout(ds, new string('0', sampleLength), format, 9999, 9999);
-            float total = 0;
-            foreach (var cluster in layout.ClusterMetrics)
-                total += cluster.Width;
-            return total / sampleLength;
-        }
-
-        private void EnsureTextFormats()
-        {
-            if (_normalTextFormat != null
-                && _cachedFontFamily == _mtr.CurrentFont
-                && _cachedFontSize == _mtr.CurrentFontSize)
-            {
-                return;
-            }
-
-            _normalTextFormat = new CanvasTextFormat
-            {
-                FontFamily = _mtr.CurrentFont,
-                FontSize = _mtr.CurrentFontSize,
-                FontWeight = FontWeights.Normal,
-                WordWrapping = CanvasWordWrapping.NoWrap
-            };
-            _boldTextFormat = new CanvasTextFormat
-            {
-                FontFamily = _mtr.CurrentFont,
-                FontSize = _mtr.CurrentFontSize,
-                FontWeight = FontWeights.Bold,
-                WordWrapping = CanvasWordWrapping.NoWrap
-            };
-            _cachedFontFamily = _mtr.CurrentFont;
-            _cachedFontSize = _mtr.CurrentFontSize;
-        }
-
-        private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format)
-        {
-            float x = _leftTextPadding + (startCol * _measuredCharWidth);
-            float width = _runBuffer.Length * _measuredCharWidth;
-            _mtr.DrawText(
-                _runBuffer.ToString(),
-                x,
-                y,
-                width,
-                fg,
-                bg,
-                format,
-                fgDefault,
-                bgDefault);
-            _runBuffer.Clear();
-        }
-
-        // Printable ASCII is rendered natively by the primary monospace font, so glyph
-        // advances are known to equal _measuredCharWidth and runs stay column-aligned
-        // when drawn as a single string. Anything outside this range may trigger font
-        // fallback with a different advance, so we render those per-cell on the grid.
-        private static bool IsSafeForBatch(char c) => c >= 0x20 && c <= 0x7E;
-
-        // Braille Patterns block (U+2800-U+28FF), used by TUI apps (btop, etc.) for fine graphs.
-        private static bool IsBrailleChar(char c) => c >= '\u2800' && c <= '\u28FF';      
+        
+       
 
         private void ModtermCanvas_KeyDown(object sender, KeyRoutedEventArgs e)
         {
@@ -260,8 +33,8 @@ namespace modterm
             // Handle Ctrl+C (send interrupt)
             if (isCtrlPressed && e.Key == Windows.System.VirtualKey.C)
             {
-                _scrollOffset = 0;
-                _terminal.WriteInput("\x03");
+                _mtr.ScrollOffset = 0;
+                ConPtyTerminal.WriteInput("\x03");
                 e.Handled = true;
                 ModtermCanvas.Invalidate();
                 return;
@@ -272,11 +45,11 @@ namespace modterm
             switch (e.Key)
             {
                 case Windows.System.VirtualKey.PageUp:
-                    ScrollBackBy(Math.Max(1, _lines - 1));
+                    _mtr.ScrollBackBy(Math.Max(1, _mtr.Lines - 1));
                     e.Handled = true;
                     return;
                 case Windows.System.VirtualKey.PageDown:
-                    ScrollBackBy(-Math.Max(1, _lines - 1));
+                    _mtr.ScrollBackBy(-Math.Max(1, _mtr.Lines - 1));
                     e.Handled = true;
                     return;
                 case Windows.System.VirtualKey.Enter:
@@ -327,8 +100,8 @@ namespace modterm
             }
             if (!string.IsNullOrEmpty(vtSeq))
             {
-                _scrollOffset = 0;
-                _terminal.WriteInput(vtSeq);
+                _mtr.ScrollOffset = 0;
+                ConPtyTerminal.WriteInput(vtSeq);
                 e.Handled = true;
             }
             ModtermCanvas.Invalidate();
@@ -340,40 +113,40 @@ namespace modterm
             if (!e.GetCurrentPoint(ModtermCanvas).Properties.IsLeftButtonPressed)
                 return;
 
-            _isSelecting = false;
-            _selectionRange = null;
-            _selectedText = "";
+            _mtr.IsSelecting = false;
+            _mtr.SelectionRange = null;
+            _mtr.SelectedText = "";
 
-            if (!IsInTextArea(currentPoint))
+            if (!_mtr.IsInTextArea(currentPoint))
                 return;
 
-            _isSelecting = true;
-            _selectionStart = currentPoint;
-            _selectionEnd = _selectionStart;
-            _selectionTopRow = _vtController.ViewPort.TopRow - _scrollOffset;
-            UpdateSelectedText();
+            _mtr.IsSelecting = true;
+            _mtr.SelectionStart = currentPoint;
+            _mtr.SelectionEnd = _mtr.SelectionStart;
+            _mtr.SelectionTopRow = _mtr.VtController.ViewPort.TopRow - _mtr.ScrollOffset;
+            _mtr.UpdateSelectedText();
             ModtermCanvas.Invalidate();
         }
 
         private void ModtermCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (!_isSelecting)
+            if (!_mtr.IsSelecting)
                 return;
 
-            _selectionEnd = e.GetCurrentPoint(ModtermCanvas).Position;
-            UpdateSelectedText();
+            _mtr.SelectionEnd = e.GetCurrentPoint(ModtermCanvas).Position;
+            _mtr.UpdateSelectedText();
             ModtermCanvas.Invalidate();
         }
 
         private void ModtermCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            if (!_isSelecting)
+            if (!_mtr.IsSelecting)
                 return;
 
-            _selectionEnd = e.GetCurrentPoint(ModtermCanvas).Position;
-            UpdateSelectedText();
-            _isSelecting = false;
-            CopySelectedTextToClipboard();
+            _mtr.SelectionEnd = e.GetCurrentPoint(ModtermCanvas).Position;
+            _mtr.UpdateSelectedText();
+            _mtr.IsSelecting = false;
+            _mtr.CopySelectedTextToClipboard();
             ModtermCanvas.Invalidate();
         }
 
@@ -386,31 +159,14 @@ namespace modterm
         {
             int delta = e.GetCurrentPoint(ModtermCanvas).Properties.MouseWheelDelta;
             int notches = Math.Max(1, Math.Abs(delta) / 120);
-            int rowsPerNotch = Math.Max(1, _lines / 10);
+            int rowsPerNotch = Math.Max(1, _mtr.Lines / 10);
             int rows = notches * rowsPerNotch * (delta > 0 ? 1 : -1);
 
-            ScrollBackBy(rows);
+            _mtr.ScrollBackBy(rows);
             e.Handled = true;
         }
 
-        private void ScrollBackBy(int rows)
-        {
-            if (rows == 0)
-                return;
 
-            int previousOffset = _scrollOffset;
-            _scrollOffset += rows;
-            ClampScrollOffset();
-
-            if (_scrollOffset != previousOffset)
-                ModtermCanvas.Invalidate();
-        }
-
-        private void ClampScrollOffset()
-        {
-            int maxScrollOffset = Math.Max(0, _vtController.ViewPort.TopRow);
-            _scrollOffset = Math.Clamp(_scrollOffset, 0, maxScrollOffset);
-        }
 
 
         // xterm / Windows Console VT sequences for function keys.
@@ -445,7 +201,7 @@ namespace modterm
             // Handle SHIFT + INSERT for paste
             if (e.Key == VirtualKey.Insert && isShiftPressed)
             {
-                PasteFromClipboard();
+                _mtr.PasteFromClipboard();
                 e.Handled = true;
                 return null;
             }
