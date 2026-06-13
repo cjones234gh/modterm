@@ -14,26 +14,14 @@ using System.Numerics;
 using Windows.Foundation;
 using Windows.UI;
 using Windows.ApplicationModel.DataTransfer;
-using WinRT.modtermVtableClasses;
 using Microsoft.UI.Dispatching;
 using System.Windows;
 using Microsoft.UI.Text;
 
 namespace modterm
 {
-    public enum Effects
-    {
-        None,
-        Glow,
-    }
-
     public partial class ModtermRender
     {
-        // glow colors for terminal and control text
-        public Color OutputGlowColor { get; set; }
-        // normal colors for terminal and control text
-        public Color OutputColor { get; set; }
-
         public ModtermWindow ModtermWinInstance { get; set; } = null!;
         public int Lines { get { return _lines; } }
         public int Columns { get { return _columns; } }
@@ -61,13 +49,12 @@ namespace modterm
         private float _currentFontSize = 12f;
         private float _controlFontScale = 1f;
         private float _currentControlFontSize = 12f;
-        private float _currentBgColorPadding; 
-        private float _controlPadding;
-        private float _controlMargin;
-        private float _controlMarginRight;
+        private float _controlPadding = 5f;
         private Color _labelColor;
         private Color _labelBlurColor;
-        private int _transparencyPct;
+        private Color _outputColor;
+        private Color _outputBlurColor;
+        private int _opacityPct;
         private int _scrollOffset = 0;
         private bool _isSelecting = false;
         private float _blurAmount;
@@ -82,7 +69,6 @@ namespace modterm
         private bool _effectSequenceStarted = false;
         private List<DrawTextCall> _effectSequence = new List<DrawTextCall>();
         private CanvasDrawingSession _drawSession = null!;
-        private Effects _effect = Effects.None;
         private CanvasControl _sender = null!;
 
         private CanvasTextFormat _currentTextFormat = null!;
@@ -135,41 +121,25 @@ namespace modterm
                 _currentTextFormat.FontSize = _currentFontSize;
                 _currentControlTextFormat.FontSize = _currentControlFontSize;
                 _controlPadding = _currentControlFontSize / 1.75f;
-                _controlMargin = 5;// + (_currentFontSize / 2);
-                _controlMarginRight = 10;
-                _currentBgColorPadding = _currentFontSize / 1.25f; // adjust background rectangle padding based on font size for better fit
             }
         }
 
-        public CanvasTextFormat CurrentControlTextFormat { get { return _currentControlTextFormat; } set { _currentControlTextFormat = value; } }
-        public float ControlPadding { get { return _controlPadding; } set { _controlPadding = value; } }
-        public float ControlMargin { get { return _controlMargin; } set { _controlMargin = value; } }
-        public float ControlMarginRight { get { return _controlMarginRight; } set { _controlMarginRight = value; } }
-        public float CurrentBgColorPadding { get { return _currentBgColorPadding; } set { _currentBgColorPadding = value; } }
+        public CanvasTextFormat CurrentControlTextFormat 
+        {
+            get { return _currentControlTextFormat; } 
+            set { _currentControlTextFormat = value; }
+        }
 
         public int OpacityPct
         {
             get
             {
-                return _transparencyPct;
+                return _opacityPct;
             }
             set
             {
-                _transparencyPct = value;
-                _alpha = (byte)(_transparencyPct * 2.55);
-                _backgroundBrush.Color = GetBackgroundArgb();
-            }
-        }
-
-        public Color WindowColor
-        {
-            get
-            {
-                return _windowColor;
-            }
-            set
-            {
-                _windowColor = value;
+                _opacityPct = value;
+                _alpha = (byte)(_opacityPct * 2.55);
                 _backgroundBrush.Color = GetBackgroundArgb();
             }
         }
@@ -181,8 +151,8 @@ namespace modterm
             _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
             _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
 
-            _vtController.SetRgbForegroundColor(OutputColor.R,
-                OutputColor.G, OutputColor.B);
+            _vtController.SetRgbForegroundColor(_outputColor.R,
+                _outputColor.G, _outputColor.B);
 
             // set default values
             _currentTextFormat = new CanvasTextFormat { FontFamily = _currentFont,
@@ -240,21 +210,21 @@ namespace modterm
 
         private Color GetBackgroundArgb()
         {
-            return WindowColor == Colors.Transparent
+            return _windowColor == Colors.Transparent
                 ? Colors.Transparent
-                : Color.FromArgb(_alpha, WindowColor.R, WindowColor.G, WindowColor.B);
+                : Color.FromArgb(_alpha, _windowColor.R, _windowColor.G, _windowColor.B);
         }
 
         public void SetColorConfiguration(ThemeConfiguration config, Window wInstance)
         {
-            OutputColor = config.OutputColor;
-            _vtController.SetRgbForegroundColor(OutputColor.R, OutputColor.G, OutputColor.B);
-            OutputGlowColor = config.OutputBlurColor;
+            _outputColor = config.OutputColor;
+            _vtController.SetRgbForegroundColor(_outputColor.R, _outputColor.G, _outputColor.B);
+            _outputBlurColor = config.OutputBlurColor;
             _labelColor = config.LabelColor;
             _labelBlurColor = config.LabelBlurColor;
             _blurAmount = config.BlurAmount;
             OpacityPct = config.WindowOpacityPct;
-            WindowColor = config.WindowColor;
+            _windowColor = config.WindowColor;
             ApplySystemBackdrop(config.BackdropKind, wInstance);
             _backgroundBrush.Color = GetBackgroundArgb();
         }
@@ -373,10 +343,9 @@ namespace modterm
             _scrollOffset = Math.Clamp(_scrollOffset, 0, maxScrollOffset);
         }
 
-        public void BeginEffectSequence(CanvasControl sender, CanvasDrawingSession ds, Effects effect)
+        public void BeginEffectSequence(CanvasControl sender, CanvasDrawingSession ds)
         {
             _drawSession = ds;
-            _effect = effect;
             if (_effectSequenceStarted)
             {
                 throw new InvalidOperationException("Effect sequence already started.");
@@ -438,7 +407,7 @@ namespace modterm
                 terminal.Resize((short)Columns, (short)Lines);
             }
 
-            BeginEffectSequence(sender, args.DrawingSession, Effects.Glow);
+            BeginEffectSequence(sender, args.DrawingSession);
 
             // Keep the VT controller's TopRow as the live screen position; scrollback only changes what we render.
             ClampScrollOffset();
@@ -481,10 +450,10 @@ namespace modterm
 
                     string combining = sourceChar?.CombiningCharacters ?? string.Empty;
 
-                    Color fg = OutputColor;
+                    Color fg = _outputColor;
                     if (!attr.DefaultForeground)
                     {
-                        try { fg = string.IsNullOrEmpty(attr.WebColor) ? OutputColor : GetColorFromHexString(attr.WebColor); } catch { }
+                        try { fg = string.IsNullOrEmpty(attr.WebColor) ? _outputColor : GetColorFromHexString(attr.WebColor); } catch { }
                     }
 
                     Color bg = Colors.Black;
@@ -567,7 +536,7 @@ namespace modterm
                 var cursor = _vtController.ViewPort.CursorPosition;
                 float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
                 float cursorY = (float)(cursor.Row * (CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
-                args.DrawingSession.DrawText("|", cursorX, cursorY, OutputColor, _currentTextFormat);
+                args.DrawingSession.DrawText("|", cursorX, cursorY, _outputColor, _currentTextFormat);
             }
 
             EndEffectSequence();
@@ -637,8 +606,8 @@ namespace modterm
                 {
                     foreach (DrawTextCall call in _effectSequence)
                     {
-                        Color glyphColor = (call.ForegroundIsDefault || call.Color == OutputColor)
-                            ? OutputGlowColor
+                        Color glyphColor = (call.ForegroundIsDefault || call.Color == _outputColor)
+                            ? _outputBlurColor
                             : call.Color;
 
                         if (call.FitToCell)
