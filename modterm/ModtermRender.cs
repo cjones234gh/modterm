@@ -86,8 +86,9 @@ namespace modterm
         private CanvasTextFormat? _boldTextFormat;
         private string? _cachedFontFamily;
         private float _cachedFontSize;
-
         private readonly StringBuilder _runBuffer = new StringBuilder(256);
+        private readonly string FullBrailleCell = "\u28FF";
+        private readonly Dictionary<CanvasTextFormat, Rect> _brailleCellInkBounds = new Dictionary<CanvasTextFormat, Rect>();
 
         public string CurrentFont 
         { 
@@ -637,16 +638,6 @@ namespace modterm
                 }
             }
         }
-
-        // Cache of the rendered ink bounds of a full braille cell (U+28FF) per text format.
-        // The reference is measured from the actually-drawn glyph, so it reflects the font
-        // that really renders braille - whether that is the primary font or a DirectWrite
-        // fallback (e.g. Consolas, which has no braille glyphs of its own).
-        private readonly Dictionary<CanvasTextFormat, Rect> _brailleCellInkBounds = new Dictionary<CanvasTextFormat, Rect>();
-
-        // The full braille cell glyph (all 8 dots set). Its ink bounds define the design
-        // cell that every other braille glyph's dots are positioned within.
-        private const string FullBrailleCell = "\u28FF";
 
          private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
         {

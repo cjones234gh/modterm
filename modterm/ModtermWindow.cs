@@ -74,10 +74,10 @@ namespace modterm
         private void InitializeApplication()
         {
             // wait for debugger to attach
-            while (!Debugger.IsAttached)
-            {
-                Task.Delay(100).Wait();
-            }
+            // while (!Debugger.IsAttached)
+            // {
+            //     Task.Delay(100).Wait();
+            // }
             _flyout = new MenuFlyout();
             RootGrid.Loaded += RootGrid_Loaded;
 
