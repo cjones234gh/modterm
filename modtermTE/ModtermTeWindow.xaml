@@ -16,14 +16,14 @@
 
         <Grid x:Name="AppTitleBar"
               Grid.Row="0"
-              Height="33"
+              Height="0"
               VerticalAlignment="Top"
               Background="Transparent" />
 
         <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
-                      Padding="32,8,32,24">
+                      Padding="32,0,32,12">
             <StackPanel x:Name="SettingsPanel"
                         Spacing="0"
                         MaxWidth="760"

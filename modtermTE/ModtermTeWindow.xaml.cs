@@ -19,6 +19,10 @@ namespace modtermTE
             AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             SetTitleBar(AppTitleBar);
 
+            this.AppWindow.Resize(new Windows.Graphics.SizeInt32(700, 925));
+            // set the window title
+            this.AppWindow.Title = "modtermTE - Theme Editor";
+
             _liveConfigurationPublisher = new LiveConfigurationPublisher(DispatcherQueue, _configurationStore);
             InitializeSettings();
         }
