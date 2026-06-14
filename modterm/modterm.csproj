@@ -52,7 +52,34 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\VtNetCore\VtNetCore\VtNetCore.csproj" />
+    <ProjectReference Include="..\modtermTE\modtermTE.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
+
+  <Target Name="CopyThemeEditorToOutput" AfterTargets="Build">
+    <PropertyGroup>
+      <_ModtermTeOutputDir>$(MSBuildThisFileDirectory)..\modtermTE\bin\$(Platform)\$(Configuration)\$(TargetFramework)\</_ModtermTeOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ModtermTeOutput)"
+          DestinationFiles="@(_ModtermTeOutput->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyThemeEditorToPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <_ModtermTeOutputDir>$(MSBuildThisFileDirectory)..\modtermTE\bin\$(Platform)\$(Configuration)\$(TargetFramework)\</_ModtermTeOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ModtermTeOutput)"
+          DestinationFiles="@(_ModtermTeOutput->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
   <ItemGroup>
     <Content Update="Assets\Fonts\BlexMonoNerdFontMono-Bold.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

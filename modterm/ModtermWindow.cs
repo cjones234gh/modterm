@@ -419,6 +419,25 @@ namespace modterm
             await dialog.ShowAsync();
         }
 
+        private async Task ShowSimpleDialogAsync(string title, string content)
+        {
+            if (RootGrid.XamlRoot is null)
+            {
+                return;
+            }
+
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = content,
+                CloseButtonText = "OK",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = RootGrid.XamlRoot
+            };
+
+            await dialog.ShowAsync();
+        }
+
         private void OpenConfigurationInNotepad()
         {
             var startInfo = new ProcessStartInfo
@@ -429,6 +448,43 @@ namespace modterm
             };
 
             Process.Start(startInfo);
+        }
+
+        private void LaunchThemeEditor()
+        {
+            string baseDirectory = AppContext.BaseDirectory;
+            string themeEditorPath = Path.Combine(baseDirectory, "modtermTE.exe");
+            string themeEditorDllPath = Path.Combine(baseDirectory, "modtermTE.dll");
+
+            if (!File.Exists(themeEditorPath))
+            {
+                _ = ShowSimpleDialogAsync(
+                    "Theme Editor Not Found",
+                    $"Could not find modtermTE.exe next to modterm at:\n{themeEditorPath}");
+                return;
+            }
+
+            if (!File.Exists(themeEditorDllPath))
+            {
+                _ = ShowSimpleDialogAsync(
+                    "Theme Editor Not Found",
+                    $"modtermTE.exe is present but modtermTE.dll is missing at:\n{themeEditorDllPath}");
+                return;
+            }
+
+            try
+            {
+                var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = themeEditorPath,
+                    WorkingDirectory = baseDirectory,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _ = ShowSimpleDialogAsync("Theme Editor Launch Failed", ex.Message);
+            }
         }
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
@@ -640,6 +696,10 @@ namespace modterm
                 themeItem.Items.Add(item);
             }
             _flyout.Items.Add(themeItem);
+
+            var launchThemeEditorItem = new MenuFlyoutItem { Text = "Launch Theme Editor" };
+            launchThemeEditorItem.Click += (_, __) => LaunchThemeEditor();
+            _flyout.Items.Add(launchThemeEditorItem);
 
             var resetDefaultsItem = new MenuFlyoutItem { Text = "Reset Default Configuration" };
             resetDefaultsItem.Click += (_, __) => ResetDefaultConfiguration();
