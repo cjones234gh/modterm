@@ -16,9 +16,14 @@
 
         <Grid x:Name="AppTitleBar"
               Grid.Row="0"
-              Height="0"
+              Height="33"
               VerticalAlignment="Top"
-              Background="Transparent" />
+              Background="Transparent">
+            <TextBlock Text="modtermTE - Theme Editor"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
 
         <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"

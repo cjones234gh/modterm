@@ -15,7 +15,7 @@
         <Grid x:Name="AppTitleBar"
               Height="33"
               VerticalAlignment="Top"
-              Background="Transparent" />
+              Background="Transparent"/>
         <!-- Single application pane -->
         <win2dcanvas:CanvasControl x:Name="ModtermCanvas"
                 Margin="0,0,0,0"
