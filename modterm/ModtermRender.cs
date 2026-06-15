@@ -535,9 +535,10 @@ namespace modterm
             if (_cursorVisible && _scrollOffset == 0)
             {
                 var cursor = _vtController.ViewPort.CursorPosition;
-                float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth) - _measuredCharWidth / 2;
+                float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
                 float cursorY = (float)(cursor.Row * (CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
-                args.DrawingSession.DrawText("|", cursorX, cursorY, _outputColor, _currentTextFormat);
+                //args.DrawingSession.DrawText("|", cursorX, cursorY, _outputColor, _currentTextFormat);
+                args.DrawingSession.FillRectangle(cursorX, cursorY, _measuredCharWidth, (float)lineHeight, _outputColor);
             }
 
             EndEffectSequence();
