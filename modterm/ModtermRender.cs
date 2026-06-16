@@ -7,8 +7,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
-using VtNetCore.VirtualTerminal;
-using VtNetCore.XTermParser;
 using System.Text;
 using System.Numerics;
 using Windows.Foundation;
@@ -26,7 +24,8 @@ namespace modterm
         public int Lines { get { return _lines; } }
         public int Columns { get { return _columns; } }
         public int ScrollOffset { get { return _scrollOffset; } set { _scrollOffset = value; } }
-        public VirtualTerminalController VtController { get { return _vtController; } }
+        public XtermSharp.Terminal Terminal { get { return _terminal; } }
+        public int TopRow { get { return _terminal.Buffer.YBase; } }
         public UserAppConfiguration UserAppConfiguration { get; set; } = null!;
         public bool IsSelecting { get { return _isSelecting; } set { _isSelecting = value; } }
         public TextRange? SelectionRange { get { return _selectionRange; } set { _selectionRange = value; } }
@@ -42,8 +41,9 @@ namespace modterm
         private DispatcherQueueTimer _cursorTimer = null!;
         private int _cursorSpeed = 500;
         private bool _cursorVisible = true;
-        private VirtualTerminalController _vtController = null!;
-        private DataConsumer _vtDataConsumer = null!;
+        private XtermSharp.Terminal _terminal = null!;
+        // DECSCNM (screen-wide reverse video) is not tracked by XtermSharp; kept false.
+        private bool _screenReverse = false;
         private string _currentFont = "BlexMono Nerd Font Mono";
         private string _currentControlFont = "BlexMono Nerd Font Mono";
         private float _currentFontSize = 12f;
@@ -148,12 +148,11 @@ namespace modterm
         public void Initialize()
         {
             
-            // Initialize VtNetCore terminal controller and data consumer
-            _vtController = new VtNetCore.VirtualTerminal.VirtualTerminalController();
-            _vtDataConsumer = new VtNetCore.XTermParser.DataConsumer(_vtController);
-
-            _vtController.SetRgbForegroundColor(_outputColor.R,
-                _outputColor.G, _outputColor.B);
+            // Initialize the XtermSharp terminal engine. Size is corrected on first draw
+            // once the canvas measures how many rows/columns fit.
+            _terminal = new XtermSharp.Terminal(
+                new ModtermTerminalDelegate(ModtermWinInstance),
+                new XtermSharp.TerminalOptions { Cols = 80, Rows = 25, Scrollback = 5000 });
 
             // set default values
             _currentTextFormat = new CanvasTextFormat { FontFamily = _currentFont,
@@ -219,7 +218,6 @@ namespace modterm
         public void SetColorConfiguration(ThemeConfiguration config, Window wInstance)
         {
             _outputColor = config.OutputColor;
-            _vtController.SetRgbForegroundColor(_outputColor.R, _outputColor.G, _outputColor.B);
             _outputBlurColor = config.OutputBlurColor;
             _labelColor = config.LabelColor;
             _labelBlurColor = config.LabelBlurColor;
@@ -247,13 +245,55 @@ namespace modterm
                 Math.Abs(_selectionStart.Y - _selectionEnd.Y) < 2)
                 return;
 
-            _selectionRange = new VtNetCore.VirtualTerminal.TextRange
+            _selectionRange = new TextRange
             {
                 Start = GetTextPositionFromPoint(_selectionStart),
                 End = GetTextPositionFromPoint(_selectionEnd)
             };
 
-            _selectedText = _vtController.GetText(_selectionRange);
+            _selectedText = GetText(_selectionRange);
+        }
+
+        // Stream-based (reading-order) text extraction across the selection span, matching
+        // the behavior of the previous engine. Rows are absolute buffer indices.
+        private string GetText(TextRange range)
+        {
+            int startCol = range.Start.Column;
+            int startRow = range.Start.Row;
+            int endCol = range.End.Column;
+            int endRow = range.End.Row;
+
+            if (startRow > endRow || (startRow == endRow && startCol > endCol))
+            {
+                (startCol, endCol) = (endCol, startCol);
+                (startRow, endRow) = (endRow, startRow);
+            }
+
+            var lines = _terminal.Buffer.Lines;
+            if (startRow < 0 || startRow >= lines.Length)
+                return string.Empty;
+
+            var sb = new StringBuilder();
+            for (int row = startRow; row <= endRow && row < lines.Length; row++)
+            {
+                int c0 = (row == startRow) ? startCol : 0;
+                int c1 = (row == endRow) ? endCol : _columns - 1;
+
+                if (row != startRow)
+                    sb.Append('\n');
+
+                var line = lines[row];
+                if (line == null)
+                    continue;
+
+                for (int i = c0; i <= c1 && i < line.Length; i++)
+                {
+                    var cd = line[i];
+                    sb.Append(cd.Code == 0 ? ' ' : (char)(uint)cd.Rune);
+                }
+            }
+
+            return sb.ToString();
         }
 
         public bool IsInTextArea(Point point)
@@ -271,17 +311,17 @@ namespace modterm
                 point.Y <= textBottom;
         }
 
-        public VtNetCore.VirtualTerminal.TextPosition GetTextPositionFromPoint(Point point)
+        public TextPosition GetTextPositionFromPoint(Point point)
         {
             double lineHeight = CurrentFontSize + _lineHeightPadding;
             int column = (int)Math.Floor((point.X - _leftTextPadding) / _measuredCharWidth);
             int visibleRow = (int)Math.Floor((point.Y - _topTextPadding) / lineHeight);
-            int topRow = _isSelecting ? _selectionTopRow : _vtController.ViewPort.TopRow - _scrollOffset;
+            int topRow = _isSelecting ? _selectionTopRow : _terminal.Buffer.YBase - _scrollOffset;
 
             column = Math.Clamp(column, 0, Math.Max(0, Columns - 1));
             visibleRow = Math.Clamp(visibleRow, 0, Math.Max(0, Lines - 1));
 
-            return new VtNetCore.VirtualTerminal.TextPosition
+            return new TextPosition
             {
                 Column = column,
                 Row = topRow + visibleRow
@@ -320,7 +360,7 @@ namespace modterm
             if (_scrollOffset > 0 && !_isSelecting) _scrollOffset = 0;
             if (data is { Length: > 0 })
             {
-                _vtDataConsumer.Push(data);
+                _terminal.Feed(data, data.Length);
                 ModtermWinInstance.InvalidateModtermCanvas();
             }
         }
@@ -340,8 +380,40 @@ namespace modterm
 
         private void ClampScrollOffset()
         {
-            int maxScrollOffset = Math.Max(0, _vtController.ViewPort.TopRow);
+            int maxScrollOffset = Math.Max(0, _terminal.Buffer.YBase);
             _scrollOffset = Math.Clamp(_scrollOffset, 0, maxScrollOffset);
+        }
+
+        /// <summary>
+        /// Recomputes the row/column grid from the current canvas size and applies it live,
+        /// resizing both the emulator buffer and the pseudo console without restarting the
+        /// shell. The shell receives the new dimensions via ConPTY and repaints.
+        /// </summary>
+        public void ResizeToCanvas(double actualWidth, double actualHeight)
+        {
+            if (_measuredCharWidth <= 0 || !ModtermWinInstance.ConPtyTerminal.Started)
+                return;
+
+            double lineHeight = CurrentFontSize + _lineHeightPadding;
+            int rows = (int)((actualHeight - _topTextPadding) / lineHeight);
+            int cols = (int)((actualWidth - _leftTextPadding) / _measuredCharWidth);
+
+            if (rows <= 0 || cols <= 0)
+                return;
+            if (rows == _lines && cols == _columns)
+                return;
+
+            _lines = rows;
+            _columns = cols;
+
+            // Reflow the emulator buffer first, then notify the pseudo console so the shell
+            // sees the new size and redraws against the reflowed contents.
+            _terminal.Resize(cols, rows);
+            ModtermWinInstance.ConPtyTerminal.Resize((short)cols, (short)rows);
+
+            _scrollOffset = 0;
+            UpdateTitleBarLabels();
+            ModtermWinInstance.InvalidateModtermCanvas();
         }
 
         public void BeginEffectSequence(CanvasControl sender, CanvasDrawingSession ds)
@@ -395,8 +467,7 @@ namespace modterm
                 _lines = measuredRows;
                 _columns = measuredCols;
                 _measuredCharWidth = measuredCharWidth;
-                _vtController.VisibleRows = _lines;
-                _vtController.VisibleColumns = _columns;
+                _terminal.Resize(_columns, _lines);
 
                 var terminal = ModtermWinInstance.EnsureTerminalInstanceForStart();
                 if (terminal.Started)
@@ -404,7 +475,7 @@ namespace modterm
 
                 terminal.Start(UserAppConfiguration.TerminalShell, Lines, Columns);
 
-                _vtController.ResizeView(Columns, Lines);
+                _terminal.Resize(Columns, Lines);
                 terminal.Resize((short)Columns, (short)Lines);
             }
 
@@ -412,7 +483,7 @@ namespace modterm
 
             // Keep the VT controller's TopRow as the live screen position; scrollback only changes what we render.
             ClampScrollOffset();
-            int topRow = _vtController.ViewPort.TopRow - _scrollOffset;
+            int topRow = _terminal.Buffer.YBase - _scrollOffset;
             var selectionRange = _isSelecting ? _selectionRange : null;
             double lineHeight = CurrentFontSize + _lineHeightPadding;
 
@@ -422,7 +493,9 @@ namespace modterm
             {
                 int logicalRow = topRow + visibleRow;
                 float y = _topTextPadding + (float)(visibleRow * lineHeight);
-                var sourceLine = _vtController.ViewPort.GetLine(logicalRow);
+                var sourceLine = (logicalRow >= 0 && logicalRow < _terminal.Buffer.Lines.Length)
+                    ? _terminal.Buffer.Lines[logicalRow]
+                    : null;
 
                 // Run-batching state: accumulate contiguous cells with identical SGR
                 // attributes so the row can be drawn as a small number of DrawText calls
@@ -439,34 +512,38 @@ namespace modterm
 
                 for (int col = 0; col < _columns; col++)
                 {
-                    var sourceChar = sourceLine != null && col < sourceLine.Count ? sourceLine[col] : null;
+                    XtermSharp.CharData cd = (sourceLine != null && col < sourceLine.Length)
+                        ? sourceLine[col]
+                        : XtermSharp.CharData.Null;
+
+                    XtermAttr.Decode(cd.Attribute, out int fgIdx, out int bgIdx, out XtermSharp.FLAGS flags);
+
                     bool inverted = selectionRange != null && selectionRange.Contains(col, logicalRow);
-                    var attr = sourceChar == null
-                        ? _vtController.NullAttribute
-                        : ((_vtController.CursorState.ReverseVideoMode ^ inverted ^ sourceChar.Attributes.Reverse)
-                            ? sourceChar.Attributes.Inverse
-                            : sourceChar.Attributes);
+                    bool cellReverse = (flags & XtermSharp.FLAGS.INVERSE) != 0;
+                    // screen-reverse (DECSCNM) XOR selection XOR per-cell reverse
+                    bool swap = _screenReverse ^ inverted ^ cellReverse;
 
-                    char displayChar = sourceChar == null ? ' ' : sourceChar.Char;
+                    bool fgDefault = XtermAttr.IsDefault(fgIdx);
+                    bool bgDefault = XtermAttr.IsDefault(bgIdx);
 
-                    string combining = sourceChar?.CombiningCharacters ?? string.Empty;
+                    Color fg = fgDefault ? _outputColor : ResolvePaletteColor(fgIdx, _outputColor);
+                    Color bg = bgDefault ? Colors.Black : ResolvePaletteColor(bgIdx, Colors.Black);
 
-                    Color fg = _outputColor;
-                    if (!attr.DefaultForeground)
+                    if (swap)
                     {
-                        try { fg = string.IsNullOrEmpty(attr.WebColor) ? _outputColor : GetColorFromHexString(attr.WebColor); } catch { }
+                        (fg, bg) = (bg, fg);
+                        (fgDefault, bgDefault) = (bgDefault, fgDefault);
                     }
 
-                    Color bg = Colors.Black;
-                    if (!attr.DefaultBackground)
-                    {
-                        try { bg = string.IsNullOrEmpty(attr.BackgroundWebColor) ? Colors.Black : GetColorFromHexString(attr.BackgroundWebColor); } catch { }
-                    }
-
-                    if (attr.Hidden)
+                    if ((flags & XtermSharp.FLAGS.INVISIBLE) != 0)
                         fg = bg;
 
-                    CanvasTextFormat cellFormat = attr.Bright ? _boldTextFormat! : _normalTextFormat!;
+                    // A cell holds a single code point (no multi-codepoint combining marks).
+                    string runeString = cd.Code == 0 ? " " : RuneToString((uint)cd.Rune);
+                    char displayChar = runeString.Length == 1 ? runeString[0] : '\uFFFF';
+                    string combining = string.Empty;
+
+                    CanvasTextFormat cellFormat = (flags & XtermSharp.FLAGS.BOLD) != 0 ? _boldTextFormat! : _normalTextFormat!;
 
                     // Only batch cells whose glyph is known to use the primary monospace
                     // font's natural advance (printable ASCII). Box-drawing, braille,
@@ -478,8 +555,8 @@ namespace modterm
                         && ReferenceEquals(runFormat, cellFormat)
                         && runFg == fg
                         && runBg == bg
-                        && runFgDefault == attr.DefaultForeground
-                        && runBgDefault == attr.DefaultBackground;
+                        && runFgDefault == fgDefault
+                        && runBgDefault == bgDefault;
 
                     if (runActive && (!canBatch || !matchesRun))
                     {
@@ -495,15 +572,15 @@ namespace modterm
                             runStartCol = col;
                             runFg = fg;
                             runBg = bg;
-                            runFgDefault = attr.DefaultForeground;
-                            runBgDefault = attr.DefaultBackground;
+                            runFgDefault = fgDefault;
+                            runBgDefault = bgDefault;
                             runFormat = cellFormat;
                         }
                         _runBuffer.Append(displayChar);
                     }
                     else
                     {
-                        string cellText = displayChar.ToString() + combining;
+                        string cellText = runeString + combining;
                         float cellX = _leftTextPadding + (col * _measuredCharWidth);
                         // Braille patterns are absent from typical monospace fonts (Consolas),
                         // so they resolve through font fallback whose glyph cell is taller than
@@ -518,8 +595,8 @@ namespace modterm
                             fg,
                             bg,
                             cellFormat,
-                            attr.DefaultForeground,
-                            attr.DefaultBackground,
+                            fgDefault,
+                            bgDefault,
                             fitToCell,
                             (float)lineHeight);
                     }
@@ -532,11 +609,10 @@ namespace modterm
             }
 
             // Draw blinking cursor only on the live viewport.
-            if (_cursorVisible && _scrollOffset == 0)
+            if (_cursorVisible && _scrollOffset == 0 && !_terminal.CursorHidden)
             {
-                var cursor = _vtController.ViewPort.CursorPosition;
-                float cursorX = _leftTextPadding + (float)(cursor.Column * _measuredCharWidth);
-                float cursorY = (float)(cursor.Row * (CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
+                float cursorX = _leftTextPadding + (float)(_terminal.Buffer.X * _measuredCharWidth);
+                float cursorY = (float)(_terminal.Buffer.Y * (CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
                 //args.DrawingSession.DrawText("|", cursorX, cursorY, _outputColor, _currentTextFormat);
                 args.DrawingSession.FillRectangle(cursorX, cursorY, _measuredCharWidth, (float)lineHeight, _outputColor);
             }
@@ -756,6 +832,33 @@ namespace modterm
 
             ds.DrawTextLayout(layout, 0f, 0f, color);
             ds.Transform = prior;
+        }
+
+        // Maps a 0-255 palette index to its RGB color; default/inverted-default sentinels
+        // (256/257) fall back to the supplied theme color.
+        private Color ResolvePaletteColor(int index, Color themeDefault)
+        {
+            var palette = XtermSharp.Color.DefaultAnsiColors;
+            if (index >= 0 && index < palette.Count)
+            {
+                var c = palette[index];
+                return Color.FromArgb(255, c.Red, c.Green, c.Blue);
+            }
+
+            return themeDefault;
+        }
+
+        // Converts a Unicode code point to a string, handling astral (supplementary) planes.
+        private static string RuneToString(uint codePoint)
+        {
+            try
+            {
+                return char.ConvertFromUtf32((int)codePoint);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return "\uFFFD";
+            }
         }
 
         public static string GetHexStringFromColor(Color color)

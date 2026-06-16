@@ -46,12 +46,6 @@ namespace modterm
 
         // context menu flyout for right-click
         private MenuFlyout _flyout = null!;
-        private SizeInt32 _lastWindowSize;
-        private SizeInt32 _resizeStartSize;
-        private SizeInt32 _resizeEndSize;
-        private bool _isResizeSessionActive = false;
-        private bool _isResizeConfirmationInProgress = false;
-        private bool _suppressResizeHandling = false;
         private bool _terminalRestartInProgress = false;
 
         public void InvalidateModtermCanvas()
@@ -152,16 +146,15 @@ namespace modterm
             ModtermCanvas.PointerReleased += this.ModtermCanvas_PointerReleased;
             ModtermCanvas.RightTapped += this.ModtermCanvas_RightTapped;
 
-            // Detect "resize finished" by waiting for a brief pause in size events.
-            _resizeStopTimer.Interval = TimeSpan.FromMilliseconds(350);
-            _resizeStopTimer.Tick += async (s, e) =>
+            // Debounce a burst of size events, then apply a live resize once they settle.
+            _resizeStopTimer.Interval = TimeSpan.FromMilliseconds(120);
+            _resizeStopTimer.Tick += (s, e) =>
             {
                 _resizeStopTimer.Stop();
-                await ConfirmResizeRestartAsync();
+                _mtr.ResizeToCanvas(ModtermCanvas.ActualWidth, ModtermCanvas.ActualHeight);
             };
 
             this.InitializeFlyouts();
-            _lastWindowSize = this.AppWindow.Size;
 
             // Update labels and ensure a draw pass runs so deferred ConPTY start can measure the canvas.
             _mtr.UpdateTitleBarLabels();
@@ -261,8 +254,60 @@ namespace modterm
             }
 
             _uac = configuration;
+            NormalizeShellConfigurations(_uac);
             _uac.PropertyChanged += UserConfiguration_PropertyChanged;
             _uac.ThemeConfiguration.PropertyChanged += ThemeConfiguration_PropertyChanged;
+        }
+
+        // Migrates legacy "conhost --headless ... -- <shell>" entries to direct shell launches.
+        // The nested conhost was a fixed-size console host that prevented live resize; attaching
+        // the shell directly to our ConPTY lets ResizePseudoConsole reach it.
+        private static void NormalizeShellConfigurations(UserAppConfiguration configuration)
+        {
+            if (configuration is null)
+                return;
+
+            if (configuration.TerminalShell is not null)
+                NormalizeShell(configuration.TerminalShell);
+
+            if (configuration.ShellConfigurations is not null)
+            {
+                foreach (var shell in configuration.ShellConfigurations)
+                    NormalizeShell(shell);
+            }
+        }
+
+        private static void NormalizeShell(Shell shell)
+        {
+            if (shell is null || !string.Equals(shell.Path, "conhost", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            string args = shell.Arguments ?? string.Empty;
+            int sep = args.IndexOf(" -- ", StringComparison.Ordinal);
+            if (sep < 0)
+                return;
+
+            string remainder = args.Substring(sep + 4).Trim();
+            if (string.IsNullOrEmpty(remainder))
+                return;
+
+            string targetPath;
+            string targetArgs;
+            if (remainder.StartsWith("\"", StringComparison.Ordinal))
+            {
+                int end = remainder.IndexOf('"', 1);
+                targetPath = end > 0 ? remainder.Substring(1, end - 1) : remainder.Trim('"');
+                targetArgs = end > 0 ? remainder.Substring(end + 1).Trim() : string.Empty;
+            }
+            else
+            {
+                int space = remainder.IndexOf(' ');
+                targetPath = space > 0 ? remainder.Substring(0, space) : remainder;
+                targetArgs = space > 0 ? remainder.Substring(space + 1).Trim() : string.Empty;
+            }
+
+            shell.Path = targetPath;
+            shell.Arguments = targetArgs;
         }
 
         private void SetThemeConfiguration(ThemeConfiguration themeConfig)
@@ -489,23 +534,9 @@ namespace modterm
 
         private void MainWindow_SizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
-            if (_suppressResizeHandling || _isResizeConfirmationInProgress)
-            {
-                _lastWindowSize = this.AppWindow.Size;
-                return;
-            }
-
-            var currentSize = this.AppWindow.Size;
-            if (!_isResizeSessionActive)
-            {
-                _isResizeSessionActive = true;
-                _resizeStartSize = _lastWindowSize;
-            }
-
-            _resizeEndSize = currentSize;
-            _lastWindowSize = currentSize;
             PersistWindowSize();
 
+            // Coalesce rapid size events during a drag; the live resize runs when they pause.
             _resizeStopTimer.Stop();
             _resizeStopTimer.Start();
         }
@@ -530,44 +561,6 @@ namespace modterm
         }
 
 
-
-        private async Task ConfirmResizeRestartAsync()
-        {
-            if (!_isResizeSessionActive || _isResizeConfirmationInProgress)
-                return;
-
-            _isResizeConfirmationInProgress = true;
-            try
-            {
-                var dialog = new ContentDialog
-                {
-                    Title = "Restart shell to apply resize?",
-                    Content = "Resizing requires restarting the shell. Continue?",
-                    PrimaryButtonText = "OK",
-                    CloseButtonText = "Cancel",
-                    DefaultButton = ContentDialogButton.Close,
-                    XamlRoot = RootGrid.XamlRoot
-                };
-
-                var result = await dialog.ShowAsync();
-                if (result == ContentDialogResult.Primary)
-                {
-                    RestartTerminalForLayoutChange();
-                }
-                else
-                {
-                    _suppressResizeHandling = true;
-                    this.AppWindow.Resize(_resizeStartSize);
-                    _lastWindowSize = _resizeStartSize;
-                    _suppressResizeHandling = false;
-                }
-            }
-            finally
-            {
-                _isResizeSessionActive = false;
-                _isResizeConfirmationInProgress = false;
-            }
-        }
 
         private void RestartTerminalForLayoutChange()
         {
@@ -605,7 +598,7 @@ namespace modterm
                 if (startImmediately)
                 {
                     ConPtyTerminal.Start(nextShell, _mtr.Lines, _mtr.Columns);
-                    _mtr.VtController.ResizeView(_mtr.Columns, _mtr.Lines);
+                    _mtr.Terminal.Resize(_mtr.Columns, _mtr.Lines);
                     ConPtyTerminal.Resize((short)_mtr.Columns, (short)_mtr.Lines);
                 }
                 else

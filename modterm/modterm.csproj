@@ -51,7 +51,7 @@
     <PackageReference Include="WinUIEx" Version="2.9.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\VtNetCore\VtNetCore\VtNetCore.csproj" />
+    <ProjectReference Include="..\..\XtermSharp\XtermSharp\XtermSharp.csproj" />
     <ProjectReference Include="..\modtermTE\modtermTE.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

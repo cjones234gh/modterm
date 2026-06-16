@@ -25,8 +25,8 @@ namespace modterm
                 TerminalShell = new Shell
                 {
                     Name = "powershell",
-                    Path = "conhost",
-                    Arguments = " --headless --width [W] --height [H] -- C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+                    Path = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                    Arguments = ""
                 },
                 TerminalCursor = "bar",
                 ThemeConfiguration = new ThemeConfiguration()
@@ -43,10 +43,10 @@ namespace modterm
                 },
                 ShellConfigurations = new List<Shell>()
                 {
-                    new Shell { Name = "cmd", Path = "conhost", Arguments = " --headless --width [W] --height [H] -- C:\\Windows\\System32\\cmd.exe" },
-                    new Shell { Name = "powershell", Path = "conhost", Arguments = " --headless --width [W] --height [H] -- C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
-                    new Shell { Name = "bash", Path = "conhost", Arguments = " --headless --width [W] --height [H] -- C:\\Program Files\\Git\\bin\\bash.exe" },
-                    new Shell { Name = "wsl", Path = "conhost", Arguments = " --headless --width [W] --height [H] -- wsl.exe" },
+                    new Shell { Name = "cmd", Path = "C:\\Windows\\System32\\cmd.exe", Arguments = "" },
+                    new Shell { Name = "powershell", Path = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", Arguments = "" },
+                    new Shell { Name = "bash", Path = "C:\\Program Files\\Git\\bin\\bash.exe", Arguments = "" },
+                    new Shell { Name = "wsl", Path = "wsl.exe", Arguments = "" },
                 }
             };
         }

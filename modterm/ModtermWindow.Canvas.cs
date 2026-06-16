@@ -123,7 +123,7 @@ namespace modterm
             _mtr.IsSelecting = true;
             _mtr.SelectionStart = currentPoint;
             _mtr.SelectionEnd = _mtr.SelectionStart;
-            _mtr.SelectionTopRow = _mtr.VtController.ViewPort.TopRow - _mtr.ScrollOffset;
+            _mtr.SelectionTopRow = _mtr.TopRow - _mtr.ScrollOffset;
             _mtr.UpdateSelectedText();
             ModtermCanvas.Invalidate();
         }
