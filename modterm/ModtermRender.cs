@@ -360,6 +360,9 @@ namespace modterm
             if (_scrollOffset > 0 && !_isSelecting) _scrollOffset = 0;
             if (data is { Length: > 0 })
             {
+                // #region agent log
+                DebugAgentLog.Write("B", "ModtermRender.OnOutputReceived", "feeding terminal", new { bytes = data.Length });
+                // #endregion
                 _terminal.Feed(data, data.Length);
                 ModtermWinInstance.InvalidateModtermCanvas();
             }
@@ -475,8 +478,18 @@ namespace modterm
 
                 terminal.Start(UserAppConfiguration.TerminalShell, Lines, Columns);
 
+                // #region agent log
+                DebugAgentLog.Write("E", "ModtermRender.ModtermCanvas_Draw", "shell started from draw", new
+                {
+                    Lines,
+                    Columns,
+                    terminal.Started,
+                    shell = UserAppConfiguration.TerminalShell.Path
+                });
+                // #endregion
+
                 _terminal.Resize(Columns, Lines);
-                terminal.Resize((short)Columns, (short)Lines);
+                // CreatePseudoConsole already sized the PTY; avoid an immediate redundant resize.
             }
 
             BeginEffectSequence(sender, args.DrawingSession);

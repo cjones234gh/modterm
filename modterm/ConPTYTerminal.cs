@@ -60,19 +60,32 @@ namespace modterm
 
             try
             {
-                // Pipe for child's STDOUT/STDERR (we read from this)
-                CreatePipe(out _outputRead, out _outputWrite, IntPtr.Zero, 0);
+                // ConPTY-facing pipe ends must be inheritable (MS ConPTY sample). Host-side ends are not.
+                IntPtr saPtr = Marshal.AllocHGlobal(Marshal.SizeOf<SECURITY_ATTRIBUTES>());
+                try
+                {
+                    var sa = new SECURITY_ATTRIBUTES
+                    {
+                        nLength = Marshal.SizeOf<SECURITY_ATTRIBUTES>(),
+                        lpSecurityDescriptor = IntPtr.Zero,
+                        bInheritHandle = true
+                    };
+                    Marshal.StructureToPtr(sa, saPtr, false);
 
-                // Prevent read handle from being inherited by unrelated children
-                if (!SetHandleInformation(_outputRead, HANDLE_FLAG_INHERIT, 0))
-                    throw new Exception("Stdout SetHandleInformation");
+                    // Pipe for child's STDOUT/STDERR (we read from _outputRead; ConPTY uses _outputWrite)
+                    CreatePipe(out _outputRead, out _outputWrite, saPtr, 0);
+                    if (!SetHandleInformation(_outputRead, HANDLE_FLAG_INHERIT, 0))
+                        throw new Exception("Stdout SetHandleInformation");
 
-                // Pipe for child's STDIN (we write to this)
-                CreatePipe(out _inputRead, out _inputWrite, IntPtr.Zero, 0);
-
-                // Prevent write handle from being inherited by unrelated children
-                if (!SetHandleInformation(_inputWrite, HANDLE_FLAG_INHERIT, 0))
-                    throw new Exception("Stdin SetHandleInformation");
+                    // Pipe for child's STDIN (ConPTY uses _inputRead; we write to _inputWrite)
+                    CreatePipe(out _inputRead, out _inputWrite, saPtr, 0);
+                    if (!SetHandleInformation(_inputWrite, HANDLE_FLAG_INHERIT, 0))
+                        throw new Exception("Stdin SetHandleInformation");
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(saPtr);
+                }
 
                 // Create pseudo console at clamped size (caller may pass pre-layout 1x1 from canvas math).
                 var coord = new COORD { X = (short)cols, Y = (short)rows };
@@ -85,7 +98,7 @@ namespace modterm
                 InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref attrListSize);
                 _attrListPtr = Marshal.AllocHGlobal(attrListSize);
 
-                // lpValue must be the HPCON handle (same as Microsoft's ConPTY samples).
+                // lpValue is the HPCON handle itself (MS / ConPtyShell pattern), not a pointer to it.
                 _hPCPtr = IntPtr.Zero;
 
                 // zero out the PI
@@ -96,13 +109,9 @@ namespace modterm
                 startupInfo.StartupInfo.cb = Marshal.SizeOf<STARTUPINFOEX>();
                 startupInfo.lpAttributeList = _attrListPtr;
 
-                // Windows Terminal sets STARTF_USESTDHANDLES with null std handles so a GUI
-                // parent does not duplicate its own (invalid for console) handles into the child.
-                // Do NOT point these at the ConPTY pipe ends — the pseudoconsole supplies I/O.
-                startupInfo.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-                startupInfo.StartupInfo.hStdInput = IntPtr.Zero;
-                startupInfo.StartupInfo.hStdOutput = IntPtr.Zero;
-                startupInfo.StartupInfo.hStdError = IntPtr.Zero;
+                // Do not set STARTF_USESTDHANDLES. With PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE the
+                // child's console I/O is supplied by the pseudoconsole; forcing null std handles
+                // prevents the shell from ever writing to our ConPTY output pipe (runtime proven).
 
                 if (!InitializeProcThreadAttributeList(startupInfo.lpAttributeList, 1, 0, ref attrListSize))
                     throw new Exception("InitializeProcThreadAttributeList failed");
@@ -139,6 +148,8 @@ namespace modterm
                 envVars["COLORTERM"] = "truecolor";
                 envVars["FORCE_COLOR"] = "true";
                 envVars["TERM_PROGRAM"] = "modterm";
+                envVars["LINES"] = rows.ToString();
+                envVars["COLUMNS"] = cols.ToString();
 
                 bool usesUnixLocale = UsesUnixLocaleShell(targetShell);
                 if (usesUnixLocale)
@@ -155,7 +166,7 @@ namespace modterm
                 IntPtr envBlockPtr = BuildEnvironmentBlock(envVars);
                 IntPtr commandLinePtr = Marshal.StringToHGlobalUni(commandLine);
 
-                uint creationFlags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW;
+                uint creationFlags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
                 IntPtr envPtrForCreateProcess = envBlockPtr;
                 IntPtr currentDirectory = IntPtr.Zero;
                 // The pseudoconsole is passed via the attribute list (not handle inheritance),
@@ -168,13 +179,15 @@ namespace modterm
                 {
                     // Create the process with the extended startup info.
                     if (!CreateProcessW(IntPtr.Zero, commandLinePtr, IntPtr.Zero, IntPtr.Zero, inheritHandles,
-                            creationFlags, envPtrForCreateProcess, currentDirectory, ref startupInfo.StartupInfo, out pi))
+                            creationFlags, envPtrForCreateProcess, currentDirectory, ref startupInfo, out pi))
                     {
                         int error = Marshal.GetLastWin32Error();
                         throw new Exception($"CreateProcess failed with error code: {error}");
                     }
 
                     DeleteProcThreadAttributeList(startupInfo.lpAttributeList);
+                    Marshal.FreeHGlobal(_attrListPtr);
+                    _attrListPtr = IntPtr.Zero;
                 }
                 finally
                 {
@@ -193,6 +206,7 @@ namespace modterm
                         _process = Process.GetProcessById(pi.dwProcessId);
                         _process.EnableRaisingEvents = true;
                         _process.Exited += OnProcessExited;
+                        Debug.WriteLine($"Child process {pi.dwProcessId} attached.");
                     }
                     catch (ArgumentException ex)
                     {
@@ -219,6 +233,9 @@ namespace modterm
 
                 // Start async reader
                 _readTask = Task.Run(ReadOutputLoop);
+
+                // Nudge interactive shells to emit their first prompt after ConPTY attach.
+                WriteInput("\r");
             }
             catch
             {
@@ -276,10 +293,13 @@ namespace modterm
                 
         public void WriteInput(string text)
         {
-            if (_inputWrite != null && !_inputWrite.IsClosed)
+            bool closed = _inputWrite == null || _inputWrite.IsClosed;
+            bool ok = false;
+            uint sent = 0;
+            if (!closed)
             {
                 var bytes = Encoding.UTF8.GetBytes(text);
-                WriteFile(_inputWrite, bytes, (uint)bytes.Length, out uint sent, IntPtr.Zero);
+                ok = WriteFile(_inputWrite, bytes, (uint)bytes.Length, out sent, IntPtr.Zero);
             }
         }
 
@@ -292,20 +312,29 @@ namespace modterm
         private async Task ReadOutputLoop()
         {
             Debug.WriteLine("Started ConPTY output reader task.");
+            int readAttempts = 0;
+            int successfulReads = 0;
 
             var buffer = new byte[4096];
             while (!_disposed)
             {
                 try
                 {
+                    readAttempts++;
                     if (_outputRead == null || _outputRead.IsClosed)
+                    {
                         break;
+                    }
                     bool ok = ReadFile(_outputRead, buffer, (uint)buffer.Length, out uint read, IntPtr.Zero);
                     if (!ok)
                     {
                         int err = Marshal.GetLastWin32Error();
-                        // ERROR_BROKEN_PIPE (233) = other end closed; ERROR_NO_DATA (232) = pipe empty with no writers
-                        if (err == 233 || err == 232)
+                        if (readAttempts <= 5 || err == ERROR_BROKEN_PIPE || err == ERROR_NO_DATA)
+                        {
+                            bool procExited = false;
+                            try { procExited = _process?.HasExited ?? false; } catch { }
+                        }
+                        if (err == ERROR_BROKEN_PIPE || err == ERROR_NO_DATA)
                             break;
                         await Task.Delay(50);
                         continue;
@@ -315,6 +344,8 @@ namespace modterm
                         await Task.Delay(10);
                         continue;
                     }
+                    successfulReads++;
+
                     // Pass raw bytes to the VT parser so multi-byte UTF-8 sequences split
                     // across reads are not corrupted by per-chunk string decoding.
                     var chunk = new byte[read];
@@ -328,6 +359,7 @@ namespace modterm
                 }
                 await Task.Delay(10);
             }
+
             Debug.WriteLine("ConPTY output reader loop exited");
 
             if (!_disposeRequested)
@@ -393,7 +425,6 @@ namespace modterm
 
             if (_attrListPtr != IntPtr.Zero)
             {
-                DeleteProcThreadAttributeList(_attrListPtr);
                 Marshal.FreeHGlobal(_attrListPtr);
                 _attrListPtr = IntPtr.Zero;
             }
@@ -464,7 +495,7 @@ namespace modterm
         // P/Invoke for Windows API access
         // Flags and structs for ConPTY and process/thread attributes
         private const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
-        private const uint PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x0002000A;
+        private const uint PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x00020016;
         private const uint CREATE_NO_WINDOW = 0x08000000;
         private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
         private const uint STARTF_USESTDHANDLES = 0x00000100;
@@ -475,6 +506,8 @@ namespace modterm
         private const uint SWP_NOACTIVATE = 0x0010;
         private const uint SWP_ASYNCWINDOWPOS = 0x4000;
         private const uint HANDLE_FLAG_INHERIT = 0x00000001;
+        private const int ERROR_BROKEN_PIPE = 109;
+        private const int ERROR_NO_DATA = 232;
         private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
         private const uint TH32CS_SNAPPROCESS = 0x00000002;
         private const int JobObjectExtendedLimitInformation = 9;
@@ -499,7 +532,7 @@ namespace modterm
         [StructLayout(LayoutKind.Sequential)] private struct PROCESS_INFORMATION { public IntPtr hProcess; public IntPtr hThread; public int dwProcessId; public int dwThreadId; }
         [StructLayout(LayoutKind.Sequential)] private struct STARTUPINFOEX { public STARTUPINFO StartupInfo; public IntPtr lpAttributeList; }
         [StructLayout(LayoutKind.Sequential)] private struct STARTUPINFO { public int cb; public IntPtr lpReserved; public IntPtr lpDesktop; public IntPtr lpTitle; public uint dwX; public uint dwY; public uint dwXSize; public uint dwYSize; public uint dwXCountChars; public uint dwYCountChars; public uint dwFillAttribute; public uint dwFlags; public short wShowWindow; public short cbReserved2; public IntPtr lpReserved2; public IntPtr hStdInput; public IntPtr hStdOutput; public IntPtr hStdError; }
-        [StructLayout(LayoutKind.Sequential)] public struct SECURITY_ATTRIBUTES { public int nLength; public IntPtr lpSecurityDescriptor; public bool bInheritHandle; }
+        [StructLayout(LayoutKind.Sequential)] public struct SECURITY_ATTRIBUTES { public int nLength; public IntPtr lpSecurityDescriptor; [MarshalAs(UnmanagedType.Bool)] public bool bInheritHandle; }
         [StructLayout(LayoutKind.Sequential)] private struct JOBOBJECT_BASIC_LIMIT_INFORMATION
         {
             public long PerProcessUserTimeLimit;
@@ -541,11 +574,12 @@ namespace modterm
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool SetInformationJobObject(IntPtr hJob, int JobObjectInfoClass, IntPtr lpJobObjectInfo, uint cbJobObjectInfoLength);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool AssignProcessToJobObject(IntPtr hJob, IntPtr hProcess);
         [DllImport("kernel32.dll", EntryPoint = "CreateProcessW", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool CreateProcessW(IntPtr lpApplicationName, IntPtr lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, IntPtr lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+        private static extern bool CreateProcessW(IntPtr lpApplicationName, IntPtr lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, IntPtr lpCurrentDirectory, ref STARTUPINFOEX lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool InitializeProcThreadAttributeList(IntPtr lpAttributeList, int dwAttributeCount, uint dwFlags, ref IntPtr lpSize);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool UpdateProcThreadAttribute(IntPtr lpAttributeList, uint dwFlags, IntPtr Attribute, IntPtr lpValue, IntPtr cbSize, IntPtr lpPreviousValue, IntPtr lpReturnSize);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool ReadFile(SafeFileHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool SetHandleInformation(SafeFileHandle hObject, uint dwMask, uint dwFlags);
+        [DllImport("kernel32.dll", SetLastError = true)] private static extern bool GetHandleInformation(SafeFileHandle hObject, out uint lpdwFlags);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool WriteFile(SafeHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern bool Process32FirstW(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
