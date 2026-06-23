@@ -612,7 +612,7 @@ namespace modterm
             if (_cursorVisible && _scrollOffset == 0 && !_terminal.CursorHidden)
             {
                 float cursorX = _leftTextPadding + (float)(_terminal.Buffer.X * _measuredCharWidth);
-                float cursorY = (float)(_terminal.Buffer.Y * (CurrentFontSize + _lineHeightPadding)) + _topTextPadding;
+                float cursorY = (float)(_terminal.Buffer.Y * (CurrentFontSize + _lineHeightPadding)) + _topTextPadding + 2;
                 //args.DrawingSession.DrawText("|", cursorX, cursorY, _outputColor, _currentTextFormat);
                 args.DrawingSession.FillRectangle(cursorX, cursorY, _measuredCharWidth, (float)lineHeight, _outputColor);
             }
