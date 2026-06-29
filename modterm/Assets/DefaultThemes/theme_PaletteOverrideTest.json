@@ -1,36 +1,54 @@
 {
-    "Name": "PaletteOverrideTest",
-    "OutputColor": {
-      "A": 255,
-      "R": 100,
-      "G": 255,
-      "B": 0
-    },
-    "OutputBlurColor": {
-      "A": 255,
-      "R": 100,
-      "G": 255,
-      "B": 0
-    },
-    "LabelColor": {
-      "A": 255,
-      "R": 100,
-      "G": 255,
-      "B": 0
-    },
-    "LabelBlurColor": {
-      "A": 255,
-      "R": 100,
-      "G": 255,
-      "B": 0
-    },
-    "BlurAmount": 7,
-    "WindowOpacityPct": 80,
-    "WindowColor": {
-      "A": 255,
-      "R": 0,
-      "G": 0,
-      "B": 0
-    },
-    "BackdropKind": 1
+  "Name": "PaletteOverrideTest",
+  "OutputColor": {
+    "A": 255,
+    "R": 180,
+    "G": 220,
+    "B": 255
+  },
+  "OutputBlurColor": {
+    "A": 255,
+    "R": 94,
+    "G": 180,
+    "B": 255
+  },
+  "LabelColor": {
+    "A": 255,
+    "R": 155,
+    "G": 210,
+    "B": 255
+  },
+  "LabelBlurColor": {
+    "A": 255,
+    "R": 77,
+    "G": 140,
+    "B": 255
+  },
+  "BlurAmount": 7,
+  "WindowOpacityPct": 80,
+  "WindowColor": {
+    "A": 255,
+    "R": 8,
+    "G": 12,
+    "B": 28
+  },
+  "BackdropKind": 1,
+  "Palette": {
+    "Black": { "A": 255, "R": 10, "G": 16, "B": 36 },
+    "Red": { "A": 255, "R": 45, "G": 27, "B": 78 },
+    "Green": { "A": 255, "R": 11, "G": 74, "B": 48 },
+    "Yellow": { "A": 255, "R": 10, "G": 66, "B": 72 },
+    "Blue": { "A": 255, "R": 20, "G": 48, "B": 102 },
+    "Magenta": { "A": 255, "R": 59, "G": 31, "B": 110 },
+    "Cyan": { "A": 255, "R": 12, "G": 88, "B": 102 },
+    "White": { "A": 255, "R": 58, "G": 74, "B": 96 },
+    "BrightBlack": { "A": 255, "R": 61, "G": 45, "B": 102 },
+    "BrightRed": { "A": 255, "R": 107, "G": 76, "B": 154 },
+    "BrightGreen": { "A": 255, "R": 46, "G": 204, "B": 113 },
+    "BrightYellow": { "A": 255, "R": 45, "G": 212, "B": 191 },
+    "BrightBlue": { "A": 255, "R": 77, "G": 166, "B": 255 },
+    "BrightMagenta": { "A": 255, "R": 155, "G": 109, "B": 255 },
+    "BrightCyan": { "A": 255, "R": 94, "G": 234, "B": 212 },
+    "BrightWhite": { "A": 255, "R": 212, "G": 228, "B": 255 }
   }
+}

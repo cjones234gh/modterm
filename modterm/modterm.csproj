@@ -25,6 +25,7 @@
     <Content Remove="Assets\DefaultThemes\theme_Greenmica.json" />
     <Content Remove="Assets\DefaultThemes\theme_Mica Me Crazy.json" />
     <Content Remove="Assets\DefaultThemes\theme_Paper Edition.json" />
+    <Content Remove="Assets\DefaultThemes\theme_PaletteOverrideTest.json" />
     <Content Remove="Assets\DefaultThemes\theme_Smoke.json" />
     <Content Remove="Assets\DefaultThemes\theme_Violet Fog.json" />
   </ItemGroup>
@@ -119,6 +120,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\DefaultThemes\theme_Paper Edition.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_PaletteOverrideTest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\DefaultThemes\theme_Smoke.json">

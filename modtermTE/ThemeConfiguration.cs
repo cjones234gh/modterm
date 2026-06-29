@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using Windows.UI;
 
@@ -22,6 +23,7 @@ namespace modtermTE
         private Color _windowColor;
         public BackdropKind BackdropKind { get => _backdropKind; set { _backdropKind = value; OnPropertyChanged(nameof(BackdropKind)); } }
         private BackdropKind _backdropKind;
+        public Dictionary<string, Color>? Palette { get; set; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

@@ -65,6 +65,7 @@ namespace modterm
         private int _selectionTopRow = 0;
         private byte _alpha;
         private Color _windowColor;
+        private Color?[] _terminalPaletteOverrides = new Color?[16];
         private SolidColorBrush _backgroundBrush = new SolidColorBrush(Colors.Red);
         private bool _effectSequenceStarted = false;
         private List<DrawTextCall> _effectSequence = new List<DrawTextCall>();
@@ -224,8 +225,26 @@ namespace modterm
             _blurAmount = config.BlurAmount;
             OpacityPct = config.WindowOpacityPct;
             _windowColor = config.WindowColor;
+            ApplyTerminalPaletteOverrides(config.Palette);
             ApplySystemBackdrop(config.BackdropKind, wInstance);
             _backgroundBrush.Color = GetBackgroundArgb();
+        }
+
+        private void ApplyTerminalPaletteOverrides(Dictionary<string, Color>? palette)
+        {
+            Array.Clear(_terminalPaletteOverrides, 0, _terminalPaletteOverrides.Length);
+            if (palette is null || palette.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < TerminalPalette.StandardNames.Length; i++)
+            {
+                if (TerminalPalette.TryGetColor(palette, i, out Color color))
+                {
+                    _terminalPaletteOverrides[i] = color;
+                }
+            }
         }
 
         public SolidColorBrush GetBackgroundBrush()
@@ -843,9 +862,16 @@ namespace modterm
         }
 
         // Maps a 0-255 palette index to its RGB color; default/inverted-default sentinels
-        // (256/257) fall back to the supplied theme color.
+        // (256/257) fall back to the supplied theme color. Indices 0-15 may be overridden
+        // by the active theme's optional Palette dictionary.
         private Color ResolvePaletteColor(int index, Color themeDefault)
         {
+            if (index >= 0 && index < _terminalPaletteOverrides.Length
+                && _terminalPaletteOverrides[index] is Color overrideColor)
+            {
+                return overrideColor;
+            }
+
             var palette = XtermSharp.Color.DefaultAnsiColors;
             if (index >= 0 && index < palette.Count)
             {

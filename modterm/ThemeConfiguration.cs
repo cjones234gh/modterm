@@ -1,6 +1,6 @@
 ﻿using Windows.UI;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.Reflection.Metadata.Ecma335;
 
 namespace modterm
 {
@@ -23,6 +23,7 @@ namespace modterm
         private Color _windowColor;
         public BackdropKind BackdropKind { get => _backdropKind; set { _backdropKind = value; OnPropertyChanged(nameof(BackdropKind)); } }
         private BackdropKind _backdropKind;
+        public Dictionary<string, Color>? Palette { get; set; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
