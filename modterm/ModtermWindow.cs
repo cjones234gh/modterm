@@ -696,19 +696,19 @@ namespace modterm
             }
             _flyout.Items.Add(themeItem);
 
-            var launchThemeEditorItem = new MenuFlyoutItem { Text = "Launch Theme Editor" };
+            var launchThemeEditorItem = new MenuFlyoutItem { Text = "Launch Configuration and Theme Editor" };
             launchThemeEditorItem.Click += (_, __) => LaunchThemeEditor();
             _flyout.Items.Add(launchThemeEditorItem);
 
-            var resetDefaultsItem = new MenuFlyoutItem { Text = "Reset Default Configuration" };
+            var resetDefaultsItem = new MenuFlyoutItem { Text = "Reset Default Configuration Files" };
             resetDefaultsItem.Click += (_, __) => ResetDefaultConfiguration();
             _flyout.Items.Add(resetDefaultsItem);
 
-            var editConfigItem = new MenuFlyoutItem { Text = "Edit Configuration" };
+            var editConfigItem = new MenuFlyoutItem { Text = "Edit Configuration File" };
             editConfigItem.Click += (_, __) => OpenConfigurationInNotepad();
             _flyout.Items.Add(editConfigItem);
 
-            var reloadConfigItem = new MenuFlyoutItem { Text = "Reload Configuration" };
+            var reloadConfigItem = new MenuFlyoutItem { Text = "Reload Configuration File" };
             reloadConfigItem.Click += async (_, __) => await ReloadConfigurationFromDiskAsync();
             _flyout.Items.Add(reloadConfigItem);
         }
