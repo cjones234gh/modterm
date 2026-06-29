@@ -46,7 +46,7 @@ namespace modtermTE
 
             SettingsPanel.Children.Add(CreateSectionHeader("Terminal"));
             SettingsPanel.Children.Add(CreateSettingRow("Terminal Font", CreateTerminalFontCombo()));
-            SettingsPanel.Children.Add(CreateSettingRow("Control Font", CreateControlFontCombo()));
+            SettingsPanel.Children.Add(CreateSettingRow("Label Font", CreateLabelFontCombo()));
             SettingsPanel.Children.Add(CreateSettingRow("Shell", CreateShellCombo()));
             SettingsPanel.Children.Add(CreateSettingRow("Cursor", CreateCursorDisplay()));
 
@@ -58,7 +58,7 @@ namespace modtermTE
                 CreateColorPickerButton(theme.OutputBlurColor, color => theme.OutputBlurColor = color)));
             SettingsPanel.Children.Add(CreateSettingRow("Label Color",
                 CreateColorPickerButton(theme.LabelColor, color => theme.LabelColor = color)));
-            SettingsPanel.Children.Add(CreateSettingRow("Label Blur",
+            SettingsPanel.Children.Add(CreateSettingRow("Label Blur Color",
                 CreateColorPickerButton(theme.LabelBlurColor, color => theme.LabelBlurColor = color)));
             SettingsPanel.Children.Add(CreateSettingRow("Blur Amount", CreateBlurAmountBox(theme.BlurAmount)));
             SettingsPanel.Children.Add(CreateSettingRow("Opacity", CreateOpacitySlider(theme.WindowOpacityPct)));
@@ -88,7 +88,7 @@ namespace modtermTE
             return _terminalFontCombo;
         }
 
-        private ComboBox CreateControlFontCombo()
+        private ComboBox CreateLabelFontCombo()
         {
             _labelFontCombo = CreateFontCombo(_configuration.LabelFont, font =>
             {

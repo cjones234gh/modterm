@@ -19,7 +19,7 @@
               Height="33"
               VerticalAlignment="Top"
               Background="Transparent">
-            <TextBlock Text="modtermTE - Theme Editor"
+            <TextBlock Text="modtermTE - Configuration and Theme Editor"
                        FontSize="16"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />
