@@ -97,9 +97,9 @@ namespace modterm
             }
             else
             {
+                CopyDefaultThemeFiles(overwriteExisting: false);
                 SetUserConfiguration(GetDefaultAppConfiguration());
                 WriteConfigurationToDisk(_uac);
-                WriteDefaultThemeConfigurations(overwriteExisting: false);
             }
 
             LoadThemeNames();
@@ -176,24 +176,49 @@ namespace modterm
             File.WriteAllText(_userAppConfigPath, json);
         }
 
-        private void WriteDefaultThemeConfigurations(bool overwriteExisting)
-        {
-            foreach (var themeConfig in GetDefaultThemeConfigurations())
-            {
-                WriteThemeConfigurationToDisk(themeConfig, overwriteExisting);
-            }
-        }
+        private static string GetBundledDefaultThemesDirectory()
+            => Path.Combine(AppContext.BaseDirectory, "Assets", "DefaultThemes");
 
-        private void WriteThemeConfigurationToDisk(ThemeConfiguration themeConfig, bool overwriteExisting = true)
+        private void CopyDefaultThemeFiles(bool overwriteExisting)
         {
-            string themePath = Path.Combine(_userConfigDirectory, $"theme_{themeConfig.Name}.json");
-            if (!overwriteExisting && File.Exists(themePath))
+            string sourceDirectory = GetBundledDefaultThemesDirectory();
+            if (!Directory.Exists(sourceDirectory))
             {
                 return;
             }
 
-            string themeJson = JsonSerializer.Serialize(themeConfig, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(themePath, themeJson);
+            foreach (string sourcePath in Directory.GetFiles(sourceDirectory, "theme_*.json"))
+            {
+                string destinationPath = Path.Combine(_userConfigDirectory, Path.GetFileName(sourcePath));
+                if (!overwriteExisting && File.Exists(destinationPath))
+                {
+                    continue;
+                }
+
+                File.Copy(sourcePath, destinationPath, overwriteExisting);
+            }
+        }
+
+        private ThemeConfiguration LoadThemeConfiguration(string themeName)
+        {
+            string fileName = $"theme_{themeName}.json";
+            string userThemePath = Path.Combine(_userConfigDirectory, fileName);
+            string themePath = File.Exists(userThemePath)
+                ? userThemePath
+                : Path.Combine(GetBundledDefaultThemesDirectory(), fileName);
+
+            if (!File.Exists(themePath))
+            {
+                throw new FileNotFoundException($"Theme file not found: {fileName}", themePath);
+            }
+
+            var theme = JsonSerializer.Deserialize<ThemeConfiguration>(File.ReadAllText(themePath));
+            if (theme is null)
+            {
+                throw new InvalidDataException($"Theme file deserialized to null: {fileName}");
+            }
+
+            return theme;
         }
 
         private void LoadThemeNames()
@@ -349,11 +374,11 @@ namespace modterm
         private void ResetDefaultConfiguration()
         {
             _saveConfiguration = true;
+            CopyDefaultThemeFiles(overwriteExisting: true);
             SetUserConfiguration(GetDefaultAppConfiguration());
             ApplyCurrentUserConfiguration(applyWindowBounds: false);
             _mtr.InitializeDisplayLabels();
             RestartTerminalForLayoutChange();
-            WriteDefaultThemeConfigurations(overwriteExisting: true);
             LoadThemeNames();
             InitializeFlyouts();
             _mtr.UpdateTitleBarLabels();
