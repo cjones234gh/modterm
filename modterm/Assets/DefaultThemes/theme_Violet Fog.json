@@ -1,0 +1,36 @@
+{
+  "Name": "Purpleser",
+  "OutputColor": {
+    "A": 255,
+    "R": 80,
+    "G": 255,
+    "B": 140
+  },
+  "OutputBlurColor": {
+    "A": 255,
+    "R": 0,
+    "G": 238,
+    "B": 255
+  },
+  "LabelColor": {
+    "A": 255,
+    "R": 255,
+    "G": 79,
+    "B": 193
+  },
+  "LabelBlurColor": {
+    "A": 255,
+    "R": 51,
+    "G": 51,
+    "B": 255
+  },
+  "BlurAmount": 7,
+  "WindowOpacityPct": 20,
+  "WindowColor": {
+    "A": 255,
+    "R": 0,
+    "G": 0,
+    "B": 102
+  },
+  "BackdropKind": 0
+}

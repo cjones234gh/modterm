@@ -1,0 +1,36 @@
+{
+  "Name": "MicaMeCrazy",
+  "OutputColor": {
+    "A": 255,
+    "R": 31,
+    "G": 255,
+    "B": 0
+  },
+  "OutputBlurColor": {
+    "A": 255,
+    "R": 0,
+    "G": 255,
+    "B": 184
+  },
+  "LabelColor": {
+    "A": 255,
+    "R": 154,
+    "G": 17,
+    "B": 255
+  },
+  "LabelBlurColor": {
+    "A": 255,
+    "R": 254,
+    "G": 0,
+    "B": 255
+  },
+  "BlurAmount": 15,
+  "WindowOpacityPct": 0,
+  "WindowColor": {
+    "A": 255,
+    "R": 0,
+    "G": 0,
+    "B": 0
+  },
+  "BackdropKind": 1
+}

@@ -1,0 +1,36 @@
+{
+  "Name": "BlueMatrice",
+  "OutputColor": {
+    "A": 255,
+    "R": 90,
+    "G": 255,
+    "B": 90
+  },
+  "OutputBlurColor": {
+    "A": 255,
+    "R": 90,
+    "G": 45,
+    "B": 240
+  },
+  "LabelColor": {
+    "A": 255,
+    "R": 100,
+    "G": 255,
+    "B": 0
+  },
+  "LabelBlurColor": {
+    "A": 255,
+    "R": 90,
+    "G": 45,
+    "B": 240
+  },
+  "BlurAmount": 12,
+  "WindowOpacityPct": 40,
+  "WindowColor": {
+    "A": 255,
+    "R": 0,
+    "G": 0,
+    "B": 0
+  },
+  "BackdropKind": 0
+}

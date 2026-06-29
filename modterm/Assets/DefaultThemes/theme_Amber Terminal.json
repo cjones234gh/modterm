@@ -1,0 +1,36 @@
+{
+  "Name": "WarmSun",
+  "OutputColor": {
+    "A": 255,
+    "R": 255,
+    "G": 171,
+    "B": 11
+  },
+  "OutputBlurColor": {
+    "A": 255,
+    "R": 255,
+    "G": 165,
+    "B": 10
+  },
+  "LabelColor": {
+    "A": 255,
+    "R": 255,
+    "G": 174,
+    "B": 0
+  },
+  "LabelBlurColor": {
+    "A": 255,
+    "R": 255,
+    "G": 240,
+    "B": 11
+  },
+  "BlurAmount": 15,
+  "WindowOpacityPct": 60,
+  "WindowColor": {
+    "A": 255,
+    "R": 48,
+    "G": 15,
+    "B": 5
+  },
+  "BackdropKind": 1
+}

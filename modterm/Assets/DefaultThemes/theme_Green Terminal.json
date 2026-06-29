@@ -1,0 +1,36 @@
+{
+  "Name": "Matrix",
+  "OutputColor": {
+    "A": 255,
+    "R": 100,
+    "G": 255,
+    "B": 0
+  },
+  "OutputBlurColor": {
+    "A": 255,
+    "R": 100,
+    "G": 255,
+    "B": 0
+  },
+  "LabelColor": {
+    "A": 255,
+    "R": 100,
+    "G": 255,
+    "B": 0
+  },
+  "LabelBlurColor": {
+    "A": 255,
+    "R": 100,
+    "G": 255,
+    "B": 0
+  },
+  "BlurAmount": 7,
+  "WindowOpacityPct": 80,
+  "WindowColor": {
+    "A": 255,
+    "R": 0,
+    "G": 0,
+    "B": 0
+  },
+  "BackdropKind": 1
+}

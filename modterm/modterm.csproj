@@ -17,6 +17,18 @@
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Content Remove="Assets\DefaultThemes\theme_Amber Terminal.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Aqua.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Deep Blue.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Eggplant.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Green Terminal.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Greenmica.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Mica Me Crazy.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Paper Edition.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Smoke.json" />
+    <Content Remove="Assets\DefaultThemes\theme_Violet Fog.json" />
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="Assets\Fonts\BlexMonoNerdFontMono-Bold.ttf" />
     <None Remove="Assets\Fonts\BlexMonoNerdFontMono-Regular.ttf" />
   </ItemGroup>
@@ -64,9 +76,7 @@
     <ItemGroup>
       <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(_ModtermTeOutput)"
-          DestinationFiles="@(_ModtermTeOutput->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
   <Target Name="CopyThemeEditorToPublish" AfterTargets="Publish">
@@ -76,9 +86,7 @@
     <ItemGroup>
       <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(_ModtermTeOutput)"
-          DestinationFiles="@(_ModtermTeOutput->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
   <ItemGroup>
     <Content Update="Assets\Fonts\BlexMonoNerdFontMono-Bold.ttf">
@@ -89,6 +97,36 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <None Update="Assets\DefaultThemes\theme_Amber Terminal.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Aqua.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Deep Blue.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Eggplant.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Green Terminal.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Greenmica.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Mica Me Crazy.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Paper Edition.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Smoke.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\DefaultThemes\theme_Violet Fog.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="test-bash.sh">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

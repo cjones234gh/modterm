@@ -1,0 +1,36 @@
+{
+  "Name": "MicaGreenTerm",
+  "OutputColor": {
+    "A": 255,
+    "R": 64,
+    "G": 255,
+    "B": 103
+  },
+  "OutputBlurColor": {
+    "A": 255,
+    "R": 32,
+    "G": 255,
+    "B": 1
+  },
+  "LabelColor": {
+    "A": 255,
+    "R": 144,
+    "G": 255,
+    "B": 117
+  },
+  "LabelBlurColor": {
+    "A": 255,
+    "R": 8,
+    "G": 255,
+    "B": 41
+  },
+  "BlurAmount": 6,
+  "WindowOpacityPct": 81,
+  "WindowColor": {
+    "A": 255,
+    "R": 0,
+    "G": 10,
+    "B": 0
+  },
+  "BackdropKind": 1
+}
