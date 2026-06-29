@@ -323,13 +323,19 @@ namespace modterm
             {
                 var position = _uac.LastWindowLocation;
                 var size = _uac.WindowSize;
-                var rectInt32 = new Windows.Graphics.RectInt32
+                var rectInt32 = WindowPlacement.EnsureVisible(new RectInt32
                 {
                     X = (int)position.X,
                     Y = (int)position.Y,
                     Width = (int)size.Width,
                     Height = (int)size.Height
-                };
+                });
+
+                if (rectInt32.X != (int)position.X || rectInt32.Y != (int)position.Y)
+                {
+                    _uac.LastWindowLocation = new Point(rectInt32.X, rectInt32.Y);
+                }
+
                 this.AppWindow.MoveAndResize(rectInt32);
             }
 

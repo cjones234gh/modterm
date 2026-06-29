@@ -533,6 +533,14 @@ namespace modterm
                     {
                         (fg, bg) = (bg, fg);
                         (fgDefault, bgDefault) = (bgDefault, fgDefault);
+
+                        // Selection inversion swaps default fg/bg indices too, which would
+                        // suppress the highlight fill. Treat the inverted colors as explicit.
+                        if (inverted)
+                        {
+                            fgDefault = false;
+                            bgDefault = false;
+                        }
                     }
 
                     if ((flags & XtermSharp.FLAGS.INVISIBLE) != 0)
