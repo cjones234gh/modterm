@@ -9,7 +9,7 @@ namespace modterm
     /// Keys in theme JSON are case-insensitive; bright slots also accept snake_case aliases
     /// (e.g. "bright_green").
     /// </summary>
-    internal static class TerminalPalette
+    public static class TerminalPalette
     {
         public static readonly string[] StandardNames =
         {

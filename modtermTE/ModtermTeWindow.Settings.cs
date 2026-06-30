@@ -24,6 +24,7 @@ namespace modtermTE
         private Slider? _opacitySlider;
         private TextBlock? _opacityValueText;
         private ComboBox? _backdropCombo;
+        private StackPanel? _palettePanel;
         private bool _settingsUiReady;
 
         private void InitializeSettings()
@@ -65,6 +66,11 @@ namespace modtermTE
             SettingsPanel.Children.Add(CreateSettingRow("Window Color",
                 CreateColorPickerButton(theme.WindowColor, color => theme.WindowColor = color)));
             SettingsPanel.Children.Add(CreateSettingRow("Backdrop", CreateBackdropCombo(theme.BackdropKind)));
+
+            // Palette Mapping section using modern WinUI Expander for collapsible palette editor
+            SettingsPanel.Children.Add(CreateSectionHeader("Palette Mapping"));
+            SettingsPanel.Children.Add(CreatePaletteMappingControl(theme));
+
             _settingsUiReady = true;
         }
 
@@ -426,5 +432,150 @@ namespace modtermTE
         }
 
         private sealed record BackdropOption(BackdropKind Kind, string Label);
+
+        private static Color GetDefaultAnsiColor(string name)
+        {
+            return name switch
+            {
+                "Black" => Color.FromArgb(255, 12, 12, 12),
+                "Red" => Color.FromArgb(255, 197, 15, 21),
+                "Green" => Color.FromArgb(255, 19, 161, 14),
+                "Yellow" => Color.FromArgb(255, 193, 156, 0),
+                "Blue" => Color.FromArgb(255, 0, 55, 218),
+                "Magenta" => Color.FromArgb(255, 136, 23, 152),
+                "Cyan" => Color.FromArgb(255, 58, 150, 221),
+                "White" => Color.FromArgb(255, 204, 204, 204),
+                "BrightBlack" => Color.FromArgb(255, 118, 118, 118),
+                "BrightRed" => Color.FromArgb(255, 231, 72, 86),
+                "BrightGreen" => Color.FromArgb(255, 22, 198, 12),
+                "BrightYellow" => Color.FromArgb(255, 249, 241, 165),
+                "BrightBlue" => Color.FromArgb(255, 59, 120, 255),
+                "BrightMagenta" => Color.FromArgb(255, 180, 0, 158),
+                "BrightCyan" => Color.FromArgb(255, 97, 214, 214),
+                "BrightWhite" => Color.FromArgb(255, 242, 242, 242),
+                _ => Microsoft.UI.Colors.Gray
+            };
+        }
+
+        /// <summary>
+        /// Creates a modern WinUI Expander containing the Palette Mapping interface.
+        /// Left: fixed default ANSI color name + square swatch. Right: color picker (shows current override, updates live).
+        /// Updates live and supports serialization of the Dictionary in ThemeConfiguration.
+        /// </summary>
+        private FrameworkElement CreatePaletteMappingControl(ThemeConfiguration theme)
+        {
+            if (theme.Palette is null)
+            {
+                theme.Palette = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+                // Initialize with a basic set of defaults (can be overridden by loaded theme)
+                string[] standardNames = {
+                    "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
+                    "BrightBlack", "BrightRed", "BrightGreen", "BrightYellow",
+                    "BrightBlue", "BrightMagenta", "BrightCyan", "BrightWhite"
+                };
+                foreach (var name in standardNames)
+                {
+                    if (!theme.Palette.ContainsKey(name))
+                    {
+                        theme.Palette[name] = Microsoft.UI.Colors.Black; // fallback; will be updated by loaded JSON or user
+                    }
+                }
+            }
+
+            _palettePanel = new StackPanel { Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
+
+            string[] paletteNames = {
+                "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
+                "BrightBlack", "BrightRed", "BrightGreen", "BrightYellow",
+                "BrightBlue", "BrightMagenta", "BrightCyan", "BrightWhite"
+            };
+            for (int i = 0; i < paletteNames.Length; i++)
+            {
+                string name = paletteNames[i];
+                _palettePanel.Children.Add(CreatePaletteRow(theme, i, name));
+            }
+
+            var expander = new Expander
+            {
+                Header = "Terminal ANSI Palette Overrides",
+                Content = _palettePanel,
+                IsExpanded = true,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Margin = new Thickness(0, 4, 0, 16)
+            };
+
+            return expander;
+        }
+
+        private FrameworkElement CreatePaletteRow(ThemeConfiguration theme, int index, string name)
+        {
+            var grid = new Grid
+            {
+                MinHeight = 48,
+                Padding = new Thickness(0, 8, 0, 8),
+                ColumnSpacing = 16
+            };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) }); // Label + swatch area
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });   // Color picker
+
+            // Left side: Name label and color swatch
+            var leftPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 12,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var nameText = new TextBlock
+            {
+                Text = name,
+                Width = 100,
+                VerticalAlignment = VerticalAlignment.Center,
+                Style = (Style)Application.Current.Resources["BodyTextBlockStyle"]
+            };
+
+            // Fixed default ANSI color swatch (for visual reference); picker on right shows/sets the override
+            Color currentColor = theme.Palette!.TryGetValue(name, out Color c) ? c : GetDefaultAnsiColor(name);
+            Color defaultAnsiColor = GetDefaultAnsiColor(name);
+            var swatch = new Border
+            {
+                Width = 24,
+                Height = 24,
+                CornerRadius = new CornerRadius(4),
+                BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray) { Opacity = 0.6 },
+                BorderThickness = new Thickness(1),
+                Background = new SolidColorBrush(defaultAnsiColor),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            leftPanel.Children.Add(nameText);
+            leftPanel.Children.Add(swatch);
+            Grid.SetColumn(leftPanel, 0);
+
+            // Right side: Color picker button (reuses existing helper logic)
+            var pickerButton = CreateColorPickerButton(
+                currentColor,
+                color =>
+                {
+                    if (theme.Palette is null)
+                    {
+                        theme.Palette = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+                    }
+                    theme.Palette[name] = color;
+                    NotifyConfigurationChanged();
+                });
+
+            Grid.SetColumn(pickerButton, 1);
+
+            grid.Children.Add(leftPanel);
+            grid.Children.Add(pickerButton);
+
+            return new Border
+            {
+                BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray) { Opacity = 0.1 },
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Child = grid
+            };
+        }
     }
 }
