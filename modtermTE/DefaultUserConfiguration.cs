@@ -35,25 +35,7 @@ namespace modtermTE
                     WindowOpacityPct = 20,
                     WindowColor = ColorFromHex("#000066"),
                     BackdropKind = BackdropKind.Blurred,
-                    Palette = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        ["Black"] = ColorFromHex("#0C0C0C"),
-                        ["Red"] = ColorFromHex("#C50F15"),
-                        ["Green"] = ColorFromHex("#13A10E"),
-                        ["Yellow"] = ColorFromHex("#C19C00"),
-                        ["Blue"] = ColorFromHex("#0037DA"),
-                        ["Magenta"] = ColorFromHex("#881798"),
-                        ["Cyan"] = ColorFromHex("#3A96DD"),
-                        ["White"] = ColorFromHex("#CCCCCC"),
-                        ["BrightBlack"] = ColorFromHex("#767676"),
-                        ["BrightRed"] = ColorFromHex("#E74856"),
-                        ["BrightGreen"] = ColorFromHex("#16C60C"),
-                        ["BrightYellow"] = ColorFromHex("#F9F1A5"),
-                        ["BrightBlue"] = ColorFromHex("#3B78FF"),
-                        ["BrightMagenta"] = ColorFromHex("#B4009E"),
-                        ["BrightCyan"] = ColorFromHex("#61D6D6"),
-                        ["BrightWhite"] = ColorFromHex("#F2F2F2")
-                    }
+                    Palette = null // Let CreatePaletteMappingControl() initialize with GetDefaultAnsiColor() for consistency
                 },
                 ShellConfigurations =
                 [

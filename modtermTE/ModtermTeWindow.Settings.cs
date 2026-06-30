@@ -467,18 +467,19 @@ namespace modtermTE
             if (theme.Palette is null)
             {
                 theme.Palette = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
-                // Initialize with a basic set of defaults (can be overridden by loaded theme)
-                string[] standardNames = {
-                    "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
-                    "BrightBlack", "BrightRed", "BrightGreen", "BrightYellow",
-                    "BrightBlue", "BrightMagenta", "BrightCyan", "BrightWhite"
-                };
-                foreach (var name in standardNames)
+            }
+            // Ensure all 16 keys exist (merges loaded theme values with any missing defaults). This prevents
+            // all-black initialization and ensures color pickers start with the correct current value.
+            string[] standardNames = {
+                "Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White",
+                "BrightBlack", "BrightRed", "BrightGreen", "BrightYellow",
+                "BrightBlue", "BrightMagenta", "BrightCyan", "BrightWhite"
+            };
+            foreach (var name in standardNames)
+            {
+                if (!theme.Palette.ContainsKey(name))
                 {
-                    if (!theme.Palette.ContainsKey(name))
-                    {
-                        theme.Palette[name] = Microsoft.UI.Colors.Black; // fallback; will be updated by loaded JSON or user
-                    }
+                    theme.Palette[name] = GetDefaultAnsiColor(name);
                 }
             }
 
