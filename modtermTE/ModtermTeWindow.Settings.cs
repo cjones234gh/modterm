@@ -25,6 +25,7 @@ namespace modtermTE
         private TextBlock? _opacityValueText;
         private ComboBox? _backdropCombo;
         private StackPanel? _palettePanel;
+        private TextBlock? _themeHeader = null!;
         private bool _settingsUiReady;
 
         private void InitializeSettings()
@@ -51,7 +52,8 @@ namespace modtermTE
             SettingsPanel.Children.Add(CreateSettingRow("Shell", CreateShellCombo()));
             SettingsPanel.Children.Add(CreateSettingRow("Cursor", CreateCursorDisplay()));
 
-            SettingsPanel.Children.Add(CreateSectionHeader("Theme"));
+            _themeHeader = CreateSectionHeader("Theme");
+            SettingsPanel.Children.Add(_themeHeader);
             var theme = _configuration.ThemeConfiguration;
             SettingsPanel.Children.Add(CreateSettingRow("Output Color",
                 CreateColorPickerButton(theme.OutputColor, color => theme.OutputColor = color)));

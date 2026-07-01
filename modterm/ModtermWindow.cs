@@ -528,6 +528,9 @@ namespace modterm
 
         private void LaunchThemeEditor()
         {
+            // Persist current configuration (including active theme + palette) so modtermTE loads the user's current state.
+            SaveConfig();
+
             string baseDirectory = AppContext.BaseDirectory;
             string themeEditorPath = Path.Combine(baseDirectory, "modtermTE.exe");
             string themeEditorDllPath = Path.Combine(baseDirectory, "modtermTE.dll");

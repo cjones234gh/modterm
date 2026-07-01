@@ -19,8 +19,7 @@
               Height="33"
               VerticalAlignment="Top"
               Background="Transparent">
-            <TextBlock Text="modtermTE - Configuration and Theme Editor"
-                       FontSize="16"
+            <TextBlock Text="Modterm - Configuration and Theme Editor"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />
         </Grid>

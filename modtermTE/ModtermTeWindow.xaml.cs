@@ -1,6 +1,7 @@
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
+using System;
 
 namespace modtermTE
 {
@@ -20,11 +21,15 @@ namespace modtermTE
             SetTitleBar(AppTitleBar);
 
             this.AppWindow.Resize(new Windows.Graphics.SizeInt32(700, 925));
-            // set the window title
-            this.AppWindow.Title = "modtermTE - Theme Editor";
 
             _liveConfigurationPublisher = new LiveConfigurationPublisher(DispatcherQueue, _configurationStore);
             InitializeSettings();
+
+            // Set dynamic title using the loaded theme name (persisted by modterm before launch).
+            // Note: _configuration is populated in the partial class by InitializeSettings().
+            string themeName = _configuration?.ThemeConfiguration?.Name ?? "Untitled";
+            this.AppWindow.Title = $"Theme: {themeName}";
+            _themeHeader.Text = $"Theme: {themeName}";
         }
     }
 }
