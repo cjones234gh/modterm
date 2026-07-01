@@ -47,7 +47,7 @@ namespace modterm
         private string _currentFont = "BlexMono Nerd Font Mono";
         private string _currentControlFont = "BlexMono Nerd Font Mono";
         private float _currentFontSize = 12f;
-        private float _controlFontScale = 1f;
+        private float _controlFontScale = 0.777f;
         private float _currentControlFontSize = 12f;
         private float _controlPadding = 5f;
         private Color _labelColor;
@@ -190,8 +190,8 @@ namespace modterm
         public void UpdateTitleBarLabels()
         {
             // path and appearance info labels
-            _shellInfoLabel.TextContent = $"MODTERM - Shell: {UserAppConfiguration.TerminalShell.Name ?? "Unknown"}";
-            _appearanceInfoLabel.TextContent = $"Backdrop: {UserAppConfiguration.ThemeConfiguration.BackdropKind.ToString() ?? "Unknown"} {OpacityPct}% {GetHexStringFromColor(GetBackgroundBrush().Color)}";
+            _shellInfoLabel.TextContent = $"shell: {UserAppConfiguration.TerminalShell.Name ?? "unknown"}";
+            _appearanceInfoLabel.TextContent = $"{UserAppConfiguration.ThemeConfiguration.BackdropKind.ToString() ?? "unknown"}/#{_alpha:X2}{GetHexStringFromColor(GetBackgroundBrush().Color).Substring(1)}";
             _linesColsInfoLabel.TextContent = $"{_lines}x{_columns}";
 
             ModtermWinInstance.InvalidateModtermCanvas();

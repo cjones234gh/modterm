@@ -3,8 +3,7 @@ using XtermSharp;
 namespace modterm
 {
     /// <summary>
-    /// A zero-based cell coordinate in buffer space (column, absolute row). Replaces
-    /// VtNetCore's TextPosition, preserving its stream (reading-order) comparison semantics.
+    /// A zero-based cell coordinate in buffer space (column, absolute row).
     /// </summary>
     public struct TextPosition
     {
@@ -33,7 +32,7 @@ namespace modterm
     }
 
     /// <summary>
-    /// A stream-based (not rectangular) selection span. Replaces VtNetCore's TextRange.
+    /// A stream-based (not rectangular) selection span.
     /// </summary>
     public class TextRange
     {
