@@ -151,9 +151,13 @@ namespace modterm
             
             // Initialize the XtermSharp terminal engine. Size is corrected on first draw
             // once the canvas measures how many rows/columns fit.
+            // ConvertEol must be false: ConPTY moves the cursor down a row (keeping the
+            // column) with a bare LF and emits an explicit CR when it wants column 0.
+            // Converting LF to CR+LF pulls the cursor to column 0 mid-frame, which made
+            // ECH erase box borders (btop) and misplace delta rows (gitui).
             _terminal = new XtermSharp.Terminal(
                 new ModtermTerminalDelegate(ModtermWinInstance),
-                new XtermSharp.TerminalOptions { Cols = 80, Rows = 25, Scrollback = 5000 });
+                new XtermSharp.TerminalOptions { Cols = 80, Rows = 25, Scrollback = 5000, ConvertEol = false });
 
             // set default values
             _currentTextFormat = new CanvasTextFormat { FontFamily = _currentFont,
