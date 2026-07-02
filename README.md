@@ -16,13 +16,12 @@ Build modterm in Visual Studio with F5, or Cursor AI with F5.
 
 BlexMono is currently the default font, but not embedded yet. (You can choose a new font by launching the config editor, right-click for context, select Launch...Editor)
 
-Running TUI apps often requires running 'reset' in git-bash and WSL environments for correct rendering. Occasional TUI app mis-renderings occur with border characters, and sometimes with scrambled line ordering as is the case with 'gitui'.
+Running TUI apps someimtes requires running 'reset' before launch in git-bash and WSL environments for correct rendering.
 
 Configuration and Theme editor works, but to save an existing theme you must "Save as New" and then use its current name to overwrite it.
 
 Copy/Paste works, but mouse clicks aren't translated in any way to to the pty.
 
-No support for tiling or anything yet, but that will come.
 
 
 
