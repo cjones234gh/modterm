@@ -5,7 +5,7 @@ namespace modterm
 {
     public partial class ModtermWindow
     {
-        private const string DefaultThemeName = "Deep Blue";
+        private const string DefaultThemeName = "Bluefang";
 
         public UserAppConfiguration GetDefaultAppConfiguration()
         {

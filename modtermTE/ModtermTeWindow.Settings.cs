@@ -30,14 +30,17 @@ namespace modtermTE
 
         private void InitializeSettings()
         {
-            _configuration = _configurationStore.LoadOrDefault(out var loadedFromDisk);
-            if (!loadedFromDisk && File.Exists(_configurationStore.UserAppConfigPath))
+            try
+            {
+                _configuration = _configurationStore.LoadConfig();
+            }
+            catch
             {
                 _ = ShowSimpleDialogAsync(
                     "Configuration Load Failed",
                     "Your configuration failed to load. Using defaults; save when ready to write a new file.");
             }
-
+            
             BuildSettingsUi();
         }
 
