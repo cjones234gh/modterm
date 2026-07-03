@@ -1,0 +1,1877 @@
+
+ESC [?9001h
+ESC [?1004h
+ESC ]3008;start=8856f52e-fad5-4086-b1f5-3773ad1494b3;machineid=b7919a7e316b4a329c4427cd3ffeceed;user=root;hostname=I6ISQGM1;bootid=3d952b74-ab9f-439f-8edc-b8befc5dd597;pid=00000000000000000308;type=shell;cwd=/mnt/c/source/repos/modterm
+ESC \
+ESC [?25l
+ESC [2J
+ESC [m
+ESC [H
+ESC ]0;root@I6ISQGM1:/mnt/c/source/repos/modterm<BEL>
+ESC [?25h
+ESC [?2004h[root@I6ISQGM1 modterm]# 
+ESC [?2004lgitui<CR><LF>
+
+ESC ]3008;start=2eca76dc-5589-4f2e-a42b-27e0c359aa8e;machineid=b7919a7e316b4a329c4427cd3ffeceed;user=root;hostname=I6ISQGM1;bootid=3d952b74-ab9f-439f-8edc-b8befc5dd597;pid=00000000000000000308;type=command;cwd=/mnt/c/source/repos/modterm
+ESC \
+ESC [?1049h
+ESC [?25l
+ESC [H
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K
+ESC [2;1H
+ESC [?25h
+ESC [2J
+ESC [?25l
+ESC [H
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K
+ESC ]0;gitui (/mnt/c/source/repos/modterm)<BEL>
+ESC [120C
+ESC [38;5;8m
+ESC [1;2H Status [1]  |  Log [2]  |  
+ESC [m
+ESC [4mFiles [3]
+ESC [38;5;8m
+ESC [24m  |  Stashing [4]  |  Stashes [5]                    /mnt/c/source/repos/modterm/
+ESC [2;2H──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ESC [m<CR><LF>
+┌
+ESC [1mFiles at {27b0ad7} [Merge branch 'main' of h…]
+ESC [22m┐
+ESC [38;5;8m┌──────────────────────────────────────────────────────────────────────┐
+ESC [m│
+ESC [38;5;15m
+ESC [48;5;4m▾.
+ESC [44X
+ESC [38;5;4m
+ESC [49m
+ESC [44C█
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [2C▸.vscode
+ESC [36C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [2C▸modterm
+ESC [36C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [2C▸modtermTE
+ESC [34C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│  
+ESC [38;5;3m.gitignore
+ESC [34X
+ESC [m
+ESC [34C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│  
+ESC [38;5;3mREADME.md
+ESC [35X
+ESC [m
+ESC [35C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│  
+ESC [38;5;3mlicense.md
+ESC [34X
+ESC [m
+ESC [34C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│  
+ESC [38;5;3mmodterm.slnx
+ESC [32X
+ESC [m
+ESC [32C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m│
+ESC [46C║
+ESC [38;5;8m│
+ESC [70C│
+ESC [m└──────────────────────────────────────────────┘
+ESC [38;5;8m└──────────────────────────────────────────────────────────────────────┘
+ESC [48;5;4mEdit [e]
+ESC [38;5;15m
+ESC [1CFind [f]
+ESC [38;5;8m
+ESC [1CBlame [⇧B]
+ESC [38;5;15m
+ESC [1CNav [↑↓→←]
+ESC [1CNext [⇥]
+ESC [1CTab [12345]
+ESC [1COptions [o]
+ESC [38;5;8m
+ESC [1CHistory [⇧H]
+ESC [1CCopy Path [y]
+ESC [38;5;15m
+ESC [1CHelp [h]
+ESC [1CQuit [^c]
+ESC [m
+ESC [4m
+ESC [1;18HLog [2]
+ESC [38;5;8m
+ESC [24m
+ESC [5CFiles [3]
+ESC [m
+ESC [1m
+ESC [3;2HCommit 0/0
+ESC [22m────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+ESC [4;2H
+ESC [48X
+ESC [118C│
+ESC [5;4H        
+ESC [36C  
+ESC [70C│
+ESC [6;4H        
+ESC [36C  
+ESC [70C│
+ESC [7;4H
+ESC [10X
+ESC [44C  
+ESC [70C│
+ESC [8;2H
+ESC [48X
+ESC [118C│
+ESC [9;2H
+ESC [48X
+ESC [118C│
+ESC [10;2H
+ESC [48X
+ESC [118C│
+ESC [11;2H
+ESC [48X
+ESC [118C│
+ESC [12;48H  
+ESC [70C│
+ESC [13;48H  
+ESC [70C│
+ESC [14;48H  
+ESC [70C│
+ESC [15;48H  
+ESC [70C│
+ESC [16;48H  
+ESC [70C│
+ESC [17;48H  
+ESC [70C│
+ESC [18;48H  
+ESC [70C│
+ESC [19;48H  
+ESC [70C│
+ESC [20;48H  
+ESC [70C│
+ESC [21;48H  
+ESC [70C│
+ESC [22;48H  
+ESC [70C│
+ESC [23;48H  
+ESC [70C│
+ESC [24;48H  
+ESC [70C│
+ESC [25;48H  
+ESC [70C│
+ESC [26;48H  
+ESC [70C│
+ESC [27;48H  
+ESC [70C│
+ESC [28;48H  
+ESC [70C│
+ESC [29;48H────────────────────────────────────────────────────────────────────────┘
+ESC [38;5;8m
+ESC [48;5;4mScroll [↑↓]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mMark [˽]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mDetails [⏎]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mBranches [b]
+ESC [m 
+ESC [38;5;8m
+ESC [48;5;4mCompare [⇧C]
+ESC [m 
+ESC [38;5;8m
+ESC [48;5;4mCopy Hash [y]
+ESC [1CTag [t]
+ESC [m 
+ESC [38;5;8m
+ESC [48;5;4mCheckout [⇧S]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mTags [⇧T]
+ESC [m    
+ESC [1C   more [.]
+ESC [H⢿
+ESC [H⣻
+ESC [H⣽
+ESC [1m
+ESC [3;9H194/194
+ESC [38;5;15m
+ESC [48;5;4m
+ESC [22m
+ESC [4;2H27b0ad7 15:09:18   cjones234gh           
+ESC [11X
+ESC [38;5;11m
+ESC [1m{main}
+ESC [38;5;15m
+ESC [22m 
+ESC [38;5;11m
+ESC [1m[origin/HEAD]
+ESC [38;5;15m
+ESC [22m Merge branch 'main' of https://github.com/cjones234gh/mo
+ESC [38;5;4m
+ESC [49m█
+ESC [38;5;5m
+ESC [5;2H203078e
+ESC [38;5;14m
+ESC [1C15:08:09  
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdates
+ESC [1Cbluefang
+ESC [1Ctheme
+ESC [1Cand
+ESC [1Creduces
+ESC [1Csize
+ESC [1Cand
+ESC [1Ccontent
+ESC [1Cof
+ESC [1Ctitle
+ESC [1Cbar
+ESC [13C║
+ESC [38;5;5m
+ESC [6;2H2ac1804
+ESC [38;5;14m
+ESC [1C13:05:58  
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdate
+ESC [1Clicense.md
+ESC [60C║
+ESC [38;5;5m
+ESC [7;2Hdf52c2e
+ESC [38;5;14m
+ESC [1C13:01:59  
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdate
+ESC [1CREADME.md
+ESC [61C║
+ESC [38;5;5m
+ESC [8;2H8452ee8
+ESC [38;5;14m
+ESC [1C02:30:38  
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CModtermTE
+ESC [1Cnow
+ESC [1Cedits
+ESC [1Cthe
+ESC [1Ccurrently
+ESC [1Cactive
+ESC [1Ctheme..and
+ESC [1Cdisplays
+ESC [1Cthe
+ESC [1Ctheme
+ESC [7C║
+ESC [38;5;5m
+ESC [9;2H73c2667
+ESC [38;5;14m
+ESC [1C2026-06-30
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CAquaTwo
+ESC [1Cpalette
+ESC [1Cupdates.
+ESC [53C║
+ESC [38;5;5m
+ESC [10;2Hf2f07c3
+ESC [38;5;14m
+ESC [1C2026-06-30
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CAdds
+ESC [1Cnew
+ESC [1CAquaTwo
+ESC [1Ctheme
+ESC [1Cwith
+ESC [1Cpalette
+ESC [1Coverride.
+ESC [32C║
+ESC [38;5;5m
+ESC [11;2Hd4a1ac7
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CFixes
+ESC [1CANSI
+ESC [1Ccolor
+ESC [1Cpalette
+ESC [1Cinitialization
+ESC [1Cissue
+ESC [1Cin
+ESC [1CmodtermTE,
+ESC [1Cadds
+ESC [1Ctwo
+ESC [9C║
+ESC [38;5;5m
+ESC [12;2Hb95c6f0
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdates
+ESC [1CBluefang
+ESC [1Ctheme
+ESC [1Cto
+ESC [1Ca
+ESC [1Cfull
+ESC [1Cset
+ESC [1Cof
+ESC [1Cpalette
+ESC [1Coverrides.
+ESC [19C║
+ESC [38;5;5m
+ESC [13;2H71f1afa
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CAdds
+ESC [1CANSI
+ESC [1Cpalette
+ESC [1Cmapping
+ESC [1Coverride
+ESC [1Cto
+ESC [1Cthe
+ESC [1Cconfiguration
+ESC [1Cand
+ESC [1Ctheme
+ESC [1Ceditor
+ESC [5C║
+ESC [38;5;5m
+ESC [14;2Hbebdc2e
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdates
+ESC [1Cthe
+ESC [1Cpalette
+ESC [1Coverride
+ESC [1Ctest
+ESC [1Ctheme
+ESC [1Cwith
+ESC [1Cbrighter
+ESC [1C'dark'
+ESC [1Ccolors.
+ESC [9C║
+ESC [38;5;5m
+ESC [15;2H5a3cedc
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CAdds
+ESC [1Cpalette
+ESC [1Coverride
+ESC [1Ccapability.
+ESC [1CThe
+ESC [1Cdefault
+ESC [1C16
+ESC [1Ccolors
+ESC [1Ccan
+ESC [1Cbe
+ESC [15C║
+ESC [38;5;5m
+ESC [16;2H763102f
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CGets
+ESC [1Cdefault
+ESC [1Ctheme
+ESC [1Cnames
+ESC [1Cin
+ESC [1Csync
+ESC [1Cwith
+ESC [1Cnew
+ESC [1Cfile
+ESC [1Cnames.
+ESC [24C║
+ESC [38;5;5m
+ESC [17;2H9225514
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CLabel
+ESC [1Cchanges
+ESC [1Cin
+ESC [1Cconfig
+ESC [1Cand
+ESC [1Ctheme
+ESC [1Ceditor.
+ESC [36C║
+ESC [38;5;5m
+ESC [18;2H0ce20fc
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CRemoves
+ESC [1Ccode-defined
+ESC [1Cdefault
+ESC [1Cthemes
+ESC [1Cand
+ESC [1Cinstead
+ESC [1Cuses
+ESC [1Ctheme
+ESC [1Cfiles
+ESC [1Cfrom
+ESC [8C║
+ESC [38;5;5m
+ESC [19;2H472c1f0
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CAdds
+ESC [1Cdefault
+ESC [1Cthemes
+ESC [1Cto
+ESC [1Cthe
+ESC [1Cassets
+ESC [1Cfolder.
+ESC [36C║
+ESC [38;5;5m
+ESC [20;2H6599217
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CRenames
+ESC [1Ccontext
+ESC [1Cmenu
+ESC [1Citems.
+ESC [50C║
+ESC [38;5;5m
+ESC [21;2H2dc10a8
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CMerge
+ESC [1Cbranch
+ESC [1C'main'
+ESC [1Cof
+ESC [1Chttps://github.com/cjones234gh/modterm
+ESC [16C║
+ESC [38;5;5m
+ESC [22;2H936a2cf
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh        
+ESC [m
+ESC [H 
+ESC [38;5;2m
+ESC [22;40H 
+ESC [m
+ESC [2CFixes
+ESC [1Coff-screen
+ESC [1Clocation
+ESC [1Cissue
+ESC [1Cat
+ESC [1Cstartup,
+ESC [1Cand
+ESC [1Cinverts
+ESC [1Cforeground
+ESC [1Ctext
+ESC [6C║
+ESC [38;5;5m
+ESC [23;2H72142c2
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CSlight
+ESC [1CY
+ESC [1Cnudge
+ESC [1Cof
+ESC [1Cthe
+ESC [1Ccursor
+ESC [1Cfor
+ESC [1Cbetter
+ESC [1Calignment.
+ESC [27C║
+ESC [38;5;5m
+ESC [24;2H15169ee
+ESC [38;5;14m
+ESC [1C2026-06-23
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CSlight
+ESC [1CY
+ESC [1Cnudge
+ESC [1Cof
+ESC [1Cthe
+ESC [1Ccursor
+ESC [1Cfor
+ESC [1Cbetter
+ESC [1Calignment.
+ESC [27C║
+ESC [38;5;5m
+ESC [25;2H2fa4054
+ESC [38;5;14m
+ESC [1C2026-06-23
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CRemoves
+ESC [1Csome
+ESC [1Cdebug
+ESC [1Coutput
+ESC [1Cused
+ESC [1Cfor
+ESC [1Ctesting.
+ESC [34C║
+ESC [38;5;5m
+ESC [26;2H6922699
+ESC [38;5;14m
+ESC [1C2026-06-16
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdates
+ESC [1Creadme
+ESC [1Cto
+ESC [1Creflect
+ESC [1Cswitching
+ESC [1Cfrom
+ESC [1CVtNetCore
+ESC [1Cto
+ESC [1CXtermSharp.
+ESC [12C║
+ESC [38;5;5m
+ESC [27;2H30ad267
+ESC [38;5;14m
+ESC [1C2026-06-16
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CThis
+ESC [1Cremoves
+ESC [1Cthe
+ESC [1Cfallback
+ESC [1Cuse
+ESC [1Cof
+ESC [1Cconhost.exe
+ESC [1Cwhen
+ESC [1Claunching
+ESC [1Cthe
+ESC [1Cshell.
+ESC [7C║
+ESC [38;5;5m
+ESC [28;2H54cb190
+ESC [38;5;14m
+ESC [1C2026-06-16
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [38;5;11m
+ESC [1m
+ESC [11C{xtsh}
+ESC [m
+ESC [1CReplaces
+ESC [1CVtNetCore
+ESC [1Cwith
+ESC [1CXtermSharp.
+ESC [1CThat
+ESC [1Cworked
+ESC [1Cgreat.
+ESC [1CBut
+ESC [1Cthen
+ESC [1Calso
+ESC [1Ct║
+ESC [38;5;15m
+ESC [48;5;4m
+ESC [30;1HScroll [↑↓]
+ESC [48CCopy Hash [y]
+ESC [1CTag [t]
+ESC [1CCheckout [⇧S]
+ESC [m
+ESC [4m
+ESC [1;3HStatus [1]
+ESC [38;5;8m
+ESC [24m
+ESC [5CLog [2]
+ESC [m
+ESC [1m
+ESC [3;2HUnstaged Changes
+ESC [22m
+ESC [42C┐
+ESC [38;5;8m┌Diff: ────────────────────────────────────────────────────┐
+ESC [4;2HLoading ...                                               
+ESC [47X
+ESC [m│
+ESC [38;5;8m│                                                          │
+ESC [m
+ESC [5;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C       
+ESC [1C        
+ESC [1C│
+ESC [38;5;8m│   
+ESC [m
+ESC [1C   
+ESC [1C       
+ESC [1C    
+ESC [1C   
+ESC [1C       
+ESC [1C  
+ESC [1C     
+ESC [1C   
+ESC [38;5;8m
+ESC [13C│
+ESC [m
+ESC [6;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C      
+ESC [1C          │
+ESC [38;5;8m│
+ESC [58C│
+ESC [m
+ESC [7;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C      
+ESC [1C
+ESC [9X
+ESC [10C│
+ESC [38;5;8m│
+ESC [58C│
+ESC [m
+ESC [8;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C
+ESC [9X
+ESC [10C   
+ESC [1C   │
+ESC [38;5;8m│
+ESC [m
+ESC [1C   
+ESC [1C
+ESC [9X
+ESC [10C      
+ESC [1C
+ESC [10X
+ESC [11C        
+ESC [1C   
+ESC [1C     
+ESC [38;5;8m
+ESC [7C│
+ESC [m
+ESC [9;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C       
+ESC [1C       
+ESC [1C │
+ESC [38;5;8m│     
+ESC [53C│
+ESC [m
+ESC [10;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C    
+ESC [1C   
+ESC [1C       
+ESC [1C│
+ESC [38;5;8m│   
+ESC [m
+ESC [1C    
+ESC [1C       
+ESC [1C
+ESC [9X
+ESC [38;5;8m
+ESC [41C│
+ESC [m
+ESC [11;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C     
+ESC [1C    
+ESC [1C     
+ESC [1C│
+ESC [38;5;8m│     
+ESC [m
+ESC [1C
+ESC [14X
+ESC [15C     
+ESC [1C  
+ESC [1C
+ESC [10X
+ESC [11C    
+ESC [1C   
+ESC [38;5;8m
+ESC [9C│
+ESC [m
+ESC [12;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C       
+ESC [1C        
+ESC [1C│
+ESC [38;5;8m│   
+ESC [m
+ESC [1C  
+ESC [1C 
+ESC [1C    
+ESC [1C   
+ESC [1C  
+ESC [1C       
+ESC [1C
+ESC [10X
+ESC [38;5;8m
+ESC [29C│
+ESC [m
+ESC [13;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C    
+ESC [1C    
+ESC [1C       │
+ESC [38;5;8m│      
+ESC [m
+ESC [1C        
+ESC [1C  
+ESC [1C   
+ESC [1C
+ESC [13X
+ESC [14C   
+ESC [1C     
+ESC [1C      
+ESC [38;5;8m
+ESC [5C│
+ESC [m
+ESC [14;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C       
+ESC [1C   
+ESC [1C     │
+ESC [38;5;8m│
+ESC [m
+ESC [1C        
+ESC [1C    
+ESC [1C     
+ESC [1C    
+ESC [1C        
+ESC [1C      
+ESC [1C       
+ESC [38;5;8m
+ESC [9C│
+ESC [m
+ESC [15;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C    
+ESC [1C       
+ESC [1C    │
+ESC [38;5;8m│  
+ESC [m
+ESC [1C
+ESC [11X
+ESC [12C   
+ESC [1C       
+ESC [1C  
+ESC [1C      
+ESC [1C   
+ESC [1C  
+ESC [38;5;8m
+ESC [15C│
+ESC [m
+ESC [16;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C    
+ESC [1C       
+ESC [1C    │
+ESC [38;5;8m│     
+ESC [m
+ESC [1C  
+ESC [1C    
+ESC [1C    
+ESC [1C   
+ESC [1C    
+ESC [1C      
+ESC [38;5;8m
+ESC [24C│
+ESC [m
+ESC [H⣻
+ESC [17;2H       
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C     
+ESC [1C       
+ESC [1C  
+ESC [1C│
+ESC [38;5;8m│    
+ESC [m
+ESC [1C   
+ESC [1C     
+ESC [1C       
+ESC [38;5;8m
+ESC [36C│
+ESC [m└──────────────────────────────────────────────↑0
+ESC [1C↓0 {main}┘
+ESC [38;5;8m│ 
+ESC [m
+ESC [1C       
+ESC [1C      
+ESC [1C   
+ESC [1C       
+ESC [1C    
+ESC [1C     
+ESC [1C     
+ESC [1C    
+ESC [38;5;8m
+ESC [8C│┌Staged Changes────────────────────────────────────────────┐│
+ESC [m
+ESC [1C  
+ESC [1C   
+ESC [1C      
+ESC [1C       
+ESC [38;5;8m
+ESC [36C││Loading ...       
+ESC [m
+ESC [1C
+ESC [20X
+ESC [22C       
+ESC [1C       
+ESC [1C 
+ESC [38;5;8m││ 
+ESC [m
+ESC [1C      
+ESC [38;5;8m
+ESC [50C││       
+ESC [m
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C     
+ESC [1C      
+ESC [1C    
+ESC [38;5;8m││
+ESC [m
+ESC [1C  
+ESC [1C
+ESC [38X
+ESC [38;5;8m
+ESC [54C││       
+ESC [m
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C     
+ESC [1C
+ESC [10X
+ESC [38;5;8m
+ESC [11C││      
+ESC [m
+ESC [1C     
+ESC [1C  
+ESC [1C        
+ESC [1C   
+ESC [1C       
+ESC [1C
+ESC [10X
+ESC [11C    
+ESC [38;5;8m
+ESC [6C││       
+ESC [m
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C      
+ESC [1C 
+ESC [1C     
+ESC [1C  
+ESC [38;5;8m││  
+ESC [m
+ESC [1C      
+ESC [1C   
+ESC [1C      
+ESC [1C
+ESC [10X
+ESC [38;5;8m
+ESC [37C││       
+ESC [m
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C      
+ESC [1C 
+ESC [1C     
+ESC [1C  
+ESC [38;5;8m││  
+ESC [m
+ESC [1C      
+ESC [1C   
+ESC [1C      
+ESC [1C
+ESC [10X
+ESC [38;5;8m
+ESC [37C││       
+ESC [m
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C       
+ESC [1C    
+ESC [1C    
+ESC [38;5;8m││      
+ESC [m
+ESC [1C    
+ESC [1C   
+ESC [1C        
+ESC [38;5;8m
+ESC [34C││       
+ESC [m
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C       
+ESC [1C      
+ESC [1C  
+ESC [38;5;8m││      
+ESC [m
+ESC [1C
+ESC [9X
+ESC [10C    
+ESC [1C
+ESC [9X
+ESC [10C  
+ESC [1C
+ESC [11X
+ESC [38;5;8m
+ESC [23C││       
+ESC [m
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C    
+ESC [1C       
+ESC [1C   
+ESC [38;5;8m
+ESC [1C││      
+ESC [m
+ESC [1C   
+ESC [1C  
+ESC [1C
+ESC [11X
+ESC [12C    
+ESC [1C
+ESC [9X
+ESC [10C   
+ESC [1C      
+ESC [38;5;8m
+ESC [7C││       
+ESC [m
+ESC [1C
+ESC [10X
+ESC [11C
+ESC [20X
+ESC [22C      
+ESC [1C        
+ESC [1C 
+ESC [38;5;8m││      
+ESC [m
+ESC [1C    
+ESC [1C
+ESC [11X
+ESC [12C    
+ESC [1C      
+ESC [1C      
+ESC [1C   
+ESC [1C    
+ESC [1C    
+ESC [1C 
+ESC [38;5;8m│└──────────────────────────────────────────────────────────┘└──────────────────────────────────────────────────────────┘
+ESC [38;5;15m
+ESC [48;5;4mBranches [b]
+ESC [m 
+ESC [38;5;8m
+ESC [48;5;4mPush [p]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mFetch [⇧F
+ESC [2CPull [f]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mUndo Commit [⇧U]
+ESC [1CSubmodules [⇧S]
+ESC [m 
+ESC [38;5;8m
+ESC [48;5;4mNav [↑↓→←]
+ESC [m 
+ESC [38;5;8m
+ESC [48;5;4mDiff [→]
+ESC [38;5;15m
+ESC [2Co 
+ESC [1Ctage [w]
+ESC [m
+ESC [4;2H
+ESC [11X
+ESC [20;2H
+ESC [11X
+ESC [11C
+ESC [38;5;15m
+ESC [48;5;4m
+ESC [4;2HM .gitignore
+ESC [46X
+ESC [38;5;8m
+ESC [49m
+ESC [48CLoading ...
+ESC [m
+ESC [5;4H▾.vscode
+ESC [38;5;3m
+ESC [6;2HM   launch.json
+ESC [7;2HM   start-modterm.ps1
+ESC [8;2HM README.md
+ESC [9;2HM license.md
+ESC [m
+ESC [10;4H▾modterm
+ESC [38;5;3m
+ESC [11;2HM   App.xaml
+ESC [12;2HM   App.xaml.cs
+ESC [m
+ESC [13;6H▾Assets/DefaultThemes
+ESC [38;5;3m
+ESC [14;2HM       theme_Amber Terminal.json
+ESC [15;2HM       theme_Aqua.json
+ESC [16;2HM       theme_AquaTwo.json
+ESC [17;2HM       theme_Bluefang.json
+ESC [38;5;15m
+ESC [48;5;4m
+ESC [30;1HSt
+ESC [1Cge All [a]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mStage [⏎]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mReset [⇧D]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mIgnore [i]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mBranches [b
+ESC [38;5;8m
+ESC [2CPush [p]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mFetch [⇧F]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mPull [f]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mUndo Commit [⇧U]
+ESC [m   
+ESC [H⣽
+ESC [H 
+ESC [38;5;8m
+ESC [3;68H.gitignore
+ESC [4;62H┌
+ESC [1m@@ -1,418 +1,418 @@
+ESC [22m
+ESC [5;62H│
+ESC [38;5;1m## Ignore Visual Studio temporary files, build results, a
+ESC [38;5;8m
+ESC [6;62H│
+ESC [38;5;1m## files generated by popular Visual Studio add-ons.
+ESC [38;5;8m
+ESC [7;62H│
+ESC [38;5;1m##
+ESC [38;5;8m
+ESC [8;62H│
+ESC [38;5;1m## Get latest from https://github.com/github/gitignore/bl
+ESC [38;5;8m
+ESC [9;62H│
+ESC [38;5;1m¶
+ESC [38;5;8m
+ESC [10;62H│
+ESC [38;5;1m# User-specific files
+ESC [38;5;8m
+ESC [11;62H│
+ESC [38;5;1m*.rsuser
+ESC [38;5;8m
+ESC [12;62H│
+ESC [38;5;1m*.suo
+ESC [38;5;8m
+ESC [13;62H│
+ESC [38;5;1m*.user
+ESC [38;5;8m
+ESC [14;62H│
+ESC [38;5;1m*.userosscache
+ESC [38;5;8m
+ESC [15;62H│
+ESC [38;5;1m*.sln.docstates
+ESC [38;5;8m
+ESC [16;62H│
+ESC [38;5;1m*.env
+ESC [38;5;8m
+ESC [17;62H│
+ESC [38;5;1m¶
+ESC [38;5;8m
+ESC [18;62H│
+ESC [38;5;1m# User-specific files (MonoDevelop/Xamarin Studio)
+ESC [38;5;8m
+ESC [19;62H│
+ESC [38;5;1m*.userprefs
+ESC [38;5;8m
+ESC [20;62H│
+ESC [38;5;1m¶
+ESC [38;5;8m
+ESC [21;62H│
+ESC [38;5;1m# Mono auto generated files
+ESC [38;5;8m
+ESC [22;62H│
+ESC [38;5;1mmono_crash.*
+ESC [38;5;8m
+ESC [23;62H│
+ESC [38;5;1m¶
+ESC [38;5;8m
+ESC [24;62H│
+ESC [38;5;1m# Build results
+ESC [38;5;8m
+ESC [25;62H│
+ESC [38;5;1m[Dd]ebug/
+ESC [38;5;8m
+ESC [26;62H│
+ESC [38;5;1m[Dd]ebugPublic/
+ESC [38;5;8m
+ESC [27;62H│
+ESC [38;5;1m[Rr]elease/
+ESC [38;5;8m
+ESC [28;62H│
+ESC [38;5;1m[Rr]eleases/
+ESC [m
+ESC [38;5;8m
+ESC [1;3HStatus [1]
+ESC [m
+ESC [4m
+ESC [5CLog [2]
+ESC [1m
+ESC [24m
+ESC [3;2HCommit 194/194
+ESC [22m──
+ESC [42C────────────────────────────────────────────────────────────┐
+ESC [38;5;15m
+ESC [48;5;4m
+ESC [4;2H27b0ad7 15:09:18
+ESC [3Ccjones234gh
+ESC [38;5;11m
+ESC [1m
+ESC [11C{main}
+ESC [1C[origin/HEAD]
+ESC [38;5;15m
+ESC [22m Merge branch 'main' of https://github.com/cjones234gh/mo
+ESC [38;5;4m
+ESC [49m█
+ESC [38;5;5m
+ESC [5;2H203078e 
+ESC [38;5;14m15:08:09  
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdates
+ESC [1Cbluefang
+ESC [1Ctheme and reduces size and content of title bar             ║
+ESC [38;5;5m
+ESC [6;2H2ac1804 
+ESC [38;5;14m13:05:58  
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdate
+ESC [1Clicense.md
+ESC [55X
+ESC [60C║
+ESC [38;5;5m
+ESC [7;2Hdf52c2e 
+ESC [38;5;14m13:01:59   
+ESC [38;5;2mcjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdate
+ESC [1CREADME.md
+ESC [1C     
+ESC [55C║
+ESC [38;5;5m
+ESC [8;2H8452ee8 
+ESC [38;5;14m02:30:38  
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CModtermTE
+ESC [1Cnow
+ESC [1Cedits the currently active theme..and displays the theme       ║
+ESC [38;5;5m
+ESC [9;2H73c2667 
+ESC [38;5;14m2026-06-30
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CAquaTwo
+ESC [1Cpalette
+ESC [1Cupdates.
+ESC [53C║
+ESC [38;5;5m
+ESC [10;2Hf2f07c3 
+ESC [38;5;14m2026-06-30
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CAdds
+ESC [1Cnew
+ESC [1CAquaTwo
+ESC [1Ctheme with palette override.
+ESC [32C║
+ESC [38;5;5m
+ESC [11;2Hd4a1ac7 
+ESC [38;5;14m2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CFixes
+ESC [1CANSI
+ESC [1Ccolor
+ESC [1Cpalette initialization
+ESC [1Cissue
+ESC [1Cin
+ESC [1CmodtermTE,
+ESC [1Cadds
+ESC [1Ctwo
+ESC [9C║
+ESC [38;5;5m
+ESC [12;2Hb95c6f0 
+ESC [38;5;14m2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdates
+ESC [1CBluefang
+ESC [1Ctheme to
+ESC [1Ca
+ESC [1Cfull
+ESC [1Cset
+ESC [H⣻
+ESC [12;80Hof
+ESC [1Cpalette
+ESC [1Coverrides.
+ESC [19C║
+ESC [38;5;5m
+ESC [13;2H71f1afa 
+ESC [38;5;14m2026-06-29 
+ESC [38;5;2mcjones234gh
+ESC [9X
+ESC [m
+ESC [11CAdds
+ESC [1CANSI
+ESC [1Cpalette mapping override
+ESC [1Cto
+ESC [1Cthe
+ESC [1Cconfiguration
+ESC [1Cand
+ESC [1Ctheme
+ESC [1Ceditor
+ESC [5C║
+ESC [38;5;5m
+ESC [14;2Hbebdc2e 
+ESC [38;5;14m2026-06-29 
+ESC [38;5;2mcjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdates
+ESC [1Cthe
+ESC [1Cpalette override test theme
+ESC [1Cwith
+ESC [1Cbrighter
+ESC [1C'dark'
+ESC [1Ccolors.
+ESC [9C║
+ESC [38;5;5m
+ESC [15;2H5a3cedc 
+ESC [38;5;14m2026-06-29 
+ESC [38;5;2mcjones234gh
+ESC [9X
+ESC [m
+ESC [11CAdds
+ESC [1Cpalette
+ESC [1Coverride capability. The
+ESC [1Cdefault
+ESC [1C16
+ESC [1Ccolors
+ESC [1Ccan
+ESC [1Cbe
+ESC [15C║
+ESC [38;5;5m
+ESC [16;2H763102f 
+ESC [38;5;14m2026-06-29 
+ESC [38;5;2mcjones234gh
+ESC [9X
+ESC [m
+ESC [11CGets
+ESC [1Cdefault
+ESC [1Ctheme names in
+ESC [1Csync
+ESC [1Cwith
+ESC [1Cnew
+ESC [1Cfile
+ESC [1Cnames.
+ESC [24C║
+ESC [38;5;5m
+ESC [17;2H9225514 
+ESC [38;5;14m2026-06-29 
+ESC [38;5;2mcjones234gh
+ESC [9X
+ESC [m
+ESC [11CLabel
+ESC [1Cchanges
+ESC [1Cin
+ESC [1Cconfig
+ESC [1Cand
+ESC [1Ctheme
+ESC [1Ceditor.
+ESC [36C║│
+ESC [38;5;5m0ce20fc 
+ESC [38;5;14m2026-06-29 
+ESC [38;5;2mcjones234gh
+ESC [11X
+ESC [m
+ESC [11CRemoves
+ESC [1Ccode-defined default themes and instead uses theme files from 
+ESC [7C║│
+ESC [38;5;5m472c1f0 
+ESC [38;5;14m2026-06-29 
+ESC [38;5;2mcjones234gh
+ESC [11X
+ESC [m
+ESC [11CAdds default themes to the assets
+ESC [1Cfolder.
+ESC [36C║│
+ESC [38;5;5m6599217
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CRenames
+ESC [1Ccontext
+ESC [1Cmenu items.
+ESC [50C║│
+ESC [38;5;5m2dc10a8
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CMerge
+ESC [1Cbranch
+ESC [1C'main' of https://github.com/cjones234gh/modterm
+ESC [16C║│
+ESC [38;5;5m936a2cf
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CFixes
+ESC [1Coff-screen
+ESC [1Clocation issue at
+ESC [1Cstartup,
+ESC [1Cand
+ESC [1Cinverts
+ESC [1Cforeground
+ESC [1Ctext
+ESC [6C║│
+ESC [38;5;5m72142c2
+ESC [38;5;14m
+ESC [1C2026-06-29
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CSlight
+ESC [1CY
+ESC [1Cnudge
+ESC [1Cof the
+ESC [1Ccursor
+ESC [1Cfor
+ESC [1Cbetter
+ESC [1Calignment.
+ESC [27C║│
+ESC [38;5;5m15169ee
+ESC [38;5;14m
+ESC [1C2026-06-23
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CSlight
+ESC [1CY
+ESC [1Cnudge
+ESC [1Cof the cursor for better
+ESC [1Calignment.
+ESC [27C║│
+ESC [38;5;5m2fa4054
+ESC [38;5;14m
+ESC [1C2026-06-23
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CRemoves
+ESC [1Csome
+ESC [1Cdebug output used
+ESC [1Cfor
+ESC [1Ctesting.
+ESC [34C║│
+ESC [38;5;5m6922699
+ESC [38;5;14m
+ESC [1C2026-06-16
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CUpdates
+ESC [1Creadme
+ESC [1Cto reflect switching
+ESC [1Cfrom
+ESC [1CVtNetCore
+ESC [1Cto
+ESC [1CXtermSharp.
+ESC [12C║│
+ESC [38;5;5m30ad267
+ESC [38;5;14m
+ESC [1C2026-06-16
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [m
+ESC [11CThis
+ESC [1Cremoves
+ESC [1Cthe
+ESC [1Cfallback use of
+ESC [1Cconhost.exe
+ESC [1Cwhen
+ESC [1Claunching
+ESC [1Cthe
+ESC [1Cshell.
+ESC [7C║│
+ESC [38;5;5m54cb190
+ESC [38;5;14m
+ESC [1C2026-06-16
+ESC [38;5;2m
+ESC [1Ccjones234gh
+ESC [9X
+ESC [38;5;11m
+ESC [1m
+ESC [11C{xtsh}
+ESC [m
+ESC [1CReplaces
+ESC [1CVtNetCore with XtermSharp.
+ESC [1CThat
+ESC [1Cworked
+ESC [1Cgreat.
+ESC [1CBut
+ESC [1Cthen
+ESC [1Calso
+ESC [1Ct║└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ESC [38;5;15m
+ESC [48;5;4m
+ESC [30;2Hcroll [↑↓]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mMark [˽]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mDetails [⏎]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mBranches
+ESC [2Cb
+ESC [38;5;8m
+ESC [2CCompare [⇧C]
+ESC [38;5;15m
+ESC [1CCopy Hash [y]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mTag [t]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mCheckout [⇧S]
+ESC [m 
+ESC [38;5;15m
+ESC [48;5;4mTags
+ESC [3CT
+ESC [m
+ESC [H 
+ESC [?25h
+ESC [?1049l
+ESC ]3008;end=2eca76dc-5589-4f2e-a42b-27e0c359aa8e;exit=success
+ESC \
+ESC ]3008;start=8856f52e-fad5-4086-b1f5-3773ad1494b3;machineid=b7919a7e316b4a329c4427cd3ffeceed;user=root;hostname=I6ISQGM1;bootid=3d952b74-ab9f-439f-8edc-b8befc5dd597;pid=00000000000000000308;type=shell;cwd=/mnt/c/source/repos/modterm
+ESC \
+ESC [?2004h
+ESC [?25l
+ESC [H[root@I6ISQGM1 modterm]# gitui
+ESC [K<CR><LF>
+[root@I6ISQGM1 modterm]#
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K<CR><LF>
+
+ESC [K
+ESC [2;26H
+ESC ]0;root@I6ISQGM1:/mnt/c/source/repos/modterm<BEL>
+ESC [?25h
+ESC [?2004lexit<CR><LF>
+
+ESC ]3008;start=f9a9805b-5bc4-46c2-95e5-6bcaa3f23e6c;machineid=b7919a7e316b4a329c4427cd3ffeceed;user=root;hostname=I6ISQGM1;bootid=3d952b74-ab9f-439f-8edc-b8befc5dd597;pid=00000000000000000308;type=command;cwd=/mnt/c/source/repos/modterm
+ESC \logout<CR><LF>
+
+ESC [?9001l
+ESC [?1004l

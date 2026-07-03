@@ -1,0 +1,46 @@
+--- frame ending at byte 38706: border cells blanked: (0,23) ─->blank (0,178) ─->blank (0,185) ─->blank (3,183) ─->blank (16,176) ─->blank (16,180) ─->blank (16,185) ─->blank (32,76) ─->blank (32,81) ─->blank (44,89) ─->blank (44,96) ─->blank (44,104) ─->blank ---
+  0|╭─┐¹cpu┌──┐menu┌┐preset *┌──┐wsl┌──────────────────────────────────────────────────────────┐19:27:11┌───────────────────────────────────────────────────────────────────────────┐- 2000ms +┌─╮|
+  1|│                                                                                                                                                                                            │|
+  2|│                                                                                                                                                                                            │|
+  3|│                                                                                                                                                   ╭─┐Ultra 5 225F┌───────────────┐3.3 GHz┌╮│|
+  4|│                                                                                                                                                   │CPU ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■   1%││|
+  5|│                                                                                                                                                   │C0  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%│C5  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%││|
+  6|│                                                                                                                                                   │C1  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%│C6  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀  14%││|
+  7|│                                                                                                                                                  ⣇│C2  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%│C7  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%││|
+  8|├──────────────────────────────────────────────────────────────total─▲▼─gpu-totals──────────────────────────────────────────────────────────────────┤C3  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%│C8  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%││|
+  9|│                                                                                                                                                  ⠉│C4  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%│C9  ⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀   0%││|
+ 10|│                                                                                                                                                   │               Load avg: 0.00 0.00 0.00││|
+ 11|│                                                                                                                                                   │GPU ■■■■■■■■■  1% ⣀⣀⣀⣄ 2.3G/8.0G 30.0W ││|
+ 12|│                                                                                                                                                   ╰───────────────────────────────────────╯│|
+ 13|│                                                                                                                                                                                            │|
+ 14|│ up 00:00:02                                                                                                                                                                                │|
+ 15|╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯|
+ 16|╭─┐²mem┌──────────────────────────────────┬─┐disks┌─────────────────────────────┐io┌─╮╭─┐⁴proc┌┐filter┌───────────────────────────────────────┐pause┌┐per-core┌┐reverse┌┐tree┌┐← cpu lazy →┌─╮|
+ 17|│ Total:                         15.4 GiB ├─swap────────────────────────────4.00─GiB─┤│    Pid: Program:         Command:                              Threads: User:       MemB       Cpu% ↑│|
+ 18|├─Used:───────────────────────────587─MiB─┤ Used:  0% ■■■■■■■■■■■■■■■■■■■■■   0 Byte ││     198 systemd          /usr/lib/systemd/systemd --user              1 root         12M ⣀⣀⣀⣀⣀  0.0 █│|
+ 19|│   4%                                    │ Free:100% ■■■■■■■■■■■■■■■■■■■■■ 4.00 GiB ││       1 systemd          /sbin/init                                   1 root         14M ⣀⣀⣀⣀⣀  0.0  │|
+ 20|│                                         │                                          ││      88 systemd-udevd    /usr/lib/systemd/systemd-udevd               1 root         12M ⣀⣀⣀⣀⣀  0.0  │|
+ 21|├─Available:─────────────────────14.8─GiB─├──────────────────────────────────────────┤│     104 (udev-worker)    (udev-worker)                                1 root        7.8M ⣀⣀⣀⣀⣀  0.0  │|
+ 22|│  96%                                   ⣿│                                          ││      95 (udev-worker)    (udev-worker)                                1 root        8.0M ⣀⣀⣀⣀⣀  0.0  │|
+ 23|│                                        ⣿│                                          ││      41 systemd-journal  /usr/lib/systemd/systemd-journald            1 root         11M ⣀⣀⣀⣀⣀  0.0  │|
+ 24|├─Cached:─────────────────────────252─MiB─┤                                          ││     192 btop             btop                                         3 root         25M ⣀⣀⣀⣀⣀  0.0  │|
+ 25|│   2%                                    │                                          ││      89 systemd-network  /usr/lib/systemd/systemd-networkd            1 systemd-n+   10M ⣀⣀⣀⣀⣀  0.0  │|
+ 26|│                                         │                                          ││      82 systemd-resolve  /usr/lib/systemd/systemd-resolved            1 systemd-r+   13M ⣀⣀⣀⣀⣀  0.0  │|
+ 27|├─Free:──────────────────────────14.7─GiB─┤                                          ││     176 systemd-logind   /usr/lib/systemd/systemd-logind              1 root        7.6M ⣀⣀⣀⣀⣀  0.0  │|
+ 28|│  95%                                   ⣿│                                          ││     175 systemd-homed    /usr/lib/systemd/systemd-homed               1 root        7.6M ⣀⣀⣀⣀⣀  0.0  │|
+ 29|│                                        ⣿│                                          ││     173 dbus-broker-lau  /usr/bin/dbus-broker-launch --scope syste    1 dbus        4.2M ⣀⣀⣀⣀⣀  0.0  │|
+ 30|├─────────────────────────────────────────┤                                          ││     119 (udev-worker)    (udev-worker)                                1 root        8.1M ⣀⣀⣀⣀⣀  0.0  │|
+ 31|╰─────────────────────────────────────────┴──────────────────────────────────────────╯│     122 (udev-worker)    (udev-worker)                                1 root        7.6M ⣀⣀⣀⣀⣀  0.0  │|
+ 32|╭─┐³net┌┐172.28.0.119┌─────────────────────────────────┐sync┌┐auto┌┐zero┌┐←b eth0 n→┌╮│     124 (udev-worker)    (udev-worker)                                1 root        7.6M ⣀⣀⣀⣀⣀  0.0  │|
+ 33|│10K                                                                                 ││      92 (udev-worker)    (udev-worker)                                1 root        7.7M ⣀⣀⣀⣀⣀  0.0  │|
+ 34|│                                                         ╭─┐download┌──────────────╮││      96 (udev-worker)    (udev-worker)                                1 root        8.4M ⣀⣀⣀⣀⣀  0.0  │|
+ 35|│                                                         │▼ 0 Byte/s      (0 bitps)│││     101 (udev-worker)    (udev-worker)                                1 root        7.7M ⣀⣀⣀⣀⣀  0.0  │|
+ 36|│                                                         │▼ Top:          (0 bitps)│││     103 (udev-worker)    (udev-worker)                                1 root        8.8M ⣀⣀⣀⣀⣀  0.0  │|
+ 37|│                                                        ⣀│▼ Total:         112 Byte│││     109 (udev-worker)    (udev-worker)                                1 root        7.9M ⣀⣀⣀⣀⣀  0.0  │|
+ 38|│                                                        ⠉│                         │││     110 (udev-worker)    (udev-worker)                                1 root        7.3M ⣀⣀⣀⣀⣀  0.0  │|
+ 39|│                                                         │▲ 0 Byte/s      (0 bitps)│││     111 (udev-worker)    (udev-worker)                                1 root        7.3M ⣀⣀⣀⣀⣀  0.0  │|
+ 40|│                                                         │▲ Top:          (0 bitps)│││      66 systemd-nsresou  /usr/lib/systemd/systemd-nsresourced         1 root        6.1M ⣀⣀⣀⣀⣀  0.0  │|
+ 41|│                                                         │▲ Total:         1.97 KiB│││      67 systemd-userdbd  /usr/lib/systemd/systemd-userdbd             1 root        5.9M ⣀⣀⣀⣀⣀  0.0  │|
+ 42|│                                                         ╰─┘upload└────────────────╯││       2 init-systemd(ar  /init                                        2 root        2.0M ⣀⣀⣀⣀⣀  0.0  │|
+ 43|│10K                                                                                 ││       7 init             plan9 --control-socket 7 --log-level 4 --    2 root        1.8M ⣀⣀⣀⣀⣀  0.0 ↓│|
+ 44|╰────────────────────────────────────────────────────────────────────────────────────╯╰┘↑ select ↓└┘info ↵└┘terminate└┘kill└┘signals└┘Nice└┘Follow└────────────────────────────────────┘0/64└╯|

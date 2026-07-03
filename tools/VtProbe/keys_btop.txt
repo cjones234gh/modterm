@@ -1,0 +1,6 @@
+# delay-ms payload
+2500 echo hello one\r
+400 echo hello two\r
+400 btop\r
+12000 q
+800 exit\r

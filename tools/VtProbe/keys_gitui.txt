@@ -1,0 +1,15 @@
+# navigate gitui: files tab, scroll through file diffs
+2500 gitui\r
+3000 hex:32
+800 hex:6A
+400 hex:6A
+400 hex:6A
+400 hex:6A
+400 hex:6B
+400 hex:6B
+600 hex:31
+800 hex:32
+800 hex:6A
+400 hex:6A
+1200 hex:71
+800 exit\r
