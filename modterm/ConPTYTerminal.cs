@@ -233,9 +233,6 @@ namespace modterm
 
                 // Start async reader
                 _readTask = Task.Run(ReadOutputLoop);
-
-                // Nudge interactive shells to emit their first prompt after ConPTY attach.
-                WriteInput("\r");
             }
             catch
             {
