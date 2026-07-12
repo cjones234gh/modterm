@@ -44,8 +44,8 @@ namespace modterm
         private XtermSharp.Terminal _terminal = null!;
         // DECSCNM (screen-wide reverse video) is not tracked by XtermSharp; kept false.
         private bool _screenReverse = false;
-        private string _currentFont = "BlexMono Nerd Font Mono";
-        private string _currentControlFont = "BlexMono Nerd Font Mono";
+        private string _currentFont = BundledFonts.BlexMonoNerdFontFamilyName;
+        private string _currentControlFont = BundledFonts.BlexMonoNerdFontFamilyName;
         private float _currentFontSize = 12f;
         private float _controlFontScale = 0.777f;
         private float _currentControlFontSize = 12f;
@@ -99,15 +99,21 @@ namespace modterm
             }
             set 
             {
-                _currentFont = value; 
-                _currentTextFormat.FontFamily = _currentFont; 
+                _currentFont = value;
+                _currentTextFormat.FontFamily = BundledFonts.ResolveFontFamily(_currentFont);
+                _normalTextFormat = null;
+                _boldTextFormat = null;
             }
         }
 
         public string CurrentControlFont 
         { 
             get { return _currentControlFont; }
-            set { _currentControlFont = value; _currentControlTextFormat.FontFamily = _currentControlFont; }
+            set
+            {
+                _currentControlFont = value;
+                _currentControlTextFormat.FontFamily = BundledFonts.ResolveFontFamily(_currentControlFont);
+            }
         }
         
         public float CurrentFontSize
@@ -160,10 +166,18 @@ namespace modterm
                 new XtermSharp.TerminalOptions { Cols = 80, Rows = 25, Scrollback = 5000, ConvertEol = false });
 
             // set default values
-            _currentTextFormat = new CanvasTextFormat { FontFamily = _currentFont,
-                FontSize = _currentFontSize, WordWrapping = CanvasWordWrapping.NoWrap };
-            _currentControlTextFormat = new CanvasTextFormat { FontFamily = _currentControlFont,
-                FontSize = _currentControlFontSize, WordWrapping = CanvasWordWrapping.NoWrap };
+            _currentTextFormat = new CanvasTextFormat
+            {
+                FontFamily = BundledFonts.ResolveFontFamily(_currentFont),
+                FontSize = _currentFontSize,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
+            _currentControlTextFormat = new CanvasTextFormat
+            {
+                FontFamily = BundledFonts.ResolveFontFamily(_currentControlFont),
+                FontSize = _currentControlFontSize,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
 
             _cursorTimer = ModtermWinInstance.DispatcherQueue!.CreateTimer();
             _cursorTimer.Interval = TimeSpan.FromMilliseconds(_cursorSpeed);
@@ -766,16 +780,17 @@ namespace modterm
                 return;
             }
 
+            string resolvedFontFamily = BundledFonts.ResolveFontFamily(CurrentFont);
             _normalTextFormat = new CanvasTextFormat
             {
-                FontFamily = CurrentFont,
+                FontFamily = resolvedFontFamily,
                 FontSize = CurrentFontSize,
                 FontWeight = FontWeights.Normal,
                 WordWrapping = CanvasWordWrapping.NoWrap
             };
             _boldTextFormat = new CanvasTextFormat
             {
-                FontFamily = CurrentFont,
+                FontFamily = resolvedFontFamily,
                 FontSize = CurrentFontSize,
                 FontWeight = FontWeights.Bold,
                 WordWrapping = CanvasWordWrapping.NoWrap

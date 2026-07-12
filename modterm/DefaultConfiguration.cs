@@ -13,8 +13,8 @@ namespace modterm
             {
                 LastWindowLocation = new Point(100, 100),
                 WindowSize = new Size(800, 600),
-                TerminalFont = "BlexMono Nerd Font Mono",
-                LabelFont = "BlexMono Nerd Font Mono",
+                TerminalFont = BundledFonts.BlexMonoNerdFontFamilyName,
+                LabelFont = BundledFonts.BlexMonoNerdFontFamilyName,
                 TerminalFontSize = 12.0f,
                 TerminalShell = new Shell
                 {

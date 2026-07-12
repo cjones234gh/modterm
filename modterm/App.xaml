@@ -6,8 +6,8 @@
     xmlns:local="using:modterm">
     <Application.Resources>
         <ResourceDictionary>
-            <FontFamily x:Key="CustomFont">ms-appx:///Assets/Fonts/BlexMonoNerdFontMono-Regular.ttf#BlexMonoNerdFontMono</FontFamily>
-            <FontFamily x:Key="CustomFontBold">ms-appx:///Assets/Fonts/BlexMonoNerdFontMono-Bold.ttf#BlexMonoNerdFontMono</FontFamily>
+            <FontFamily x:Key="CustomFont">ms-appx:///Assets/Fonts/BlexMonoNerdFontMono-Regular.ttf#BlexMono Nerd Font Mono</FontFamily>
+            <FontFamily x:Key="CustomFontBold">ms-appx:///Assets/Fonts/BlexMonoNerdFontMono-Bold.ttf#BlexMono Nerd Font Mono</FontFamily>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <!-- Other merged dictionaries here -->

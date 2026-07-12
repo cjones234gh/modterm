@@ -35,6 +35,7 @@ namespace modterm
         public App()
         {
             InitializeComponent();
+            BundledFonts.RegisterBundledFonts();
         }
 
         /// <summary>

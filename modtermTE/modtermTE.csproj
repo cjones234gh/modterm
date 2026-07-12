@@ -17,8 +17,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Manifest Include="$(ApplicationManifest)" />
+    <Compile Include="..\modterm\BundledFonts.cs" Link="BundledFonts.cs" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\modterm\Assets\Fonts\BlexMonoNerdFontMono-Bold.ttf" Link="Assets\Fonts\BlexMonoNerdFontMono-Bold.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\modterm\Assets\Fonts\BlexMonoNerdFontMono-Regular.ttf" Link="Assets\Fonts\BlexMonoNerdFontMono-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />

@@ -9,10 +9,11 @@ namespace modtermTE
     {
         public static IReadOnlyList<string> GetFontFamilyNames()
         {
-            var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase)
+            var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var bundledFont in modterm.BundledFonts.BundledFontFamilyNames)
             {
-                "Blex"
-            };
+                names.Add(bundledFont);
+            }
 
             using var fontSet = CanvasFontSet.GetSystemFontSet();
             foreach (var face in fontSet.Fonts)
