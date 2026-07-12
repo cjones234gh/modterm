@@ -1,4 +1,4 @@
-Copyright (c) 2026, Chris Jones (https://github.com/cjones234gh)
+Copyright (c) 2026, Christopher A. Jones (https://github.com/cjones234gh)
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
