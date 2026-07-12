@@ -14,9 +14,7 @@ Build modterm in Visual Studio with F5, or Cursor AI with F5.
 
 # Known Issues
 
-BlexMono is currently the default font, but not embedded yet. (You can choose a new font by launching the config editor, right-click for context, select Launch...Editor)
-
-Running TUI apps someimtes requires running 'reset' before launch in git-bash and WSL environments for correct rendering.
+Running TUI apps someimtes requires running `reset` before launch in git-bash and WSL environments for correct rendering.
 
 Configuration and Theme editor works, but to save an existing theme you must "Save as New" and then use its current name to overwrite it.
 
