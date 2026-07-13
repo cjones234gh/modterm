@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Compile Include="..\modterm\BundledFonts.cs" Link="BundledFonts.cs" />
+    <Compile Include="..\modterm\TerminalCursorStyles.cs" Link="TerminalCursorStyles.cs" />
   </ItemGroup>
 
   <ItemGroup>

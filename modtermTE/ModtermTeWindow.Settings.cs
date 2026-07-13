@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
+using modterm;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,6 +21,7 @@ namespace modtermTE
         private ComboBox? _terminalFontCombo;
         private ComboBox? _labelFontCombo;
         private ComboBox? _shellCombo;
+        private ComboBox? _cursorCombo;
         private NumberBox? _blurAmountBox;
         private Slider? _opacitySlider;
         private TextBlock? _opacityValueText;
@@ -54,7 +56,7 @@ namespace modtermTE
             SettingsPanel.Children.Add(CreateSettingRow("Terminal Font", CreateTerminalFontCombo()));
             SettingsPanel.Children.Add(CreateSettingRow("Label Font", CreateLabelFontCombo()));
             SettingsPanel.Children.Add(CreateSettingRow("Shell", CreateShellCombo()));
-            SettingsPanel.Children.Add(CreateSettingRow("Cursor", CreateCursorDisplay()));
+            SettingsPanel.Children.Add(CreateSettingRow("Cursor", CreateCursorCombo()));
 
             _themeHeader = CreateSectionHeader("Theme");
             SettingsPanel.Children.Add(_themeHeader);
@@ -229,14 +231,29 @@ namespace modtermTE
             return _shellCombo;
         }
 
-        private TextBlock CreateCursorDisplay()
+        private ComboBox CreateCursorCombo()
         {
-            return new TextBlock
+            var options = new[] { TerminalCursorStyles.Solid, TerminalCursorStyles.Underline };
+            string selected = TerminalCursorStyles.Normalize(_configuration.TerminalCursor);
+
+            _cursorCombo = new ComboBox
             {
-                Text = "bar",
-                VerticalAlignment = VerticalAlignment.Center,
-                Opacity = 0.8
+                ItemsSource = options,
+                SelectedItem = selected,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                MaxWidth = 360
             };
+
+            _cursorCombo.SelectionChanged += (_, _) =>
+            {
+                if (_cursorCombo.SelectedItem is string cursorStyle)
+                {
+                    _configuration.TerminalCursor = cursorStyle;
+                    NotifyConfigurationChanged();
+                }
+            };
+
+            return _cursorCombo;
         }
 
         private NumberBox CreateBlurAmountBox(float initialValue)

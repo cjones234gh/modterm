@@ -22,7 +22,7 @@ namespace modterm
                     Path = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
                     Arguments = ""
                 },
-                TerminalCursor = "bar",
+                TerminalCursor = TerminalCursorStyles.Solid,
                 ThemeConfiguration = LoadThemeConfiguration(DefaultThemeName),
                 ShellConfigurations = new List<Shell>()
                 {

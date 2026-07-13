@@ -367,6 +367,7 @@ namespace modterm
             _mtr.CurrentFont = _uac.TerminalFont;
             _mtr.CurrentControlFont = _uac.LabelFont;
             _mtr.CurrentFontSize = _uac.TerminalFontSize;
+            _mtr.CurrentCursorStyle = _uac.TerminalCursor;
             _mtr.SetColorConfiguration(_uac.ThemeConfiguration, this);
             RootGrid.Background = _mtr.GetBackgroundBrush();
         }

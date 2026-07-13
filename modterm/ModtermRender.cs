@@ -46,6 +46,7 @@ namespace modterm
         private bool _screenReverse = false;
         private string _currentFont = BundledFonts.BlexMonoNerdFontFamilyName;
         private string _currentControlFont = BundledFonts.BlexMonoNerdFontFamilyName;
+        private string _currentCursorStyle = TerminalCursorStyles.Solid;
         private float _currentFontSize = 12f;
         private float _controlFontScale = 0.777f;
         private float _currentControlFontSize = 12f;
@@ -130,6 +131,12 @@ namespace modterm
                 _currentControlTextFormat.FontSize = _currentControlFontSize;
                 _controlPadding = _currentControlFontSize / 1.75f;
             }
+        }
+
+        public string CurrentCursorStyle
+        {
+            get => _currentCursorStyle;
+            set => _currentCursorStyle = TerminalCursorStyles.Normalize(value);
         }
 
         public CanvasTextFormat CurrentControlTextFormat 
@@ -657,9 +664,17 @@ namespace modterm
             if (_cursorVisible && _scrollOffset == 0 && !_terminal.CursorHidden)
             {
                 float cursorX = _leftTextPadding + (float)(_terminal.Buffer.X * _measuredCharWidth);
-                float cursorY = (float)(_terminal.Buffer.Y * (CurrentFontSize + _lineHeightPadding)) + _topTextPadding + 2;
-                //args.DrawingSession.DrawText("|", cursorX, cursorY, _outputColor, _currentTextFormat);
-                args.DrawingSession.FillRectangle(cursorX, cursorY, _measuredCharWidth, (float)lineHeight, _outputColor);
+                float cursorY = (float)(_terminal.Buffer.Y * lineHeight) + _topTextPadding + 2;
+                if (TerminalCursorStyles.IsUnderline(_currentCursorStyle))
+                {
+                    const float underlineThickness = 2f;
+                    float underlineY = cursorY + (float)lineHeight - underlineThickness;
+                    args.DrawingSession.FillRectangle(cursorX, underlineY, _measuredCharWidth, underlineThickness, _outputColor);
+                }
+                else
+                {
+                    args.DrawingSession.FillRectangle(cursorX, cursorY, _measuredCharWidth, (float)lineHeight, _outputColor);
+                }
             }
 
             EndEffectSequence();
