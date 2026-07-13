@@ -20,7 +20,7 @@ namespace modtermTE
             AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             SetTitleBar(AppTitleBar);
 
-            this.AppWindow.Resize(new Windows.Graphics.SizeInt32(700, 925));
+            this.AppWindow.Resize(new Windows.Graphics.SizeInt32(700, 770));
 
             _liveConfigurationPublisher = new LiveConfigurationPublisher(DispatcherQueue, _configurationStore);
             InitializeSettings();

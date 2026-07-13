@@ -31,7 +31,7 @@
             <StackPanel x:Name="SettingsPanel"
                         Spacing="0"
                         MaxWidth="760"
-                        HorizontalAlignment="Stretch" />
+                        HorizontalAlignment="Center" />
         </ScrollViewer>
 
         <Border Grid.Row="2"
