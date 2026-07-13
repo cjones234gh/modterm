@@ -43,6 +43,9 @@
                         Content="Save Configuration"
                         Style="{StaticResource AccentButtonStyle}"
                         Click="SaveConfigurationButton_Click" />
+                <Button x:Name="SaveThemeButton"
+                        Content="Save Theme"
+                        Click="SaveThemeButton_Click" />
                 <Button x:Name="SaveAsNewThemeButton"
                         Content="Save as New Theme"
                         Click="SaveAsNewThemeButton_Click" />

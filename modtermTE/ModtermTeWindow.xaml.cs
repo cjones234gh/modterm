@@ -25,11 +25,7 @@ namespace modtermTE
             _liveConfigurationPublisher = new LiveConfigurationPublisher(DispatcherQueue, _configurationStore);
             InitializeSettings();
 
-            // Set dynamic title using the loaded theme name (persisted by modterm before launch).
-            // Note: _configuration is populated in the partial class by InitializeSettings().
-            string themeName = _configuration?.ThemeConfiguration?.Name ?? "Untitled";
-            this.AppWindow.Title = $"Theme: {themeName}";
-            _themeHeader.Text = $"Theme: {themeName}";
+            UpdateThemeHeader();
         }
     }
 }

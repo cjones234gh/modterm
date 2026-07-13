@@ -25,6 +25,7 @@ namespace modtermTE
         private TextBlock? _opacityValueText;
         private ComboBox? _backdropCombo;
         private StackPanel? _palettePanel;
+        private ComboBox? _themeCombo;
         private TextBlock? _themeHeader = null!;
         private bool _settingsUiReady;
 
@@ -57,6 +58,7 @@ namespace modtermTE
 
             _themeHeader = CreateSectionHeader("Theme");
             SettingsPanel.Children.Add(_themeHeader);
+            SettingsPanel.Children.Add(CreateSettingRow("Theme", CreateThemeCombo()));
             var theme = _configuration.ThemeConfiguration;
             SettingsPanel.Children.Add(CreateSettingRow("Output Color",
                 CreateColorPickerButton(theme.OutputColor, color => theme.OutputColor = color)));
@@ -77,6 +79,69 @@ namespace modtermTE
             SettingsPanel.Children.Add(CreatePaletteMappingControl(theme));
 
             _settingsUiReady = true;
+        }
+
+        private ComboBox CreateThemeCombo()
+        {
+            var themeNames = _configurationStore.GetThemeNames().ToList();
+            string currentTheme = _configuration.ThemeConfiguration?.Name ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(currentTheme)
+                && !themeNames.Any(name => string.Equals(name, currentTheme, StringComparison.OrdinalIgnoreCase)))
+            {
+                themeNames.Insert(0, currentTheme);
+            }
+
+            _themeCombo = new ComboBox
+            {
+                ItemsSource = themeNames,
+                SelectedItem = themeNames.FirstOrDefault(name => string.Equals(name, currentTheme, StringComparison.OrdinalIgnoreCase))
+                    ?? currentTheme,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                MaxWidth = 360
+            };
+
+            _themeCombo.SelectionChanged += (_, _) =>
+            {
+                if (!_settingsUiReady || _themeCombo.SelectedItem is not string themeName)
+                {
+                    return;
+                }
+
+                if (string.Equals(themeName, _configuration.ThemeConfiguration?.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                ApplySelectedTheme(themeName);
+            };
+
+            return _themeCombo;
+        }
+
+        private void ApplySelectedTheme(string themeName)
+        {
+            try
+            {
+                _configuration.ThemeConfiguration = _configurationStore.LoadTheme(themeName);
+                UpdateThemeHeader();
+                BuildSettingsUi();
+                NotifyConfigurationChanged();
+            }
+            catch (Exception ex)
+            {
+                _ = ShowSimpleDialogAsync("Theme Load Failed", ex.Message);
+            }
+        }
+
+        private void UpdateThemeHeader()
+        {
+            string themeName = _configuration?.ThemeConfiguration?.Name ?? "Untitled";
+            if (_themeHeader is not null)
+            {
+                _themeHeader.Text = $"Theme: {themeName}";
+            }
+
+            AppWindow.Title = $"Theme: {themeName}";
         }
 
         private void NotifyConfigurationChanged()
@@ -359,6 +424,43 @@ namespace modtermTE
             _ = ShowSimpleDialogAsync("Configuration Saved", "Your settings were saved to userAppConfig.json and applied to modterm.");
         }
 
+        private async void SaveThemeButton_Click(object sender, RoutedEventArgs e)
+        {
+            await OverwriteCurrentThemeAsync();
+        }
+
+        private async Task OverwriteCurrentThemeAsync()
+        {
+            if (RootGrid.XamlRoot is null)
+            {
+                return;
+            }
+
+            string themeName = _configuration.ThemeConfiguration.Name;
+            if (string.IsNullOrWhiteSpace(themeName))
+            {
+                return;
+            }
+
+            var dialog = new ContentDialog
+            {
+                Title = "Save Theme",
+                Content = $"Overwrite {themeName}?",
+                PrimaryButtonText = "Overwrite",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = RootGrid.XamlRoot
+            };
+
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+            {
+                return;
+            }
+
+            _configurationStore.SaveTheme(_configuration.ThemeConfiguration);
+            await ShowSimpleDialogAsync("Theme Saved", $"Theme \"{themeName}\" was saved.");
+        }
+
         private async void SaveAsNewThemeButton_Click(object sender, RoutedEventArgs e)
         {
             await SaveCurrentLookAsNewThemeAsync();
@@ -413,7 +515,11 @@ namespace modtermTE
             }
 
             themeConfig.Name = themeName;
+            _configuration.ThemeConfiguration.Name = themeName;
             _configurationStore.SaveTheme(themeConfig);
+            UpdateThemeHeader();
+            BuildSettingsUi();
+            NotifyConfigurationChanged();
             await ShowSimpleDialogAsync("Theme Saved", $"Theme \"{themeName}\" was saved.");
         }
 
