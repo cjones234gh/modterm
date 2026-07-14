@@ -416,3 +416,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# modterm packaging pipeline artifacts (keep note.md placeholders)
+deploy/staging/**
+!deploy/staging/note.md
+deploy/output/
+deploy/dependencies/*.exe

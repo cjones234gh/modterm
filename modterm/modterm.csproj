@@ -17,19 +17,6 @@
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Content Remove="Assets\DefaultThemes\theme_Amber Terminal.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Aqua.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Deep Blue.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Eggplant.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Green Terminal.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Greenmica.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Mica Me Crazy.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Paper Edition.json" />
-    <Content Remove="Assets\DefaultThemes\theme_PaletteOverrideTest.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Smoke.json" />
-    <Content Remove="Assets\DefaultThemes\theme_Violet Fog.json" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Assets\Fonts\BlexMonoNerdFontMono-Bold.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -74,12 +61,18 @@
     </ProjectReference>
   </ItemGroup>
 
+  <!--
+    Copy only the framework-dependent TE build output sitting next to this project's
+    binaries. Exclude nested RID publish trees (win-x64\, publish\) that appear when
+    TE is built as part of a RID-specific publish and would otherwise double the package.
+  -->
   <Target Name="CopyThemeEditorToOutput" AfterTargets="Build">
     <PropertyGroup>
       <_ModtermTeOutputDir>$(MSBuildThisFileDirectory)..\modtermTE\bin\$(Platform)\$(Configuration)\$(TargetFramework)\</_ModtermTeOutputDir>
     </PropertyGroup>
     <ItemGroup>
-      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*" />
+      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*"
+                        Exclude="$(_ModtermTeOutputDir)win-*\**;$(_ModtermTeOutputDir)publish\**" />
     </ItemGroup>
     <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
@@ -89,42 +82,13 @@
       <_ModtermTeOutputDir>$(MSBuildThisFileDirectory)..\modtermTE\bin\$(Platform)\$(Configuration)\$(TargetFramework)\</_ModtermTeOutputDir>
     </PropertyGroup>
     <ItemGroup>
-      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*" />
+      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*"
+                        Exclude="$(_ModtermTeOutputDir)win-*\**;$(_ModtermTeOutputDir)publish\**" />
     </ItemGroup>
     <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
   <ItemGroup>
-    <None Update="Assets\DefaultThemes\theme_Amber Terminal.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Aqua.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Deep Blue.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Eggplant.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Green Terminal.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Greenmica.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Mica Me Crazy.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Paper Edition.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_PaletteOverrideTest.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Smoke.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\DefaultThemes\theme_Violet Fog.json">
+    <None Update="Assets\DefaultThemes\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="test-bash.sh">

@@ -1,34 +1,58 @@
+; =================================================================================
+; modterm Inno Setup script
+; Staging and dependency folders are produced/filled by build-pipeline.ps1
+; =================================================================================
+
+#define MyAppName "modterm"
+#define MyAppVersion "1.0.0"
+#define MyAppPublisher "modterm"
+#define MyAppExeName "modterm.exe"
+#define MyAppAssocName "modterm Terminal"
+#define StagingDir "deploy\staging"
+#define DepsDir "deploy\dependencies"
+#define WinAppRuntimeInstaller "WindowsAppRuntimeInstall-x64.exe"
+
 [Setup]
-AppName=My WinUI3 Application
-AppVersion=1.0.0
-DefaultDirName={autopf}\MyWinUI3Application
-DefaultGroupName=My WinUI3 Application
-OutputBaseFilename=MyWinUI3AppSetup
+AppId={{A6C3E1F2-8B4D-4E9A-9C2F-1D7E5A0B3C84}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL=https://github.com/cjones234gh/modterm
+DefaultDirName={autopf}\{#MyAppName}
+DefaultGroupName={#MyAppName}
+DisableProgramGroupPage=yes
+OutputDir=deploy\output
+OutputBaseFilename=modtermSetup-{#MyAppVersion}
+SetupIconFile=modterm\Modterm.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
 SolidCompression=yes
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
-; Elevate to administrative privileges to allow system-wide Windows App SDK installation
+WizardStyle=modern
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+; Elevate so the Windows App Runtime installer can register framework packages system-wide.
 PrivilegesRequired=admin
+MinVersion=10.0.17763
 
-[Files]
-; 1. Copy everything inside your staging folder (Main EXE, Settings EXE, DLLs, and .NET files)
-Source: "C:\DeployStaging\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-; 2. Embed the Windows App SDK Bootstrapper installer into the setup's temporary folder
-Source: "C:\Dependencies\WindowsAppRuntimeInstall.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
-
-[Icons]
-; Create a desktop and start menu shortcut for your primary application only
-Name: "{autoprograms}\My WinUI3 Application"; Filename: "{app}\MainApplication.exe"
-Name: "{autodesktop}\My WinUI3 Application"; Filename: "{app}\MainApplication.exe"; Tasks: desktopicon
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
-[Run]
-; Run the Windows App SDK dependency wrapper silently BEFORE the main app is launched or the setup finishes
-Filename: "{tmp}\WindowsAppRuntimeInstall.exe"; Parameters: "--quiet"; Flags: runhidden waituntilterminated
+[Files]
+; Main app publish output (.NET self-contained + WinUI unpackaged binaries + assets)
+Source: "{#StagingDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Optional: Prompt the user to launch the main app upon completion
-Filename: "{app}\MainApplication.exe"; Description: "{cm:LaunchProgram,My WinUI3 Application}"; Flags: nowait postinstall skipifsilent
+; Windows App SDK / Windows App Runtime bootstrapper (downloaded by build-pipeline.ps1)
+Source: "{#DepsDir}\{#WinAppRuntimeInstaller}"; DestDir: "{tmp}"; Flags: deleteafterinstall
+
+[Icons]
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[Run]
+; Install / update Windows App Runtime before offering to launch the app.
+Filename: "{tmp}\{#WinAppRuntimeInstaller}"; Parameters: "--quiet"; StatusMsg: "Installing Windows App Runtime..."; Flags: runhidden waituntilterminated
+
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
