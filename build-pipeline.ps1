@@ -2,8 +2,13 @@
 # WinUI 3 Automated Build & Inno Setup Deployment Pipeline (modterm)
 # =================================================================================
 # Requires: .NET 8 SDK, Inno Setup 6 (ISCC.exe), network access on first run
-#           to download the Windows App Runtime installer.
+#           to download redistributable runtimes.
 # Also requires XtermSharp cloned next to this repo (see README).
+#
+# Publishes framework-dependent (not self-contained). The installer ships and
+# silently installs:
+#   - .NET 8 Desktop Runtime (needed by modterm + modtermTE)
+#   - Windows App Runtime 1.8 (needed by unpackaged WinUI)
 # =================================================================================
 
 $ErrorActionPreference = "Stop"
@@ -27,11 +32,17 @@ $WindowsAppSdkRuntimeVersion = "1.8.260317003"
 $WindowsAppRuntimeFileName   = "WindowsAppRuntimeInstall-x64.exe"
 $WindowsAppRuntimeUrl        = "https://aka.ms/windowsappsdk/1.8/$WindowsAppSdkRuntimeVersion/windowsappruntimeinstall-x64.exe"
 
+# .NET 8 Desktop Runtime (Microsoft.WindowsDesktop.App) — shared by modterm + modtermTE.
+$DotNetDesktopRuntimeVersion  = "8.0.28"
+$DotNetDesktopRuntimeFileName = "windowsdesktop-runtime-$DotNetDesktopRuntimeVersion-win-x64.exe"
+$DotNetDesktopRuntimeUrl      = "https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/$DotNetDesktopRuntimeVersion/$DotNetDesktopRuntimeFileName"
+
 Write-Host "[1/5] Configuration" -ForegroundColor Cyan
 Write-Host "  Repo:     $RepoRoot"
 Write-Host "  Project:  $MainProjPath"
 Write-Host "  Staging:  $StagingFolder"
-Write-Host "  Runtime:  Windows App SDK $WindowsAppSdkRuntimeVersion ($WindowsAppRuntimeFileName)"
+Write-Host "  Mode:     framework-dependent (win-x64)"
+Write-Host "  Runtimes: .NET Desktop $DotNetDesktopRuntimeVersion + Windows App SDK $WindowsAppSdkRuntimeVersion"
 
 # 2. Clean and Prepare Target Folders
 Write-Host "[2/5] Cleaning and preparing build paths..." -ForegroundColor Cyan
@@ -42,19 +53,29 @@ New-Item -ItemType Directory -Path $StagingFolder -Force | Out-Null
 New-Item -ItemType Directory -Path $DepsFolder -Force | Out-Null
 New-Item -ItemType Directory -Path $OutputFolder -Force | Out-Null
 
-# 3. Fetch Windows App Runtime installer if missing
-# Unpackaged WinUI apps still need the Windows App Runtime framework packages on the
-# machine, even when .NET is published self-contained.
-$SdkInstallerPath = Join-Path $DepsFolder $WindowsAppRuntimeFileName
-if (-not (Test-Path $SdkInstallerPath)) {
-    Write-Host "--> $WindowsAppRuntimeFileName not found. Downloading from Microsoft..." -ForegroundColor Yellow
-    Write-Host "    $WindowsAppRuntimeUrl"
-    Invoke-WebRequest -Uri $WindowsAppRuntimeUrl -OutFile $SdkInstallerPath
-} else {
-    Write-Host "--> Using cached runtime installer: $SdkInstallerPath" -ForegroundColor DarkGray
+function Get-CachedDependency {
+    param(
+        [Parameter(Mandatory)] [string] $FileName,
+        [Parameter(Mandatory)] [string] $Url
+    )
+
+    $path = Join-Path $DepsFolder $FileName
+    if (-not (Test-Path $path)) {
+        Write-Host "--> $FileName not found. Downloading from Microsoft..." -ForegroundColor Yellow
+        Write-Host "    $Url"
+        Invoke-WebRequest -Uri $Url -OutFile $path
+    } else {
+        Write-Host "--> Using cached dependency: $FileName" -ForegroundColor DarkGray
+    }
+
+    return $path
 }
 
-# 4. Build theme editor first, then publish the main unpackaged app.
+# 3. Fetch redistributable runtimes if missing
+$SdkInstallerPath = Get-CachedDependency -FileName $WindowsAppRuntimeFileName -Url $WindowsAppRuntimeUrl
+$DotNetInstallerPath = Get-CachedDependency -FileName $DotNetDesktopRuntimeFileName -Url $DotNetDesktopRuntimeUrl
+
+# 4. Build theme editor first, then publish the main unpackaged app framework-dependent.
 # modterm copies modtermTE into the publish output via CopyThemeEditorToPublish;
 # building TE with Platform=x64 keeps that path aligned with the csproj target.
 Write-Host "[3/5] Publishing application binaries via Dotnet CLI..." -ForegroundColor Cyan
@@ -68,7 +89,7 @@ if ($LASTEXITCODE -ne 0) {
 & dotnet publish $MainProjPath `
     -c Release `
     -r win-x64 `
-    --self-contained true `
+    --self-contained false `
     -p:Platform=x64 `
     -p:PublishReadyToRun=true `
     -p:PublishTrimmed=false `
@@ -114,7 +135,12 @@ if (-not (Test-Path $SdkInstallerPath)) {
     Exit 1
 }
 
-& $InnoCompiler $InstallerIss
+if (-not (Test-Path $DotNetInstallerPath)) {
+    Write-Error ".NET Desktop Runtime installer missing at $DotNetInstallerPath"
+    Exit 1
+}
+
+& $InnoCompiler "/DDotNetDesktopRuntimeInstaller=$DotNetDesktopRuntimeFileName" $InstallerIss
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Inno Setup compilation step encountered a critical error."
     Exit 1
@@ -127,7 +153,7 @@ $SetupExe = Get-ChildItem $OutputFolder -Filter "modtermSetup*.exe" -ErrorAction
 
 Write-Host "`n[5/5] Success! Installer built:" -ForegroundColor Green
 if ($SetupExe) {
-    Write-Host "  $($SetupExe.FullName)" -ForegroundColor Green
+    Write-Host "  $($SetupExe.FullName) ($([math]::Round($SetupExe.Length / 1MB, 1)) MB)" -ForegroundColor Green
 } else {
     Write-Host "  (See $OutputFolder)" -ForegroundColor Green
 }

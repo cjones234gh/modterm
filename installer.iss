@@ -11,6 +11,9 @@
 #define StagingDir "deploy\staging"
 #define DepsDir "deploy\dependencies"
 #define WinAppRuntimeInstaller "WindowsAppRuntimeInstall-x64.exe"
+#ifndef DotNetDesktopRuntimeInstaller
+  #define DotNetDesktopRuntimeInstaller "windowsdesktop-runtime-8.0.28-win-x64.exe"
+#endif
 
 [Setup]
 AppId={{A6C3E1F2-8B4D-4E9A-9C2F-1D7E5A0B3C84}
@@ -30,7 +33,7 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Elevate so the Windows App Runtime installer can register framework packages system-wide.
+; Elevate so redistributable runtimes can install system-wide.
 PrivilegesRequired=admin
 MinVersion=10.0.17763
 
@@ -41,10 +44,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Main app publish output (.NET self-contained + WinUI unpackaged binaries + assets)
+; Main app publish output (framework-dependent WinUI unpackaged binaries + assets)
 Source: "{#StagingDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Windows App SDK / Windows App Runtime bootstrapper (downloaded by build-pipeline.ps1)
+; Redistributable runtimes (downloaded by build-pipeline.ps1)
+Source: "{#DepsDir}\{#DotNetDesktopRuntimeInstaller}"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "{#DepsDir}\{#WinAppRuntimeInstaller}"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
@@ -52,7 +56,10 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-; Install / update Windows App Runtime before offering to launch the app.
+; Install shared .NET 8 Desktop Runtime first (required by modterm + modtermTE).
+Filename: "{tmp}\{#DotNetDesktopRuntimeInstaller}"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing .NET 8 Desktop Runtime..."; Flags: runhidden waituntilterminated
+
+; Then install / update Windows App Runtime for unpackaged WinUI.
 Filename: "{tmp}\{#WinAppRuntimeInstaller}"; Parameters: "--quiet"; StatusMsg: "Installing Windows App Runtime..."; Flags: runhidden waituntilterminated
 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
