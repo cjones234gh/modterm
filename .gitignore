@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# test directories created by VtProbe sub project
+tools/VtProbe/captures
+tools/VtProbe/frames_check/
+
 # User-specific files
 *.rsuser
 *.suo
