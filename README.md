@@ -16,8 +16,6 @@ Build modterm in Visual Studio with F5, or Cursor AI with F5.
 
 * Running TUI apps someimtes requires running `reset` before launch in git-bash and WSL environments for correct rendering.
 
-* Configuration and Theme editor works, but to save an existing theme you must "Save as New" and then use its current name to overwrite it.
-
 * Copy/Paste works, but mouse clicks aren't translated in any way to to the pty.
 
 
