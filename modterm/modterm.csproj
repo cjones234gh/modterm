@@ -62,30 +62,41 @@
   </ItemGroup>
 
   <!--
-    Copy only the framework-dependent TE build output sitting next to this project's
-    binaries. Exclude nested RID publish trees (win-x64\, publish\) that appear when
-    TE is built as part of a RID-specific publish and would otherwise double the package.
+    Ship TE in ThemeEditor\ so its App.xbf / .pri do not overwrite modterm's.
+    Exclude nested RID publish trees (win-x64\, publish\) that appear when TE is
+    built as part of a RID-specific publish.
   -->
   <Target Name="CopyThemeEditorToOutput" AfterTargets="Build">
     <PropertyGroup>
       <_ModtermTeOutputDir>$(MSBuildThisFileDirectory)..\modtermTE\bin\$(Platform)\$(Configuration)\$(TargetFramework)\</_ModtermTeOutputDir>
+      <_ModtermTeDestDir>$(OutputPath)ThemeEditor\</_ModtermTeDestDir>
     </PropertyGroup>
     <ItemGroup>
       <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*"
                         Exclude="$(_ModtermTeOutputDir)win-*\**;$(_ModtermTeOutputDir)publish\**" />
+      <!-- ProjectReference can still drop TE bits next to modterm; clear those so only ThemeEditor\ remains. -->
+      <_FlatThemeEditorArtifacts Include="$(OutputPath)modtermTE.*"
+                                 Exclude="$(OutputPath)ThemeEditor\**" />
+      <_FlatThemeEditorArtifacts Include="$(OutputPath)ModtermTeWindow.xbf" />
     </ItemGroup>
-    <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(_ModtermTeDestDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Delete Files="@(_FlatThemeEditorArtifacts)" TreatErrorsAsWarnings="true" />
   </Target>
 
   <Target Name="CopyThemeEditorToPublish" AfterTargets="Publish">
     <PropertyGroup>
       <_ModtermTeOutputDir>$(MSBuildThisFileDirectory)..\modtermTE\bin\$(Platform)\$(Configuration)\$(TargetFramework)\</_ModtermTeOutputDir>
+      <_ModtermTeDestDir>$(PublishDir)ThemeEditor\</_ModtermTeDestDir>
     </PropertyGroup>
     <ItemGroup>
       <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*"
                         Exclude="$(_ModtermTeOutputDir)win-*\**;$(_ModtermTeOutputDir)publish\**" />
+      <_FlatThemeEditorArtifacts Include="$(PublishDir)modtermTE.*"
+                                 Exclude="$(PublishDir)ThemeEditor\**" />
+      <_FlatThemeEditorArtifacts Include="$(PublishDir)ModtermTeWindow.xbf" />
     </ItemGroup>
-    <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(_ModtermTeDestDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Delete Files="@(_FlatThemeEditorArtifacts)" TreatErrorsAsWarnings="true" />
   </Target>
   <ItemGroup>
     <None Update="Assets\DefaultThemes\*.json">
@@ -105,12 +116,13 @@
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
 
-  <!-- Publish Properties -->
+  <!-- Publish Properties.
+       WinUI unpackaged apps must not trim: PublishTrimmed=true writes feature
+       switches into runtimeconfig that crash Microsoft.UI.Xaml at startup. -->
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <PublishTrimmed>false</PublishTrimmed>
     <ApplicationIcon>Modterm.ico</ApplicationIcon>
   </PropertyGroup>
 </Project>

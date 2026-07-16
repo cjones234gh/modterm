@@ -111,7 +111,8 @@ if (Test-Path $NestedPublish) {
 
 $RequiredStagingFiles = @(
     "modterm.exe",
-    "modtermTE.exe",
+    "ThemeEditor\modtermTE.exe",
+    "ThemeEditor\App.xbf",
     "Assets\Fonts\BlexMonoNerdFontMono-Regular.ttf",
     "Assets\DefaultThemes\theme_Bluefang.json"
 )

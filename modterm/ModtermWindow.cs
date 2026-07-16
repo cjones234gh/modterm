@@ -533,14 +533,22 @@ namespace modterm
             SaveConfig();
 
             string baseDirectory = AppContext.BaseDirectory;
-            string themeEditorPath = Path.Combine(baseDirectory, "modtermTE.exe");
-            string themeEditorDllPath = Path.Combine(baseDirectory, "modtermTE.dll");
+            // Prefer ThemeEditor\ (avoids App.xbf/.pri collisions with modterm), fall back to
+            // same-folder layout used by older installs / debug copies.
+            string themeEditorDirectory = Path.Combine(baseDirectory, "ThemeEditor");
+            if (!Directory.Exists(themeEditorDirectory))
+            {
+                themeEditorDirectory = baseDirectory;
+            }
+
+            string themeEditorPath = Path.Combine(themeEditorDirectory, "modtermTE.exe");
+            string themeEditorDllPath = Path.Combine(themeEditorDirectory, "modtermTE.dll");
 
             if (!File.Exists(themeEditorPath))
             {
                 _ = ShowSimpleDialogAsync(
                     "Theme Editor Not Found",
-                    $"Could not find modtermTE.exe next to modterm at:\n{themeEditorPath}");
+                    $"Could not find modtermTE.exe at:\n{themeEditorPath}");
                 return;
             }
 
@@ -557,7 +565,7 @@ namespace modterm
                 var process = Process.Start(new ProcessStartInfo
                 {
                     FileName = themeEditorPath,
-                    WorkingDirectory = baseDirectory,
+                    WorkingDirectory = themeEditorDirectory,
                     UseShellExecute = true
                 });
             }
