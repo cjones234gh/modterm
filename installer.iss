@@ -4,7 +4,7 @@
 ; =================================================================================
 
 #define MyAppName "modterm"
-#define MyAppVersion "0.8.0"
+#define MyAppVersion "0.8.1"
 #define MyAppPublisher "modterm"
 #define MyAppExeName "modterm.exe"
 #define MyAppAssocName "modterm Terminal"
