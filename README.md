@@ -18,6 +18,9 @@ Build modterm in Visual Studio with F5, or Cursor AI with F5.
 
 * Copy/Paste works, but mouse clicks aren't translated in any way to to the pty.
 
+* Color is limited to a 256 color palette, RGB values are translated to the nearest palette entry.
+
+* Some inverted or highlighted text is not rendering correctly.
 
 
 
