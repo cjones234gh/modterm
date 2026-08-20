@@ -355,6 +355,35 @@ namespace modterm
                 point.Y <= textBottom;
         }
 
+        /// <summary>
+        /// Maps a canvas point to a 0-based viewport cell. Returns false when the
+        /// grid is not ready. When <paramref name="clamp"/> is true, out-of-range
+        /// points are snapped to the nearest cell (used for drag tracking).
+        /// </summary>
+        public bool TryGetViewportCell(Point point, bool clamp, out int col, out int row)
+        {
+            col = 0;
+            row = 0;
+            if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
+                return false;
+
+            double lineHeight = CurrentFontSize + _lineHeightPadding;
+            col = (int)Math.Floor((point.X - _leftTextPadding) / _measuredCharWidth);
+            row = (int)Math.Floor((point.Y - _topTextPadding) / lineHeight);
+
+            if (clamp)
+            {
+                col = Math.Clamp(col, 0, Math.Max(0, _columns - 1));
+                row = Math.Clamp(row, 0, Math.Max(0, _lines - 1));
+                return true;
+            }
+
+            if (col < 0 || row < 0 || col >= _columns || row >= _lines)
+                return false;
+
+            return true;
+        }
+
         public TextPosition GetTextPositionFromPoint(Point point)
         {
             double lineHeight = CurrentFontSize + _lineHeightPadding;
@@ -392,7 +421,8 @@ namespace modterm
                 if (!string.IsNullOrEmpty(text))
                 {
                     _scrollOffset = 0;
-                    ModtermWinInstance.ConPtyTerminal?.WriteInput(text);
+                    ModtermWinInstance.ConPtyTerminal?.WriteInput(
+                        VtUserInput.WrapPaste(text, _terminal.BracketedPasteMode));
                 }
                 ModtermWinInstance.InvalidateModtermCanvas();
             }

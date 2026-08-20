@@ -16,6 +16,7 @@ using Windows.UI;
 using Windows.Graphics;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace modterm
 {
@@ -47,6 +48,11 @@ namespace modterm
         // context menu flyout for right-click
         private MenuFlyout _flyout = null!;
         private bool _terminalRestartInProgress = false;
+        private bool _keyDownSentToPty;
+        private bool _ptyConsumedRightClick;
+        private int _mouseReportButton = -1;
+        private int _lastReportedMouseCol = -1;
+        private int _lastReportedMouseRow = -1;
 
         public void InvalidateModtermCanvas()
         {
@@ -135,6 +141,8 @@ namespace modterm
                 RequestConfigurationReload);
 
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
+            RootGrid.CharacterReceived += RootGrid_CharacterReceived;
+            this.Activated += ModtermWindow_Activated;
 
             ModtermCanvas.Draw += _mtr.ModtermCanvas_Draw;
             
@@ -144,6 +152,8 @@ namespace modterm
             ModtermCanvas.PointerPressed += this.ModtermCanvas_PointerPressed;
             ModtermCanvas.PointerMoved += this.ModtermCanvas_PointerMoved;
             ModtermCanvas.PointerReleased += this.ModtermCanvas_PointerReleased;
+            ModtermCanvas.PointerCaptureLost += this.ModtermCanvas_PointerCaptureLost;
+            ModtermCanvas.PointerCanceled += this.ModtermCanvas_PointerCanceled;
             ModtermCanvas.RightTapped += this.ModtermCanvas_RightTapped;
 
             // Debounce a burst of size events, then apply a live resize once they settle.
@@ -748,6 +758,31 @@ namespace modterm
             var reloadConfigItem = new MenuFlyoutItem { Text = "Reload Configuration File" };
             reloadConfigItem.Click += async (_, __) => await ReloadConfigurationFromDiskAsync();
             _flyout.Items.Add(reloadConfigItem);
+
+            var versionItem = new MenuFlyoutItem
+            {
+                Text = $"Modterm Version {GetApplicationVersion()}",
+                IsEnabled = false
+            };
+            _flyout.Items.Add(versionItem);
+        }
+
+        private static string GetApplicationVersion()
+        {
+            var informational = typeof(ModtermWindow).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion;
+
+            if (string.IsNullOrWhiteSpace(informational))
+            {
+                var assemblyVersion = typeof(ModtermWindow).Assembly.GetName().Version;
+                return assemblyVersion is null
+                    ? "0.0.0"
+                    : $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
+            }
+
+            int plus = informational.IndexOf('+');
+            return plus >= 0 ? informational[..plus] : informational;
         }
     }
 }

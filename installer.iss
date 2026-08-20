@@ -4,7 +4,11 @@
 ; =================================================================================
 
 #define MyAppName "modterm"
-#define MyAppVersion "0.8.1"
+; Canonical version lives in Directory.Build.props. build-pipeline.ps1 passes
+; /DMyAppVersion=...; the value below is only used if ISCC is run by hand.
+#ifndef MyAppVersion
+  #define MyAppVersion "0.8.2"
+#endif
 #define MyAppPublisher "modterm"
 #define MyAppExeName "modterm.exe"
 #define MyAppAssocName "modterm Terminal"

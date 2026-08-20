@@ -1,116 +1,131 @@
-﻿using Microsoft.Graphics.Canvas;
-using Microsoft.Graphics.Canvas.Effects;
-using Microsoft.Graphics.Canvas.Text;
-using Microsoft.Graphics.Canvas.UI.Xaml;
-using Microsoft.UI;
+﻿using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using System;
-using System.Diagnostics;
 using System.Text;
-using Windows.System;
-using Windows.UI;
 using Windows.Foundation;
-using System.Runtime.CompilerServices;
-using Microsoft.UI.Text;
+using Windows.System;
+using Windows.UI.Core;
+using XtermSharp;
 
 namespace modterm
 {
     public sealed partial class  ModtermWindow : Window
     {
-
-
-        
-        
-       
-
         private void ModtermCanvas_KeyDown(object sender, KeyRoutedEventArgs e)
         {
-            // Forward key events as VT sequences to the shell process
-            var ctrlState = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control);
-            bool isCtrlPressed = ctrlState.HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+            _keyDownSentToPty = false;
 
-            // Handle Ctrl+C (send interrupt)
-            if (isCtrlPressed && e.Key == Windows.System.VirtualKey.C)
+            bool ctrl = IsKeyDown(VirtualKey.Control);
+            bool alt = IsKeyDown(VirtualKey.Menu);
+            bool shift = IsKeyDown(VirtualKey.Shift);
+            bool capsLock = IsCapsLockOn();
+
+            if (VtUserInput.IsAltKey(e.Key))
             {
-                _mtr.ScrollOffset = 0;
-                ConPtyTerminal.WriteInput("\x03");
+                // Swallow bare Alt so Windows does not enter menu-accelerator mode
+                // and eat the following Alt+letter (Fresh and similar TUIs).
                 e.Handled = true;
-                ModtermCanvas.Invalidate();
                 return;
             }
 
-            // Map special keys to VT sequences
-            string vtSeq = string.Empty;
-            switch (e.Key)
+            if (VtUserInput.IsModifierOnly(e.Key))
+                return;
+
+            // Let the system keep Alt+F4 (close) and Alt+Space (window menu).
+            if (alt && !ctrl && e.Key is VirtualKey.F4 or VirtualKey.Space)
+                return;
+
+            if (e.Key == VirtualKey.Insert && shift && !ctrl && !alt)
             {
-                case Windows.System.VirtualKey.PageUp:
-                    _mtr.ScrollBackBy(Math.Max(1, _mtr.Lines - 1));
-                    e.Handled = true;
-                    return;
-                case Windows.System.VirtualKey.PageDown:
-                    _mtr.ScrollBackBy(-Math.Max(1, _mtr.Lines - 1));
-                    e.Handled = true;
-                    return;
-                case Windows.System.VirtualKey.Enter:
-                    vtSeq = "\r";
-                    break;
-                case Windows.System.VirtualKey.Tab:
-                    vtSeq = "\t";
-                    break;
-                case Windows.System.VirtualKey.Back:
-                    vtSeq = "\x7F";
-                    break;
-                case Windows.System.VirtualKey.Left:
-                    vtSeq = "\x1B[D";
-                    break;
-                case Windows.System.VirtualKey.Right:
-                    vtSeq = "\x1B[C";
-                    break;
-                case Windows.System.VirtualKey.Up:
-                    vtSeq = "\x1B[A";
-                    break;
-                case Windows.System.VirtualKey.Down:
-                    vtSeq = "\x1B[B";
-                    break;
-                case Windows.System.VirtualKey.Home:
-                    vtSeq = "\x1B[H";
-                    break;
-                case Windows.System.VirtualKey.End:
-                    vtSeq = "\x1B[F";
-                    break;
-                case Windows.System.VirtualKey.Delete:
-                    vtSeq = "\x1B[3~";
-                    break;
-                case Windows.System.VirtualKey.Escape:
-                    vtSeq = "\x1B";
-                    break;
-                default:
-                    vtSeq = GetFunctionKeySequence(e.Key) ?? string.Empty;
-                    if (string.IsNullOrEmpty(vtSeq))
-                    {
-                        var keyChar = GetCharFromVirtualKey(e.Key, e);
-                        if (keyChar != null)
-                        {
-                            vtSeq = keyChar.ToString() ?? "";
-                        }
-                    }
-                    //Debug.WriteLine($"Key: {e.Key}, Char: {keyChar}, Ctrl: {isCtrlPressed}");
-                    break;
+                _mtr.PasteFromClipboard();
+                e.Handled = true;
+                _keyDownSentToPty = true;
+                return;
             }
+
+            if (e.Key is VirtualKey.PageUp or VirtualKey.PageDown)
+            {
+                if (shift || ShouldScrollWithPagingKeys())
+                {
+                    int direction = e.Key == VirtualKey.PageUp ? 1 : -1;
+                    _mtr.ScrollBackBy(direction * Math.Max(1, _mtr.Lines - 1));
+                    e.Handled = true;
+                    ModtermCanvas.Invalidate();
+                    return;
+                }
+            }
+
+            // Ctrl+Alt is typically AltGr; let CharacterReceived emit the composed glyph.
+            if (ctrl && alt)
+                return;
+
+            var terminal = _mtr.Terminal;
+            string? vtSeq = VtUserInput.EncodeKey(
+                e.Key,
+                ctrl,
+                alt,
+                shift,
+                capsLock,
+                terminal.ApplicationCursor);
+
             if (!string.IsNullOrEmpty(vtSeq))
             {
-                _mtr.ScrollOffset = 0;
-                ConPtyTerminal.WriteInput(vtSeq);
+                SendPtyInput(vtSeq);
                 e.Handled = true;
+                _keyDownSentToPty = true;
             }
-            ModtermCanvas.Invalidate();
+        }
+
+        private void RootGrid_CharacterReceived(UIElement sender, CharacterReceivedRoutedEventArgs e)
+        {
+            if (_keyDownSentToPty)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            char ch = e.Character;
+            if (char.IsControl(ch) && ch != '\r' && ch != '\n' && ch != '\t')
+                return;
+
+            SendPtyInput(ch.ToString());
+            e.Handled = true;
+        }
+
+        private void ModtermWindow_Activated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs e)
+        {
+            if (_mtr.Terminal is null || !_mtr.Terminal.SendFocus)
+                return;
+
+            SendPtyInput(
+                e.WindowActivationState == WindowActivationState.Deactivated
+                    ? VtUserInput.FocusOut
+                    : VtUserInput.FocusIn);
         }
 
         private void ModtermCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
+            _ptyConsumedRightClick = false;
             Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
-            if (!e.GetCurrentPoint(ModtermCanvas).Properties.IsLeftButtonPressed)
+            var props = e.GetCurrentPoint(ModtermCanvas).Properties;
+            int button = ButtonFromUpdateKind(props.PointerUpdateKind, pressed: true);
+            bool shift = IsKeyDown(VirtualKey.Shift);
+
+            if (ShouldReportMouseToPty(shift) && button >= 0)
+            {
+                if (TryReportMouse(button, release: false, motion: false, currentPoint, clamp: false))
+                {
+                    _mouseReportButton = button;
+                    _ptyConsumedRightClick = button == 2;
+                    ModtermCanvas.CapturePointer(e.Pointer);
+                    ClearSelectionVisual();
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            if (button != 0)
                 return;
 
             _mtr.IsSelecting = false;
@@ -130,136 +145,263 @@ namespace modterm
 
         private void ModtermCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
+            Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
+            var props = e.GetCurrentPoint(ModtermCanvas).Properties;
+            bool shift = IsKeyDown(VirtualKey.Shift);
+            var mode = _mtr.Terminal.MouseMode;
+
+            if (ShouldReportMouseToPty(shift))
+            {
+                bool buttonDown = props.IsLeftButtonPressed || props.IsMiddleButtonPressed || props.IsRightButtonPressed;
+                int button = _mouseReportButton >= 0
+                    ? _mouseReportButton
+                    : ButtonFromPressedState(props);
+
+                if (buttonDown && mode.SendButtonTracking())
+                {
+                    TryReportMouse(button, release: false, motion: true, currentPoint, clamp: true);
+                    e.Handled = true;
+                    return;
+                }
+
+                if (!buttonDown && mode.SendMotionEvent())
+                {
+                    TryReportMouse(3, release: false, motion: true, currentPoint, clamp: false);
+                    e.Handled = true;
+                    return;
+                }
+
+                if (mode != MouseMode.Off && !shift)
+                    return;
+            }
+
             if (!_mtr.IsSelecting)
                 return;
 
-            _mtr.SelectionEnd = e.GetCurrentPoint(ModtermCanvas).Position;
+            _mtr.SelectionEnd = currentPoint;
             _mtr.UpdateSelectedText();
             ModtermCanvas.Invalidate();
         }
 
         private void ModtermCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
+            Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
+            var props = e.GetCurrentPoint(ModtermCanvas).Properties;
+            int button = ButtonFromUpdateKind(props.PointerUpdateKind, pressed: false);
+            bool shift = IsKeyDown(VirtualKey.Shift);
+
+            if (_mouseReportButton >= 0)
+            {
+                int reportButton = button >= 0 ? button : _mouseReportButton;
+                if (ShouldSendMouseRelease())
+                    TryReportMouse(reportButton, release: true, motion: false, currentPoint, clamp: true);
+
+                EndMouseReport(e.Pointer);
+                e.Handled = true;
+                return;
+            }
+
             if (!_mtr.IsSelecting)
                 return;
 
-            _mtr.SelectionEnd = e.GetCurrentPoint(ModtermCanvas).Position;
+            _mtr.SelectionEnd = currentPoint;
             _mtr.UpdateSelectedText();
             _mtr.IsSelecting = false;
             _mtr.CopySelectedTextToClipboard();
             ModtermCanvas.Invalidate();
         }
 
+        private void ModtermCanvas_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            if (_mouseReportButton < 0)
+                return;
+
+            if (ShouldSendMouseRelease())
+            {
+                TryReportMouse(
+                    _mouseReportButton,
+                    release: true,
+                    motion: false,
+                    e.GetCurrentPoint(ModtermCanvas).Position,
+                    clamp: true);
+            }
+
+            EndMouseReport(pointer: null);
+        }
+
+        private void ModtermCanvas_PointerCanceled(object sender, PointerRoutedEventArgs e)
+        {
+            ModtermCanvas_PointerCaptureLost(sender, e);
+        }
+
         private void ModtermCanvas_RightTapped(object sender, RightTappedRoutedEventArgs e)
         {
+            if (_ptyConsumedRightClick && !IsKeyDown(VirtualKey.Shift))
+                return;
+
             _flyout.ShowAt(ModtermCanvas, e.GetPosition(ModtermCanvas));
         }
 
         private void ModtermCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
         {
             int delta = e.GetCurrentPoint(ModtermCanvas).Properties.MouseWheelDelta;
-            int notches = Math.Max(1, Math.Abs(delta) / 120);
+            bool shift = IsKeyDown(VirtualKey.Shift);
+            Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
+
+            if (!shift && ShouldReportMouseToPty(shift: false) && _mtr.Terminal.MouseMode != MouseMode.X10)
+            {
+                int notches = Math.Max(1, Math.Abs(delta) / 120);
+                int button = delta > 0 ? 4 : 5;
+                for (int i = 0; i < notches; i++)
+                    TryReportMouse(button, release: false, motion: false, currentPoint, clamp: true);
+
+                e.Handled = true;
+                return;
+            }
+
+            int scrollNotches = Math.Max(1, Math.Abs(delta) / 120);
             int rowsPerNotch = Math.Max(1, _mtr.Lines / 10);
-            int rows = notches * rowsPerNotch * (delta > 0 ? 1 : -1);
+            int rows = scrollNotches * rowsPerNotch * (delta > 0 ? 1 : -1);
 
             _mtr.ScrollBackBy(rows);
             e.Handled = true;
         }
 
-
-
-
-        // xterm / Windows Console VT sequences for function keys.
-        private static string? GetFunctionKeySequence(VirtualKey key)
+        private void SendPtyInput(string text)
         {
-            return key switch
+            if (string.IsNullOrEmpty(text) || ConPtyTerminal is null)
+                return;
+
+            _mtr.ScrollOffset = 0;
+            ConPtyTerminal.WriteInput(text);
+            ModtermCanvas.Invalidate();
+        }
+
+        private void SendPtyMouse(string sequence)
+        {
+            if (string.IsNullOrEmpty(sequence) || ConPtyTerminal is null)
+                return;
+
+            // X10/UTF8 mouse encodings are raw 8-bit; SGR/URXVT are ASCII.
+            var protocol = _mtr.Terminal.MouseProtocol;
+            if (protocol is MouseProtocolEncoding.SGR or MouseProtocolEncoding.URXVT)
+                ConPtyTerminal.WriteInput(sequence);
+            else
+                ConPtyTerminal.WriteInput(Encoding.Latin1.GetBytes(sequence));
+        }
+
+        private bool ShouldReportMouseToPty(bool shift)
+        {
+            // Shift+click is the xterm/Alacritty override for host selection
+            // while an application has mouse tracking enabled.
+            return !shift && _mtr.Terminal.MouseMode != MouseMode.Off;
+        }
+
+        private bool ShouldSendMouseRelease()
+        {
+            return _mtr.Terminal.MouseMode.SendButtonRelease()
+                && _mtr.Terminal.MouseMode != MouseMode.X10;
+        }
+
+        private bool ShouldScrollWithPagingKeys()
+        {
+            var terminal = _mtr.Terminal;
+            return !terminal.Buffers.IsAlternateBuffer
+                && !terminal.ApplicationCursor
+                && terminal.MouseMode == MouseMode.Off;
+        }
+
+        private bool TryReportMouse(int button, bool release, bool motion, Point point, bool clamp)
+        {
+            if (!_mtr.TryGetViewportCell(point, clamp, out int col, out int row))
+                return false;
+
+            if (motion && col == _lastReportedMouseCol && row == _lastReportedMouseRow)
+                return true;
+
+            bool alt = IsKeyDown(VirtualKey.Menu);
+            bool ctrl = IsKeyDown(VirtualKey.Control);
+            bool shift = IsKeyDown(VirtualKey.Shift);
+            string seq = VtUserInput.EncodeMouse(
+                _mtr.Terminal.MouseProtocol,
+                button,
+                release,
+                motion,
+                col,
+                row,
+                shift,
+                alt,
+                ctrl);
+
+            _lastReportedMouseCol = col;
+            _lastReportedMouseRow = row;
+            SendPtyMouse(seq);
+            return true;
+        }
+
+        private void EndMouseReport(Pointer? pointer)
+        {
+            _mouseReportButton = -1;
+            _lastReportedMouseCol = -1;
+            _lastReportedMouseRow = -1;
+            if (pointer is not null)
+                ModtermCanvas.ReleasePointerCapture(pointer);
+        }
+
+        private void ClearSelectionVisual()
+        {
+            if (!_mtr.IsSelecting && _mtr.SelectionRange is null && string.IsNullOrEmpty(_mtr.SelectedText))
+                return;
+
+            _mtr.IsSelecting = false;
+            _mtr.SelectionRange = null;
+            _mtr.SelectedText = "";
+            ModtermCanvas.Invalidate();
+        }
+
+        private static int ButtonFromUpdateKind(PointerUpdateKind kind, bool pressed)
+        {
+            if (pressed)
             {
-                VirtualKey.F1 => "\x1BOP",
-                VirtualKey.F2 => "\x1BOQ",
-                VirtualKey.F3 => "\x1BOR",
-                VirtualKey.F4 => "\x1BOS",
-                VirtualKey.F5 => "\x1B[15~",
-                VirtualKey.F6 => "\x1B[17~",
-                VirtualKey.F7 => "\x1B[18~",
-                VirtualKey.F8 => "\x1B[19~",
-                VirtualKey.F9 => "\x1B[20~",
-                VirtualKey.F10 => "\x1B[21~",
-                VirtualKey.F11 => "\x1B[23~",
-                VirtualKey.F12 => "\x1B[24~",
-                _ => null
+                return kind switch
+                {
+                    PointerUpdateKind.LeftButtonPressed => 0,
+                    PointerUpdateKind.MiddleButtonPressed => 1,
+                    PointerUpdateKind.RightButtonPressed => 2,
+                    _ => -1
+                };
+            }
+
+            return kind switch
+            {
+                PointerUpdateKind.LeftButtonReleased => 0,
+                PointerUpdateKind.MiddleButtonReleased => 1,
+                PointerUpdateKind.RightButtonReleased => 2,
+                _ => -1
             };
         }
 
-        private char? GetCharFromVirtualKey(Windows.System.VirtualKey key, KeyRoutedEventArgs e)
+        private static int ButtonFromPressedState(PointerPointProperties props)
         {
-            Windows.UI.Core.CoreVirtualKeyStates shiftState =
-                    Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(
-                        Windows.System.VirtualKey.Shift);
-
-            bool isShiftPressed = shiftState.HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
-
-            // Handle SHIFT + INSERT for paste
-            if (e.Key == VirtualKey.Insert && isShiftPressed)
-            {
-                _mtr.PasteFromClipboard();
-                e.Handled = true;
-                return null;
-            }
-
-            // handle a-z
-            if (key >= Windows.System.VirtualKey.A && key <= Windows.System.VirtualKey.Z)
-            {
-                char baseChar = (char)('a' + (key - Windows.System.VirtualKey.A));
-                if (isShiftPressed)
-                {
-                    baseChar = char.ToUpper(baseChar);
-                }
-                return baseChar;
-            }
-            // handle 0-9
-            if (key >= Windows.System.VirtualKey.Number0 && key <= Windows.System.VirtualKey.Number9)
-            {
-                char baseChar = (char)('0' + (key - Windows.System.VirtualKey.Number0));
-                if (isShiftPressed)
-                {
-                    // Handle shifted number keys for common symbols
-                    switch (baseChar)
-                    {
-                        case '1': baseChar = '!'; break;
-                        case '2': baseChar = '@'; break;
-                        case '3': baseChar = '#'; break;
-                        case '4': baseChar = '$'; break;
-                        case '5': baseChar = '%'; break;
-                        case '6': baseChar = '^'; break;
-                        case '7': baseChar = '&'; break;
-                        case '8': baseChar = '*'; break;
-                        case '9': baseChar = '('; break;
-                        case '0': baseChar = ')'; break;
-                    }
-                }
-                return baseChar;
-            }
-            else
-            {
-                // Handle some common punctuation keys
-                switch (key)
-                {
-                    case Windows.System.VirtualKey.Space: return ' ';
-                    case (VirtualKey)188: return isShiftPressed ? '<' : ',';
-                    case (VirtualKey)190: return isShiftPressed ? '>' : '.';
-                    case (VirtualKey)189: return isShiftPressed ? '_' : '-';
-                    case (VirtualKey)187: return isShiftPressed ? '+' : '=';
-                    case (VirtualKey)191: return isShiftPressed ? '?' : '/';
-                    case (VirtualKey)186: return isShiftPressed ? ':' : ';';
-                    case (VirtualKey)222: return isShiftPressed ? '"' : '\'';
-                    case (VirtualKey)219: return isShiftPressed ? '{' : '[';
-                    case (VirtualKey)221: return isShiftPressed ? '}' : ']';
-                    case (VirtualKey)220: return isShiftPressed ? '|' : '\\';
-                    case (VirtualKey)192: return isShiftPressed ? '~' : '`';
-                }
-            }
-            return null;
+            if (props.IsLeftButtonPressed)
+                return 0;
+            if (props.IsMiddleButtonPressed)
+                return 1;
+            if (props.IsRightButtonPressed)
+                return 2;
+            return 3;
         }
 
+        private static bool IsKeyDown(VirtualKey key)
+        {
+            return InputKeyboardSource.GetKeyStateForCurrentThread(key)
+                .HasFlag(CoreVirtualKeyStates.Down);
+        }
+
+        private static bool IsCapsLockOn()
+        {
+            var state = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.CapitalLock);
+            return state.HasFlag(CoreVirtualKeyStates.Locked);
+        }
     }
 }

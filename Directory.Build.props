@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!--
+      Canonical app version. Bump this when cutting a release.
+      It is stamped into the assembly at build time (shown in the context menu)
+      and passed to installer.iss by build-pipeline.ps1.
+    -->
+    <Version>0.8.2</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+</Project>

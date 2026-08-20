@@ -290,13 +290,21 @@ namespace modterm
                 
         public void WriteInput(string text)
         {
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            WriteInput(Encoding.UTF8.GetBytes(text));
+        }
+
+        public void WriteInput(byte[] bytes)
+        {
+            if (bytes is not { Length: > 0 })
+                return;
+
             bool closed = _inputWrite == null || _inputWrite.IsClosed;
-            bool ok = false;
-            uint sent = 0;
             if (!closed)
             {
-                var bytes = Encoding.UTF8.GetBytes(text);
-                ok = WriteFile(_inputWrite, bytes, (uint)bytes.Length, out sent, IntPtr.Zero);
+                WriteFile(_inputWrite, bytes, (uint)bytes.Length, out _, IntPtr.Zero);
             }
         }
 

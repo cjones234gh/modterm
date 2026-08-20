@@ -25,7 +25,23 @@ $StagingFolder  = Join-Path $RepoRoot "deploy\staging"
 $DepsFolder     = Join-Path $RepoRoot "deploy\dependencies"
 $OutputFolder   = Join-Path $RepoRoot "deploy\output"
 $InstallerIss   = Join-Path $RepoRoot "installer.iss"
+$DirectoryBuildProps = Join-Path $RepoRoot "Directory.Build.props"
 $InnoCompiler   = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+
+function Get-ModtermVersion {
+    if (-not (Test-Path -LiteralPath $DirectoryBuildProps)) {
+        throw "Directory.Build.props not found at $DirectoryBuildProps (expected source of <Version>)."
+    }
+
+    $propsText = Get-Content -LiteralPath $DirectoryBuildProps -Raw
+    if ($propsText -notmatch '<Version>\s*([^<\s]+)\s*</Version>') {
+        throw "Could not read <Version> from $DirectoryBuildProps"
+    }
+
+    return $Matches[1].Trim()
+}
+
+$AppVersion = Get-ModtermVersion
 
 # Must match Microsoft.WindowsAppSDK package version in modterm.csproj (1.8.x line).
 $WindowsAppSdkRuntimeVersion = "1.8.260317003"
@@ -41,6 +57,7 @@ Write-Host "[1/5] Configuration" -ForegroundColor Cyan
 Write-Host "  Repo:     $RepoRoot"
 Write-Host "  Project:  $MainProjPath"
 Write-Host "  Staging:  $StagingFolder"
+Write-Host "  Version:  $AppVersion"
 Write-Host "  Mode:     framework-dependent (win-x64)"
 Write-Host "  Runtimes: .NET Desktop $DotNetDesktopRuntimeVersion + Windows App SDK $WindowsAppSdkRuntimeVersion"
 
@@ -141,7 +158,7 @@ if (-not (Test-Path $DotNetInstallerPath)) {
     Exit 1
 }
 
-& $InnoCompiler "/DDotNetDesktopRuntimeInstaller=$DotNetDesktopRuntimeFileName" $InstallerIss
+& $InnoCompiler "/DDotNetDesktopRuntimeInstaller=$DotNetDesktopRuntimeFileName" "/DMyAppVersion=$AppVersion" $InstallerIss
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Inno Setup compilation step encountered a critical error."
     Exit 1

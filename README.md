@@ -16,7 +16,7 @@ Build modterm in Visual Studio with F5, or Cursor AI with F5.
 
 * Running TUI apps someimtes requires running `reset` before launch in git-bash and WSL environments for correct rendering.
 
-* Copy/Paste works, but mouse clicks aren't translated in any way to to the pty.
+* Copy/Paste works. Shift+PageUp/PageDown (and the mouse wheel) scroll the buffer; when a TUI enables mouse tracking, clicks, drags, hover, and wheel events are forwarded to the application (Shift+click still selects).
 
 * Color is limited to a 256 color palette, RGB values are translated to the nearest palette entry.
 
