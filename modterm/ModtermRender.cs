@@ -460,6 +460,18 @@ namespace modterm
             _scrollOffset = Math.Clamp(_scrollOffset, 0, maxScrollOffset);
         }
 
+        public void ResetEmulator()
+        {
+            if (_terminal is null)
+                return;
+
+            _scrollOffset = 0;
+            _isSelecting = false;
+            _selectionRange = null;
+            _selectedText = string.Empty;
+            _terminal.Feed("\x1bc");
+        }
+
         /// <summary>
         /// Recomputes the row/column grid from the current canvas size and applies it live,
         /// resizing both the emulator buffer and the pseudo console without restarting the
@@ -549,10 +561,7 @@ namespace modterm
                 if (terminal.Started)
                     return;
 
-                terminal.Start(UserAppConfiguration.TerminalShell, Lines, Columns);
-
-                _terminal.Resize(Columns, Lines);
-                // CreatePseudoConsole already sized the PTY; avoid an immediate redundant resize.
+                ModtermWinInstance.TryStartCurrentShell(terminal, Lines, Columns);
             }
 
             BeginEffectSequence(sender, args.DrawingSession);

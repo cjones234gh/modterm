@@ -48,6 +48,7 @@ namespace modterm
         // context menu flyout for right-click
         private MenuFlyout _flyout = null!;
         private bool _terminalRestartInProgress = false;
+        private bool _shellLaunchAttempted;
         private bool _keyDownSentToPty;
         private bool _ptyConsumedRightClick;
         private int _mouseReportButton = -1;
@@ -61,7 +62,7 @@ namespace modterm
 
         public ConPTYTerminal EnsureTerminalInstanceForStart()
         {
-            if (ConPtyTerminal.IsDisposed)
+            if (ConPtyTerminal.IsDisposed && !_shellLaunchAttempted)
             {
                 var previousTerminal = ConPtyTerminal;
                 ConPtyTerminal = CreateTerminalInstance();
@@ -69,6 +70,45 @@ namespace modterm
             }
 
             return ConPtyTerminal;
+        }
+
+        public void TryStartCurrentShell(ConPTYTerminal terminal, int lines, int columns)
+        {
+            if (terminal.Started || _shellLaunchAttempted || terminal.IsDisposed)
+                return;
+
+            _shellLaunchAttempted = true;
+            var shell = _uac.TerminalShell ?? new Shell();
+            if (!ShellExecutable.TryResolve(shell.Path, out string resolvedPath))
+            {
+                _mtr.ResetEmulator();
+                ModtermCanvas.Invalidate();
+                _ = ShowSimpleDialogAsync("Shell Not Found", ShellExecutable.FormatMissingMessage(shell));
+                return;
+            }
+
+            var launchShell = new Shell
+            {
+                Name = shell.Name,
+                Path = resolvedPath,
+                Arguments = shell.Arguments
+            };
+
+            try
+            {
+                _mtr.ResetEmulator();
+                terminal.Start(launchShell, lines, columns);
+                _mtr.Terminal.Resize(_mtr.Columns, _mtr.Lines);
+                if (terminal.Started)
+                    terminal.Resize((short)_mtr.Columns, (short)_mtr.Lines);
+                _mtr.UpdateTitleBarLabels();
+            }
+            catch (Exception ex)
+            {
+                _mtr.ResetEmulator();
+                ModtermCanvas.Invalidate();
+                _ = ShowSimpleDialogAsync("Shell Launch Failed", ShellExecutable.FormatLaunchFailureMessage(launchShell, ex));
+            }
         }
 
         private void InitializeApplication()
@@ -290,6 +330,7 @@ namespace modterm
 
             _uac = configuration;
             NormalizeShellConfigurations(_uac);
+            _mtr.UserAppConfiguration = _uac;
             _uac.PropertyChanged += UserConfiguration_PropertyChanged;
             _uac.ThemeConfiguration.PropertyChanged += ThemeConfiguration_PropertyChanged;
         }
@@ -641,22 +682,24 @@ namespace modterm
         private void ReplaceTerminalInstance(bool startImmediately, Shell? shellOverride = null)
         {
             _terminalRestartInProgress = true;
+            _shellLaunchAttempted = false;
             try
             {
                 var nextShell = shellOverride ?? _uac.TerminalShell;
+                if (shellOverride is not null)
+                    _uac.TerminalShell = shellOverride;
+
                 var previousTerminal = ConPtyTerminal;
                 ConPtyTerminal = CreateTerminalInstance();
                 DisposeTerminalInstance(previousTerminal);
+                _mtr.ResetEmulator();
 
-                if (startImmediately)
+                if (startImmediately && _mtr.Lines > 0 && _mtr.Columns > 0)
                 {
-                    ConPtyTerminal.Start(nextShell, _mtr.Lines, _mtr.Columns);
-                    _mtr.Terminal.Resize(_mtr.Columns, _mtr.Lines);
-                    ConPtyTerminal.Resize((short)_mtr.Columns, (short)_mtr.Lines);
+                    TryStartCurrentShell(ConPtyTerminal, _mtr.Lines, _mtr.Columns);
                 }
                 else
                 {
-                    // terminal start is deferred until the first draw pass so we can measure
                     ModtermCanvas.Invalidate();
                 }
             }
