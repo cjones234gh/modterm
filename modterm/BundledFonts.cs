@@ -26,25 +26,33 @@ namespace modterm
         public static bool IsBundledFont(string fontFamilyName) =>
             string.Equals(fontFamilyName, BlexMonoNerdFontFamilyName, StringComparison.OrdinalIgnoreCase);
 
-        public static string ResolveFontFamily(string fontFamilyName)
+        public static string ResolveFontFamily(string fontFamilyName, bool bold = false)
         {
             if (!IsBundledFont(fontFamilyName))
             {
                 return fontFamilyName;
             }
 
-            return GetBlexMonoFontFamilyUri();
+            return GetBlexMonoFontFamilyUri(bold);
         }
 
-        private static string GetBlexMonoFontFamilyUri()
+        /// <summary>
+        /// The bundled bold face is a separate TTF. Requesting FontWeight.Bold against
+        /// the regular file makes DirectWrite synthesize a wider outline.
+        /// </summary>
+        public static bool BundledBoldUsesDedicatedFace(string fontFamilyName) =>
+            IsBundledFont(fontFamilyName);
+
+        private static string GetBlexMonoFontFamilyUri(bool bold)
         {
-            string fontPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", BlexMonoRegularFileName);
+            string fileName = bold ? BlexMonoBoldFileName : BlexMonoRegularFileName;
+            string fontPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts", fileName);
             if (File.Exists(fontPath))
             {
                 return $"{new Uri(fontPath).AbsoluteUri}#{BlexMonoNerdFontFamilyName}";
             }
 
-            return $"ms-appx:///Assets/Fonts/{BlexMonoRegularFileName}#{BlexMonoNerdFontFamilyName}";
+            return $"ms-appx:///Assets/Fonts/{fileName}#{BlexMonoNerdFontFamilyName}";
         }
 
         private static void RegisterFontFile(string fileName)

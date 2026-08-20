@@ -88,6 +88,8 @@ namespace modterm
         private CanvasTextFormat? _boldTextFormat;
         private string? _cachedFontFamily;
         private float _cachedFontSize;
+        private float _boldHorizontalScale = 1f;
+        private bool _boldAdvanceReady;
         private readonly StringBuilder _runBuffer = new StringBuilder(256);
         private readonly string FullBrailleCell = "\u28FF";
         private readonly Dictionary<CanvasTextFormat, Rect> _brailleCellInkBounds = new Dictionary<CanvasTextFormat, Rect>();
@@ -518,9 +520,9 @@ namespace modterm
             }
         }
 
-        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false, bool fitToCell = false, float cellHeight = 0f)
+        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false, bool fitToCell = false, float cellHeight = 0f, float horizontalScale = 1f)
         {
-            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault, fitToCell, cellHeight));
+            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault, fitToCell, cellHeight, horizontalScale));
         }
 
         public void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
@@ -562,6 +564,7 @@ namespace modterm
             double lineHeight = CurrentFontSize + _lineHeightPadding;
 
             EnsureTextFormats();
+            EnsureBoldAdvanceScale(args.DrawingSession);
 
             for (int visibleRow = 0; visibleRow < _lines; visibleRow++)
             {
@@ -666,7 +669,8 @@ namespace modterm
                             fgDefault,
                             bgDefault,
                             fitToCell,
-                            (float)lineHeight);
+                            (float)lineHeight,
+                            HorizontalScaleFor(cellFormat));
                     }
                 }
 
@@ -741,7 +745,7 @@ namespace modterm
             CanvasTextFormat format = (flags & XtermSharp.FLAGS.BOLD) != 0
                 ? _boldTextFormat ?? _currentTextFormat
                 : _normalTextFormat ?? _currentTextFormat;
-            ds.DrawText(runeString.Replace(' ', '\u00A0'), x, y, glyph, format);
+            DrawScaledText(ds, runeString.Replace(' ', '\u00A0'), x, y, glyph, format, HorizontalScaleFor(format));
         }
 
         public void DrawModtermLabel(CanvasControl sender, CanvasDrawingSession cds, DisplayLabel label)
@@ -815,7 +819,7 @@ namespace modterm
                         }
                         else
                         {
-                            clds.DrawText(call.Text, call.X, call.Y, glyphColor, call.TextFormat);
+                            DrawGlyphOnGrid(clds, call, glyphColor, replaceSpaces: false);
                         }
                     }
                 }
@@ -832,12 +836,12 @@ namespace modterm
                 }
                 else
                 {
-                    _drawSession.DrawText(call.Text.Replace(' ', '\u00A0'), call.X, call.Y, call.Color, call.TextFormat);
+                    DrawGlyphOnGrid(_drawSession, call, call.Color, replaceSpaces: true);
                 }
             }
         }
 
-         private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
+        private float MeasureCellAdvance(CanvasDrawingSession ds, CanvasTextFormat format)
         {
             const int sampleLength = 32;
             using var layout = new CanvasTextLayout(ds, new string('0', sampleLength), format, 9999, 9999);
@@ -845,6 +849,59 @@ namespace modterm
             foreach (var cluster in layout.ClusterMetrics)
                 total += cluster.Width;
             return total / sampleLength;
+        }
+
+        private void EnsureBoldAdvanceScale(CanvasDrawingSession ds)
+        {
+            if (_boldAdvanceReady)
+                return;
+            if (_boldTextFormat is null || _measuredCharWidth <= 0)
+            {
+                _boldHorizontalScale = 1f;
+                return;
+            }
+
+            float boldAdvance = MeasureCellAdvance(ds, _boldTextFormat);
+            if (boldAdvance <= 0.01f)
+            {
+                _boldHorizontalScale = 1f;
+                _boldAdvanceReady = true;
+                return;
+            }
+
+            float scale = _measuredCharWidth / boldAdvance;
+            _boldHorizontalScale = Math.Abs(scale - 1f) < 0.005f ? 1f : scale;
+            _boldAdvanceReady = true;
+        }
+
+        private float HorizontalScaleFor(CanvasTextFormat format)
+            => ReferenceEquals(format, _boldTextFormat) ? _boldHorizontalScale : 1f;
+
+        private void DrawGlyphOnGrid(CanvasDrawingSession ds, DrawTextCall call, Color color, bool replaceSpaces)
+        {
+            string text = replaceSpaces ? call.Text.Replace(' ', '\u00A0') : call.Text;
+            DrawScaledText(ds, text, call.X, call.Y, color, call.TextFormat, call.HorizontalScale);
+        }
+
+        private static void DrawScaledText(
+            CanvasDrawingSession ds,
+            string text,
+            float x,
+            float y,
+            Color color,
+            CanvasTextFormat format,
+            float horizontalScale)
+        {
+            if (horizontalScale == 1f || horizontalScale <= 0f)
+            {
+                ds.DrawText(text, x, y, color, format);
+                return;
+            }
+
+            Matrix3x2 prior = ds.Transform;
+            ds.Transform = Matrix3x2.CreateScale(horizontalScale, 1f, new Vector2(x, y)) * prior;
+            ds.DrawText(text, x, y, color, format);
+            ds.Transform = prior;
         }
 
         private void EnsureTextFormats()
@@ -864,15 +921,21 @@ namespace modterm
                 FontWeight = FontWeights.Normal,
                 WordWrapping = CanvasWordWrapping.NoWrap
             };
+            // Bundled bold is a separate TTF; FontWeight.Bold against the regular file
+            // synthesizes a wider outline that walks off the cell grid.
             _boldTextFormat = new CanvasTextFormat
             {
-                FontFamily = resolvedFontFamily,
+                FontFamily = BundledFonts.ResolveFontFamily(CurrentFont, bold: true),
                 FontSize = CurrentFontSize,
-                FontWeight = FontWeights.Bold,
+                FontWeight = BundledFonts.BundledBoldUsesDedicatedFace(CurrentFont)
+                    ? FontWeights.Normal
+                    : FontWeights.Bold,
                 WordWrapping = CanvasWordWrapping.NoWrap
             };
             _cachedFontFamily = CurrentFont;
             _cachedFontSize = CurrentFontSize;
+            _boldHorizontalScale = 1f;
+            _boldAdvanceReady = false;
         }
 
         private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format, float lineHeight)
@@ -890,7 +953,8 @@ namespace modterm
                 fgDefault,
                 bgDefault,
                 fitToCell: false,
-                cellHeight: lineHeight);
+                cellHeight: lineHeight,
+                horizontalScale: HorizontalScaleFor(format));
             _runBuffer.Clear();
         }
 

@@ -34,10 +34,14 @@ namespace modterm
         public bool FitToCell;
         // The grid row height to fit into when FitToCell is set.
         public float CellHeight;
+        // Horizontal scale applied around X so a run whose font advance is not the
+        // measured cell width (typical of synthetic or mismatched bold) still lands
+        // on the terminal grid instead of spilling into following cells.
+        public float HorizontalScale;
 
         public DrawTextCall(string text, float x, float y, float width, Color color, Color backgroundColor, 
                     CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false,
-                    bool fitToCell = false, float cellHeight = 0f)
+                    bool fitToCell = false, float cellHeight = 0f, float horizontalScale = 1f)
         {
             Text = text;
             X = x;
@@ -53,6 +57,7 @@ namespace modterm
             CellHeight = cellHeight > 0f ? cellHeight : Height;
             if (cellHeight > 0f)
                 Height = cellHeight;
+            HorizontalScale = horizontalScale > 0f ? horizontalScale : 1f;
         }
     }
 }
