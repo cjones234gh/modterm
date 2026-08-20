@@ -16,7 +16,6 @@ namespace modterm
 {
     public partial class ConPTYTerminal : IDisposable
     {
-        public string ShellPath { get; private set; } = string.Empty;
         public bool Started { get; set; } = false;
         public bool IsDisposed => _disposed;
 
@@ -124,10 +123,6 @@ namespace modterm
                 string commandLine = string.IsNullOrEmpty(targetShell.Arguments)
                     ? $"\"{targetShell.Path}\""
                     : $"\"{targetShell.Path}\" {targetShell.Arguments}";
-
-                ShellPath = commandLine;
-                // swap the width and height placeholders with _lines and _columns in the commandLine
-                commandLine = commandLine.Replace("[W]", cols.ToString()).Replace("[H]", rows.ToString());
 
                 Debug.WriteLine($"Starting process with command line: {commandLine}");
 

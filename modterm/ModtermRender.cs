@@ -594,28 +594,14 @@ namespace modterm
 
                     bool inverted = selectionRange != null && selectionRange.Contains(col, logicalRow);
                     bool cellReverse = (flags & XtermSharp.FLAGS.INVERSE) != 0;
-                    // screen-reverse (DECSCNM) XOR selection XOR per-cell reverse
-                    bool swap = _screenReverse ^ inverted ^ cellReverse;
-
-                    bool fgDefault = XtermAttr.IsDefault(fgIdx);
-                    bool bgDefault = XtermAttr.IsDefault(bgIdx);
-
-                    Color fg = fgDefault ? _outputColor : ResolvePaletteColor(fgIdx, _outputColor);
-                    Color bg = bgDefault ? Colors.Black : ResolvePaletteColor(bgIdx, Colors.Black);
-
-                    if (swap)
-                    {
-                        (fg, bg) = (bg, fg);
-                        (fgDefault, bgDefault) = (bgDefault, fgDefault);
-
-                        // Selection inversion swaps default fg/bg indices too, which would
-                        // suppress the highlight fill. Treat the inverted colors as explicit.
-                        if (inverted)
-                        {
-                            fgDefault = false;
-                            bgDefault = false;
-                        }
-                    }
+                    ResolveCellColors(
+                        fgIdx,
+                        bgIdx,
+                        _screenReverse ^ inverted ^ cellReverse,
+                        out Color fg,
+                        out Color bg,
+                        out bool fgDefault,
+                        out bool bgDefault);
 
                     if ((flags & XtermSharp.FLAGS.INVISIBLE) != 0)
                         fg = bg;
@@ -642,7 +628,7 @@ namespace modterm
 
                     if (runActive && (!canBatch || !matchesRun))
                     {
-                        FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!);
+                        FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!, (float)lineHeight);
                         runActive = false;
                     }
 
@@ -686,7 +672,7 @@ namespace modterm
 
                 if (runActive)
                 {
-                    FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!);
+                    FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!, (float)lineHeight);
                 }
             }
 
@@ -844,7 +830,7 @@ namespace modterm
             _cachedFontSize = CurrentFontSize;
         }
 
-        private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format)
+        private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format, float lineHeight)
         {
             float x = _leftTextPadding + (startCol * _measuredCharWidth);
             float width = _runBuffer.Length * _measuredCharWidth;
@@ -857,9 +843,67 @@ namespace modterm
                 bg,
                 format,
                 fgDefault,
-                bgDefault);
+                bgDefault,
+                fitToCell: false,
+                cellHeight: lineHeight);
             _runBuffer.Clear();
         }
+
+        /// <summary>
+        /// Applies SGR reverse / selection / DECSCNM by swapping palette indices, then
+        /// maps host defaults. After reverse, default fg/bg become the inverted-default
+        /// sentinel so the cell is filled (theme foreground bar, window-color text)
+        /// instead of skipping the background and painting with a dummy black.
+        /// </summary>
+        private void ResolveCellColors(
+            int fgIdx,
+            int bgIdx,
+            bool reverse,
+            out Color fg,
+            out Color bg,
+            out bool fgDefault,
+            out bool bgDefault)
+        {
+            if (reverse)
+            {
+                (fgIdx, bgIdx) = (bgIdx, fgIdx);
+                if (fgIdx == XtermSharp.Renderer.DefaultColor)
+                    fgIdx = XtermSharp.Renderer.InvertedDefaultColor;
+                if (bgIdx == XtermSharp.Renderer.DefaultColor)
+                    bgIdx = XtermSharp.Renderer.InvertedDefaultColor;
+            }
+
+            fgDefault = XtermAttr.IsHostDefault(fgIdx);
+            bgDefault = XtermAttr.IsHostDefault(bgIdx);
+
+            if (fgIdx == XtermSharp.Renderer.InvertedDefaultColor)
+                fg = InverseForegroundColor();
+            else
+                fg = fgDefault ? _outputColor : ResolvePaletteColor(fgIdx, _outputColor);
+
+            if (bgIdx == XtermSharp.Renderer.InvertedDefaultColor)
+                bg = Opaque(_outputColor);
+            else if (bgDefault)
+                bg = Colors.Transparent;
+            else
+                bg = ResolvePaletteColor(bgIdx, Colors.Black);
+        }
+
+        private Color InverseForegroundColor()
+        {
+            if (_windowColor.A != 0 && _windowColor != Colors.Transparent)
+                return Opaque(_windowColor);
+
+            return PerceivedLuminance(_outputColor) > 128
+                ? Color.FromArgb(255, 16, 16, 16)
+                : Color.FromArgb(255, 240, 240, 240);
+        }
+
+        private static Color Opaque(Color color)
+            => Color.FromArgb(255, color.R, color.G, color.B);
+
+        private static int PerceivedLuminance(Color color)
+            => (int)((color.R * 299 + color.G * 587 + color.B * 114) / 1000);
 
         // Printable ASCII is rendered natively by the primary monospace font, so glyph
         // advances are known to equal _measuredCharWidth and runs stay column-aligned

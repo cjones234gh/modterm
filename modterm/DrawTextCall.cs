@@ -51,6 +51,8 @@ namespace modterm
             TextFormat = textFormat;
             FitToCell = fitToCell;
             CellHeight = cellHeight > 0f ? cellHeight : Height;
+            if (cellHeight > 0f)
+                Height = cellHeight;
         }
     }
 }

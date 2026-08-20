@@ -58,7 +58,11 @@ namespace modterm
             flags = (FLAGS)(attribute >> 18);
         }
 
-        public static bool IsDefault(int index)
-            => index == Renderer.DefaultColor || index == Renderer.InvertedDefaultColor;
+        /// <summary>
+        /// True when the cell uses the host default (CSI 39/49), not a palette
+        /// entry and not the inverted-default sentinel used after SGR 7.
+        /// </summary>
+        public static bool IsHostDefault(int index)
+            => index == Renderer.DefaultColor;
     }
 }

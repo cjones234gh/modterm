@@ -20,7 +20,6 @@ Build modterm in Visual Studio with F5, or Cursor AI with F5.
 
 * Color is limited to a 256 color palette, RGB values are translated to the nearest palette entry.
 
-* Some inverted or highlighted text is not rendering correctly.
 
 
 
