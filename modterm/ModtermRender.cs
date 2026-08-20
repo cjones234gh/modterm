@@ -676,27 +676,72 @@ namespace modterm
                 }
             }
 
-            // Draw blinking cursor only on the live viewport.
-            if (_cursorVisible && _scrollOffset == 0 && !_terminal.CursorHidden)
-            {
-                float cursorX = _leftTextPadding + (float)(_terminal.Buffer.X * _measuredCharWidth);
-                float cursorY = (float)(_terminal.Buffer.Y * lineHeight) + _topTextPadding + 2;
-                if (TerminalCursorStyles.IsUnderline(_currentCursorStyle))
-                {
-                    const float underlineThickness = 2f;
-                    float underlineY = cursorY + (float)lineHeight - underlineThickness;
-                    args.DrawingSession.FillRectangle(cursorX, underlineY, _measuredCharWidth, underlineThickness, _outputColor);
-                }
-                else
-                {
-                    args.DrawingSession.FillRectangle(cursorX, cursorY, _measuredCharWidth, (float)lineHeight, _outputColor);
-                }
-            }
-
             EndEffectSequence();
+
+            // Cursor must be painted after the cell glyphs. TUI apps fill every cell,
+            // so a pre-glyph cursor rectangle is covered completely.
+            DrawBlinkingCursor(args.DrawingSession, lineHeight);
 
             // draw all UI controls
             _titleBarLabels?.DrawLabels(sender, args.DrawingSession, this);
+        }
+
+        private void DrawBlinkingCursor(CanvasDrawingSession ds, double lineHeight)
+        {
+            if (!_cursorVisible || _scrollOffset != 0 || _terminal.CursorHidden)
+                return;
+            if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
+                return;
+
+            int col = Math.Clamp(_terminal.Buffer.X, 0, _columns - 1);
+            int row = _terminal.Buffer.Y;
+            if (row < 0 || row >= _lines)
+                return;
+
+            float x = _leftTextPadding + (col * _measuredCharWidth);
+            float y = _topTextPadding + (float)(row * lineHeight);
+            float height = (float)lineHeight;
+
+            int logicalRow = _terminal.Buffer.YBase + row;
+            var sourceLine = (logicalRow >= 0 && logicalRow < _terminal.Buffer.Lines.Length)
+                ? _terminal.Buffer.Lines[logicalRow]
+                : null;
+            XtermSharp.CharData cd = (sourceLine != null && col < sourceLine.Length)
+                ? sourceLine[col]
+                : XtermSharp.CharData.Null;
+
+            XtermAttr.Decode(cd.Attribute, out int fgIdx, out int bgIdx, out XtermSharp.FLAGS flags);
+            bool inverted = _isSelecting && _selectionRange != null && _selectionRange.Contains(col, logicalRow);
+            bool cellReverse = (flags & XtermSharp.FLAGS.INVERSE) != 0;
+            ResolveCellColors(
+                fgIdx,
+                bgIdx,
+                _screenReverse ^ inverted ^ cellReverse,
+                out Color fg,
+                out Color bg,
+                out bool fgDefault,
+                out bool bgDefault);
+
+            Color fill = fgDefault ? _outputColor : fg;
+            Color glyph = bgDefault ? InverseForegroundColor() : bg;
+
+            if (TerminalCursorStyles.IsUnderline(_currentCursorStyle))
+            {
+                const float underlineThickness = 2f;
+                ds.FillRectangle(x, y + height - underlineThickness, _measuredCharWidth, underlineThickness, fill);
+                return;
+            }
+
+            ds.FillRectangle(x, y, _measuredCharWidth, height, fill);
+
+            string runeString = cd.Code == 0 ? " " : RuneToString((uint)cd.Rune);
+            if (string.IsNullOrWhiteSpace(runeString))
+                return;
+
+            CanvasTextFormat format = (flags & XtermSharp.FLAGS.BOLD) != 0
+                ? _boldTextFormat ?? _currentTextFormat
+                : _normalTextFormat ?? _currentTextFormat;
+            ds.DrawText(runeString.Replace(' ', '\u00A0'), x, y, glyph, format);
         }
 
         public void DrawModtermLabel(CanvasControl sender, CanvasDrawingSession cds, DisplayLabel label)
