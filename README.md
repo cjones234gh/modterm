@@ -4,7 +4,7 @@ This is a GPU accelerated terminal emulator for Windows 11, running powershell, 
 
 # Releases
 
-[0.8.2-alpha](https://github.com/cjones234gh/modterm/releases/tag/v0.8.2-alpha) - Link to a binary installer, if you don't want to build from source.
+[0.9.0-alpha](https://github.com/cjones234gh/modterm/releases/tag/v0.9.0-alpha) - Link to a binary installer, if you don't want to build from source.
 
 # To Build from Source
 
@@ -14,4 +14,4 @@ Build modterm in Visual Studio with F5, or Cursor AI with F5. x64 is the support
 
 # Known Issues
 
-* Running different TUI apps often requires running `reset` before launch in git-bash, WSL, and Powershell environments for correct rendering, for now.
+* If you run into display issues with TUI apps in git-bash, WSL, Powershell, run 'reset'.
