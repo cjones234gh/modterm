@@ -38,10 +38,13 @@ namespace modterm
         // measured cell width (typical of synthetic or mismatched bold) still lands
         // on the terminal grid instead of spilling into following cells.
         public float HorizontalScale;
+        public int Underline;
+        public bool Strikethrough;
 
         public DrawTextCall(string text, float x, float y, float width, Color color, Color backgroundColor, 
                     CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false,
-                    bool fitToCell = false, float cellHeight = 0f, float horizontalScale = 1f)
+                    bool fitToCell = false, float cellHeight = 0f, float horizontalScale = 1f,
+                    int underline = 0, bool strikethrough = false)
         {
             Text = text;
             X = x;
@@ -58,6 +61,8 @@ namespace modterm
             if (cellHeight > 0f)
                 Height = cellHeight;
             HorizontalScale = horizontalScale > 0f ? horizontalScale : 1f;
+            Underline = underline;
+            Strikethrough = strikethrough;
         }
     }
 }

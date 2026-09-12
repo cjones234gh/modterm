@@ -1,5 +1,3 @@
-using XtermSharp;
-
 namespace modterm
 {
     /// <summary>
@@ -43,26 +41,5 @@ namespace modterm
         {
             return new TextPosition { Column = column, Row = row }.Within(Start, End);
         }
-    }
-
-    /// <summary>
-    /// Decodes XtermSharp's packed cell attribute: ((int)flags &lt;&lt; 18) | (fg &lt;&lt; 9) | bg.
-    /// fg/bg are 9-bit palette indices (0-255), with 256 = default and 257 = inverted-default.
-    /// </summary>
-    internal static class XtermAttr
-    {
-        public static void Decode(int attribute, out int fg, out int bg, out FLAGS flags)
-        {
-            bg = attribute & 0x1ff;
-            fg = (attribute >> 9) & 0x1ff;
-            flags = (FLAGS)(attribute >> 18);
-        }
-
-        /// <summary>
-        /// True when the cell uses the host default (CSI 39/49), not a palette
-        /// entry and not the inverted-default sentinel used after SGR 7.
-        /// </summary>
-        public static bool IsHostDefault(int index)
-            => index == Renderer.DefaultColor;
     }
 }

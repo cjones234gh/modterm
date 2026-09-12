@@ -54,6 +54,7 @@ namespace modterm
         private int _mouseReportButton = -1;
         private int _lastReportedMouseCol = -1;
         private int _lastReportedMouseRow = -1;
+        private readonly HashSet<Windows.System.VirtualKey> _ptyHeldKeys = new();
 
         public void InvalidateModtermCanvas()
         {
@@ -98,7 +99,7 @@ namespace modterm
             {
                 _mtr.ResetEmulator();
                 terminal.Start(launchShell, lines, columns);
-                _mtr.Terminal.Resize(_mtr.Columns, _mtr.Lines);
+                _mtr.ResizeEmulatorToGrid();
                 if (terminal.Started)
                     terminal.Resize((short)_mtr.Columns, (short)_mtr.Lines);
                 _mtr.UpdateTitleBarLabels();
@@ -181,6 +182,7 @@ namespace modterm
                 RequestConfigurationReload);
 
             RootGrid.KeyDown += ModtermCanvas_KeyDown;
+            RootGrid.KeyUp += ModtermCanvas_KeyUp;
             RootGrid.CharacterReceived += RootGrid_CharacterReceived;
             this.Activated += ModtermWindow_Activated;
 

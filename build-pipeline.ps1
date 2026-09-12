@@ -2,8 +2,7 @@
 # WinUI 3 Automated Build & Inno Setup Deployment Pipeline (modterm)
 # =================================================================================
 # Requires: .NET 8 SDK, Inno Setup 6 (ISCC.exe), network access on first run
-#           to download redistributable runtimes.
-# Also requires XtermSharp cloned next to this repo (see README).
+#           to download redistributable runtimes and the libghostty NuGet package.
 #
 # Publishes framework-dependent (not self-contained). The installer ships and
 # silently installs:

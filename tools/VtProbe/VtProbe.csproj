@@ -9,7 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\XtermSharp\XtermSharp\XtermSharp.csproj" />
+    <PackageReference Include="RoyalApps.RoyalTerminal.GhosttySharp.Native.Win64" Version="0.5.2" />
+    <Compile Include="..\..\modterm\Ghostty\GhosttyNative.cs" Link="Ghostty\GhosttyNative.cs" />
+    <Compile Include="..\..\modterm\Ghostty\GhosttyVtSession.cs" Link="Ghostty\GhosttyVtSession.cs" />
   </ItemGroup>
 
 </Project>

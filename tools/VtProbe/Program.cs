@@ -2,17 +2,16 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
-using XtermSharp;
+using modterm.Ghostty;
 
-// VtProbe: diagnostic harness for modterm/XtermSharp rendering issues.
+// VtProbe: diagnostic harness for modterm/libghostty rendering issues.
 //
 //   VtProbe capture "<command line>" <cols> <rows> <seconds> <outfile> [keyscript]
 //     Runs the command under a real ConPTY and records the raw VT byte stream.
 //     keyscript: optional file with lines "<delay-ms> <text|hex:XX..>" to send as input.
 //
 //   VtProbe replay <infile> <cols> <rows> [--screens]
-//     Feeds the captured bytes through XtermSharp and dumps the final screen,
-//     plus all parser errors/unknown sequences.
+//     Feeds the captured bytes through libghostty and dumps the final screen.
 //
 //   VtProbe seqdump <infile>
 //     Prints a human-readable trace of the escape sequences in the capture.
@@ -50,33 +49,27 @@ internal static class Program
 
     // ------------------------------------------------------------------ replay
 
-    class ProbeDelegate : ITerminalDelegate
+    static GhosttyVtSession CreateSession(int cols, int rows)
     {
-        public void ShowCursor(Terminal source) { }
-        public void SetTerminalTitle(Terminal source, string title) { }
-        public void SetTerminalIconTitle(Terminal source, string title) { }
-        public void SizeChanged(Terminal source) { }
-        public void Send(byte[] data) { }
-        public string WindowCommand(Terminal source, WindowManipulationCommand command, params int[] args) => null;
-        public bool IsProcessTrusted() => true;
+        var session = new GhosttyVtSession((ushort)cols, (ushort)rows);
+        session.Resize(cols, rows, 8, 16);
+        return session;
     }
 
     static int Replay(string file, int cols, int rows, string outFile, int chunkSize)
     {
         var bytes = File.ReadAllBytes(file);
-        var terminal = new Terminal(new ProbeDelegate(), new TerminalOptions { Cols = cols, Rows = rows, Scrollback = 5000, ConvertEol = false });
+        using var terminal = CreateSession(cols, rows);
 
         // Feed in chunks like the real reader does (4096-byte reads).
         for (int off = 0; off < bytes.Length; off += chunkSize)
         {
             int len = Math.Min(chunkSize, bytes.Length - off);
-            var chunk = new byte[len];
-            Array.Copy(bytes, off, chunk, 0, len);
-            terminal.Feed(chunk, len);
+            terminal.Write(bytes.AsSpan(off, len));
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine($"=== final screen ({cols}x{rows}), YBase={terminal.Buffer.YBase} ===");
+        sb.AppendLine($"=== final screen ({cols}x{rows}) ===");
         DumpScreen(terminal, cols, rows, sb);
         if (outFile != null)
             File.WriteAllText(outFile, sb.ToString(), new UTF8Encoding(false));
@@ -85,35 +78,41 @@ internal static class Program
         return 0;
     }
 
-    static void DumpScreen(Terminal terminal, int cols, int rows, StringBuilder sb)
+    static void DumpScreen(GhosttyVtSession terminal, int cols, int rows, StringBuilder sb)
     {
-        var buffer = terminal.Buffer;
-        for (int r = 0; r < rows; r++)
+        var frame = new GhosttyFrame();
+        terminal.Capture(frame);
+        int frameCols = Math.Max(1, frame.Cols);
+        int dumpRows = Math.Min(rows, frame.Rows);
+        int dumpCols = Math.Min(cols, frameCols);
+        for (int r = 0; r < dumpRows; r++)
         {
-            int idx = buffer.YBase + r;
-            var line = idx < buffer.Lines.Length ? buffer.Lines[idx] : null;
             var lineSb = new StringBuilder();
-            for (int c = 0; c < cols; c++)
+            for (int c = 0; c < dumpCols; c++)
             {
-                if (line == null || c >= line.Length) { lineSb.Append(' '); continue; }
-                var cd = line[c];
-                if (cd.Code == 0)
+                GhosttyCell cell = frame.Cells[r * frameCols + c];
+                if (cell.Width == 0 || string.IsNullOrEmpty(cell.Text))
                     lineSb.Append(' ');
                 else
-                {
-                    uint rune = (uint)cd.Rune;
-                    lineSb.Append(rune <= 0x10FFFF ? char.ConvertFromUtf32((int)rune) : "?");
-                }
+                    lineSb.Append(cell.Text);
             }
             sb.AppendLine($"{r,3}|{lineSb}|");
         }
+    }
+
+    static uint CellCode(GhosttyCell cell)
+    {
+        if (string.IsNullOrEmpty(cell.Text))
+            return ' ';
+        var enumerator = cell.Text.EnumerateRunes();
+        return enumerator.MoveNext() ? (uint)enumerator.Current.Value : ' ';
     }
 
     // Dumps every synchronized-update frame of the capture to numbered text files.
     static int Frames(string file, int cols, int rows, string outDir)
     {
         var bytes = File.ReadAllBytes(file);
-        var terminal = new Terminal(new ProbeDelegate(), new TerminalOptions { Cols = cols, Rows = rows, Scrollback = 5000, ConvertEol = false });
+        using var terminal = CreateSession(cols, rows);
         Directory.CreateDirectory(outDir);
 
         var marker = Encoding.ASCII.GetBytes("\x1b[?2026l");
@@ -126,9 +125,7 @@ internal static class Program
             if (!match) continue;
 
             int end = i + marker.Length;
-            var chunk = new byte[end - fed];
-            Array.Copy(bytes, fed, chunk, 0, end - fed);
-            terminal.Feed(chunk, chunk.Length);
+            terminal.Write(bytes.AsSpan(fed, end - fed));
             fed = end;
 
             var sb = new StringBuilder();
@@ -147,7 +144,7 @@ internal static class Program
     static int Scan(string file, int cols, int rows, string outFile, int chunkSize)
     {
         var bytes = File.ReadAllBytes(file);
-        var terminal = new Terminal(new ProbeDelegate(), new TerminalOptions { Cols = cols, Rows = rows, Scrollback = 5000, ConvertEol = false });
+        using var terminal = CreateSession(cols, rows);
 
         // Split the stream at end-of-synchronized-update markers (CSI ?2026l): each
         // marker is the end of one complete application frame, the only points where
@@ -167,6 +164,7 @@ internal static class Program
         int reported = 0;
         int fed = 0;
         uint[,] prev = null;
+        var frame = new GhosttyFrame();
         foreach (var end in frameEnds)
         {
             if (reported >= 8)
@@ -174,21 +172,20 @@ internal static class Program
             while (fed < end)
             {
                 int len = Math.Min(chunkSize, end - fed);
-                var chunk = new byte[len];
-                Array.Copy(bytes, fed, chunk, 0, len);
-                terminal.Feed(chunk, len);
+                terminal.Write(bytes.AsSpan(fed, len));
                 fed += len;
             }
 
-            var buffer = terminal.Buffer;
+            terminal.Capture(frame);
+            int frameCols = Math.Max(1, frame.Cols);
+            int snapRows = Math.Min(rows, frame.Rows);
+            int snapCols = Math.Min(cols, frameCols);
 
-            // Snapshot the viewport, diff box-drawing cells that became blank.
             var snapshot = new uint[rows, cols];
-            for (int r = 0; r < rows; r++)
+            for (int r = 0; r < snapRows; r++)
             {
-                var line = buffer.Lines[buffer.YBase + r];
-                for (int c = 0; c < cols; c++)
-                    snapshot[r, c] = line[c].Code == 0 ? ' ' : (uint)line[c].Rune;
+                for (int c = 0; c < snapCols; c++)
+                    snapshot[r, c] = CellCode(frame.Cells[r * frameCols + c]);
             }
 
             if (prev != null)

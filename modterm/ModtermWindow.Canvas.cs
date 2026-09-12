@@ -6,11 +6,11 @@ using System.Text;
 using Windows.Foundation;
 using Windows.System;
 using Windows.UI.Core;
-using XtermSharp;
+using modterm.Ghostty;
 
 namespace modterm
 {
-    public sealed partial class  ModtermWindow : Window
+    public sealed partial class ModtermWindow : Window
     {
         private void ModtermCanvas_KeyDown(object sender, KeyRoutedEventArgs e)
         {
@@ -60,21 +60,59 @@ namespace modterm
             if (ctrl && alt)
                 return;
 
-            var terminal = _mtr.Terminal;
-            string? vtSeq = VtUserInput.EncodeKey(
-                e.Key,
-                ctrl,
-                alt,
-                shift,
-                capsLock,
-                terminal.ApplicationCursor);
+            if (!VtUserInput.TryMapKey(e.Key, out GhosttyVtKey vtKey))
+                return;
 
-            if (!string.IsNullOrEmpty(vtSeq))
-            {
-                SendPtyInput(vtSeq);
-                e.Handled = true;
-                _keyDownSentToPty = true;
-            }
+            GhosttyVtMods mods = VtUserInput.MapMods(shift, alt, ctrl, capsLock);
+            string? text = (!ctrl && !alt)
+                ? VtUserInput.MapPrintable(e.Key, shift, capsLock)?.ToString()
+                : null;
+            GhosttyVtKeyAction action = e.KeyStatus.WasKeyDown
+                ? GhosttyVtKeyAction.Repeat
+                : GhosttyVtKeyAction.Press;
+
+            byte[] encoded = _mtr.Terminal.EncodeKey(
+                vtKey,
+                action,
+                mods,
+                text,
+                VtUserInput.UnshiftedCodepoint(e.Key));
+
+            if (encoded.Length == 0)
+                return;
+
+            SendPtyBytes(encoded);
+            _ptyHeldKeys.Add(e.Key);
+            e.Handled = true;
+            _keyDownSentToPty = true;
+        }
+
+        private void ModtermCanvas_KeyUp(object sender, KeyRoutedEventArgs e)
+        {
+            if (!_ptyHeldKeys.Remove(e.Key))
+                return;
+
+            if (!VtUserInput.TryMapKey(e.Key, out GhosttyVtKey vtKey))
+                return;
+
+            GhosttyVtMods mods = VtUserInput.MapMods(
+                IsKeyDown(VirtualKey.Shift),
+                IsKeyDown(VirtualKey.Menu),
+                IsKeyDown(VirtualKey.Control),
+                IsCapsLockOn());
+
+            byte[] encoded = _mtr.Terminal.EncodeKey(
+                vtKey,
+                GhosttyVtKeyAction.Release,
+                mods,
+                text: null,
+                VtUserInput.UnshiftedCodepoint(e.Key));
+
+            if (encoded.Length == 0)
+                return;
+
+            SendPtyBytes(encoded);
+            e.Handled = true;
         }
 
         private void RootGrid_CharacterReceived(UIElement sender, CharacterReceivedRoutedEventArgs e)
@@ -89,19 +127,34 @@ namespace modterm
             if (char.IsControl(ch) && ch != '\r' && ch != '\n' && ch != '\t')
                 return;
 
-            SendPtyInput(ch.ToString());
+            GhosttyVtMods mods = VtUserInput.MapMods(
+                IsKeyDown(VirtualKey.Shift),
+                IsKeyDown(VirtualKey.Menu),
+                IsKeyDown(VirtualKey.Control),
+                IsCapsLockOn());
+
+            string text = ch.ToString();
+            byte[] encoded = _mtr.Terminal.EncodeKey(
+                GhosttyVtKey.Unidentified,
+                GhosttyVtKeyAction.Press,
+                mods,
+                text,
+                ch);
+
+            if (encoded.Length == 0)
+                encoded = Encoding.UTF8.GetBytes(text);
+
+            SendPtyBytes(encoded);
             e.Handled = true;
         }
 
         private void ModtermWindow_Activated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs e)
         {
-            if (_mtr.Terminal is null || !_mtr.Terminal.SendFocus)
+            if (_mtr.Terminal is null || !_mtr.Terminal.FocusReporting)
                 return;
 
-            SendPtyInput(
-                e.WindowActivationState == WindowActivationState.Deactivated
-                    ? VtUserInput.FocusOut
-                    : VtUserInput.FocusIn);
+            bool gained = e.WindowActivationState != WindowActivationState.Deactivated;
+            SendPtyBytes(_mtr.Terminal.EncodeFocus(gained));
         }
 
         private void ModtermCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -114,7 +167,12 @@ namespace modterm
 
             if (ShouldReportMouseToPty(shift) && button >= 0)
             {
-                if (TryReportMouse(button, release: false, motion: false, currentPoint, clamp: false))
+                if (TryReportMouse(
+                    GhosttyMouseAction.Press,
+                    MouseButtonFromReport(button),
+                    anyPressed: true,
+                    currentPoint,
+                    clamp: false))
                 {
                     _mouseReportButton = button;
                     _ptyConsumedRightClick = button == 2;
@@ -128,9 +186,7 @@ namespace modterm
             if (button != 0)
                 return;
 
-            _mtr.IsSelecting = false;
-            _mtr.SelectionRange = null;
-            _mtr.SelectedText = "";
+            _mtr.ClearHostSelection();
 
             if (!_mtr.IsInTextArea(currentPoint))
                 return;
@@ -148,30 +204,30 @@ namespace modterm
             Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
             var props = e.GetCurrentPoint(ModtermCanvas).Properties;
             bool shift = IsKeyDown(VirtualKey.Shift);
-            var mode = _mtr.Terminal.MouseMode;
+            var terminal = _mtr.Terminal;
 
             if (ShouldReportMouseToPty(shift))
             {
                 bool buttonDown = props.IsLeftButtonPressed || props.IsMiddleButtonPressed || props.IsRightButtonPressed;
-                int button = _mouseReportButton >= 0
-                    ? _mouseReportButton
-                    : ButtonFromPressedState(props);
+                GhosttyMouseButtonId? button = _mouseReportButton >= 0
+                    ? MouseButtonFromReport(_mouseReportButton)
+                    : MouseButtonFromPressedState(props);
 
-                if (buttonDown && mode.SendButtonTracking())
+                if (buttonDown && terminal.MouseButtonTracking)
                 {
-                    TryReportMouse(button, release: false, motion: true, currentPoint, clamp: true);
+                    TryReportMouse(GhosttyMouseAction.Motion, button, anyPressed: true, currentPoint, clamp: true);
                     e.Handled = true;
                     return;
                 }
 
-                if (!buttonDown && mode.SendMotionEvent())
+                if (!buttonDown && terminal.MouseAnyTracking)
                 {
-                    TryReportMouse(3, release: false, motion: true, currentPoint, clamp: false);
+                    TryReportMouse(GhosttyMouseAction.Motion, null, anyPressed: false, currentPoint, clamp: false);
                     e.Handled = true;
                     return;
                 }
 
-                if (mode != MouseMode.Off && !shift)
+                if (terminal.MouseTracking && !shift)
                     return;
             }
 
@@ -188,13 +244,19 @@ namespace modterm
             Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
             var props = e.GetCurrentPoint(ModtermCanvas).Properties;
             int button = ButtonFromUpdateKind(props.PointerUpdateKind, pressed: false);
-            bool shift = IsKeyDown(VirtualKey.Shift);
 
             if (_mouseReportButton >= 0)
             {
                 int reportButton = button >= 0 ? button : _mouseReportButton;
                 if (ShouldSendMouseRelease())
-                    TryReportMouse(reportButton, release: true, motion: false, currentPoint, clamp: true);
+                {
+                    TryReportMouse(
+                        GhosttyMouseAction.Release,
+                        MouseButtonFromReport(reportButton),
+                        anyPressed: false,
+                        currentPoint,
+                        clamp: true);
+                }
 
                 EndMouseReport(e.Pointer);
                 e.Handled = true;
@@ -219,9 +281,9 @@ namespace modterm
             if (ShouldSendMouseRelease())
             {
                 TryReportMouse(
-                    _mouseReportButton,
-                    release: true,
-                    motion: false,
+                    GhosttyMouseAction.Release,
+                    MouseButtonFromReport(_mouseReportButton),
+                    anyPressed: false,
                     e.GetCurrentPoint(ModtermCanvas).Position,
                     clamp: true);
             }
@@ -248,12 +310,12 @@ namespace modterm
             bool shift = IsKeyDown(VirtualKey.Shift);
             Point currentPoint = e.GetCurrentPoint(ModtermCanvas).Position;
 
-            if (!shift && ShouldReportMouseToPty(shift: false) && _mtr.Terminal.MouseMode != MouseMode.X10)
+            if (!shift && ShouldReportMouseToPty(shift: false) && !_mtr.Terminal.MouseX10)
             {
                 int notches = Math.Max(1, Math.Abs(delta) / 120);
-                int button = delta > 0 ? 4 : 5;
+                GhosttyMouseButtonId wheel = delta > 0 ? GhosttyMouseButtonId.Four : GhosttyMouseButtonId.Five;
                 for (int i = 0; i < notches; i++)
-                    TryReportMouse(button, release: false, motion: false, currentPoint, clamp: true);
+                    TryReportMouse(GhosttyMouseAction.Press, wheel, anyPressed: false, currentPoint, clamp: true);
 
                 e.Handled = true;
                 return;
@@ -267,76 +329,75 @@ namespace modterm
             e.Handled = true;
         }
 
-        private void SendPtyInput(string text)
+        private void SendPtyBytes(byte[] data)
         {
-            if (string.IsNullOrEmpty(text) || ConPtyTerminal is null)
+            if (data is not { Length: > 0 } || ConPtyTerminal is null)
                 return;
 
-            _mtr.ScrollOffset = 0;
-            ConPtyTerminal.WriteInput(text);
+            _mtr.FollowLiveOutput();
+            ConPtyTerminal.WriteInput(data);
             ModtermCanvas.Invalidate();
-        }
-
-        private void SendPtyMouse(string sequence)
-        {
-            if (string.IsNullOrEmpty(sequence) || ConPtyTerminal is null)
-                return;
-
-            // X10/UTF8 mouse encodings are raw 8-bit; SGR/URXVT are ASCII.
-            var protocol = _mtr.Terminal.MouseProtocol;
-            if (protocol is MouseProtocolEncoding.SGR or MouseProtocolEncoding.URXVT)
-                ConPtyTerminal.WriteInput(sequence);
-            else
-                ConPtyTerminal.WriteInput(Encoding.Latin1.GetBytes(sequence));
         }
 
         private bool ShouldReportMouseToPty(bool shift)
         {
             // Shift+click is the xterm/Alacritty override for host selection
             // while an application has mouse tracking enabled.
-            return !shift && _mtr.Terminal.MouseMode != MouseMode.Off;
+            return !shift && _mtr.Terminal.MouseTracking;
         }
 
         private bool ShouldSendMouseRelease()
         {
-            return _mtr.Terminal.MouseMode.SendButtonRelease()
-                && _mtr.Terminal.MouseMode != MouseMode.X10;
+            return _mtr.Terminal.MouseTracking && !_mtr.Terminal.MouseX10;
         }
 
         private bool ShouldScrollWithPagingKeys()
         {
             var terminal = _mtr.Terminal;
-            return !terminal.Buffers.IsAlternateBuffer
+            return !terminal.AlternateScreen
                 && !terminal.ApplicationCursor
-                && terminal.MouseMode == MouseMode.Off;
+                && !terminal.MouseTracking;
         }
 
-        private bool TryReportMouse(int button, bool release, bool motion, Point point, bool clamp)
+        private bool TryReportMouse(
+            GhosttyMouseAction action,
+            GhosttyMouseButtonId? button,
+            bool anyPressed,
+            Point point,
+            bool clamp)
         {
             if (!_mtr.TryGetViewportCell(point, clamp, out int col, out int row))
                 return false;
 
-            if (motion && col == _lastReportedMouseCol && row == _lastReportedMouseRow)
+            if (action == GhosttyMouseAction.Motion && col == _lastReportedMouseCol && row == _lastReportedMouseRow)
                 return true;
 
-            bool alt = IsKeyDown(VirtualKey.Menu);
-            bool ctrl = IsKeyDown(VirtualKey.Control);
-            bool shift = IsKeyDown(VirtualKey.Shift);
-            string seq = VtUserInput.EncodeMouse(
-                _mtr.Terminal.MouseProtocol,
+            GhosttyVtMods mods = VtUserInput.MapMods(
+                IsKeyDown(VirtualKey.Shift),
+                IsKeyDown(VirtualKey.Menu),
+                IsKeyDown(VirtualKey.Control),
+                capsLock: false);
+
+            uint screenWidth = (uint)Math.Max(1, Math.Round(ModtermCanvas.ActualWidth));
+            uint screenHeight = (uint)Math.Max(1, Math.Round(ModtermCanvas.ActualHeight));
+            byte[] encoded = _mtr.Terminal.EncodeMouse(
+                action,
                 button,
-                release,
-                motion,
-                col,
-                row,
-                shift,
-                alt,
-                ctrl);
+                (float)point.X,
+                (float)point.Y,
+                mods,
+                anyPressed,
+                screenWidth,
+                screenHeight,
+                _mtr.CellWidthPixels,
+                _mtr.CellHeightPixels,
+                _mtr.PaddingLeft,
+                _mtr.PaddingTop);
 
             _lastReportedMouseCol = col;
             _lastReportedMouseRow = row;
-            SendPtyMouse(seq);
-            return true;
+            SendPtyBytes(encoded);
+            return encoded.Length > 0 || action == GhosttyMouseAction.Motion;
         }
 
         private void EndMouseReport(Pointer? pointer)
@@ -353,10 +414,32 @@ namespace modterm
             if (!_mtr.IsSelecting && _mtr.SelectionRange is null && string.IsNullOrEmpty(_mtr.SelectedText))
                 return;
 
-            _mtr.IsSelecting = false;
-            _mtr.SelectionRange = null;
-            _mtr.SelectedText = "";
+            _mtr.ClearHostSelection();
             ModtermCanvas.Invalidate();
+        }
+
+        private static GhosttyMouseButtonId? MouseButtonFromReport(int button)
+        {
+            return button switch
+            {
+                0 => GhosttyMouseButtonId.Left,
+                1 => GhosttyMouseButtonId.Middle,
+                2 => GhosttyMouseButtonId.Right,
+                4 => GhosttyMouseButtonId.Four,
+                5 => GhosttyMouseButtonId.Five,
+                _ => null
+            };
+        }
+
+        private static GhosttyMouseButtonId? MouseButtonFromPressedState(PointerPointProperties props)
+        {
+            if (props.IsLeftButtonPressed)
+                return GhosttyMouseButtonId.Left;
+            if (props.IsMiddleButtonPressed)
+                return GhosttyMouseButtonId.Middle;
+            if (props.IsRightButtonPressed)
+                return GhosttyMouseButtonId.Right;
+            return null;
         }
 
         private static int ButtonFromUpdateKind(PointerUpdateKind kind, bool pressed)
@@ -379,17 +462,6 @@ namespace modterm
                 PointerUpdateKind.RightButtonReleased => 2,
                 _ => -1
             };
-        }
-
-        private static int ButtonFromPressedState(PointerPointProperties props)
-        {
-            if (props.IsLeftButtonPressed)
-                return 0;
-            if (props.IsMiddleButtonPressed)
-                return 1;
-            if (props.IsRightButtonPressed)
-                return 2;
-            return 3;
         }
 
         private static bool IsKeyDown(VirtualKey key)

@@ -13,8 +13,9 @@ using Windows.Foundation;
 using Windows.UI;
 using Windows.ApplicationModel.DataTransfer;
 using Microsoft.UI.Dispatching;
-using System.Windows;
 using Microsoft.UI.Text;
+using Windows.Graphics.DirectX;
+using modterm.Ghostty;
 
 namespace modterm
 {
@@ -24,8 +25,12 @@ namespace modterm
         public int Lines { get { return _lines; } }
         public int Columns { get { return _columns; } }
         public int ScrollOffset { get { return _scrollOffset; } set { _scrollOffset = value; } }
-        public XtermSharp.Terminal Terminal { get { return _terminal; } }
-        public int TopRow { get { return _terminal.Buffer.YBase; } }
+        internal GhosttyVtSession Terminal { get { return _terminal; } }
+        public int TopRow { get { return 0; } }
+        internal uint CellWidthPixels => (uint)Math.Max(1, Math.Round(_measuredCharWidth));
+        internal uint CellHeightPixels => (uint)Math.Max(1, Math.Round(CurrentFontSize + _lineHeightPadding));
+        internal uint PaddingLeft => (uint)Math.Max(0, _leftTextPadding);
+        internal uint PaddingTop => (uint)Math.Max(0, _topTextPadding);
         public UserAppConfiguration UserAppConfiguration { get; set; } = null!;
         public bool IsSelecting { get { return _isSelecting; } set { _isSelecting = value; } }
         public TextRange? SelectionRange { get { return _selectionRange; } set { _selectionRange = value; } }
@@ -41,9 +46,10 @@ namespace modterm
         private DispatcherQueueTimer _cursorTimer = null!;
         private int _cursorSpeed = 500;
         private bool _cursorVisible = true;
-        private XtermSharp.Terminal _terminal = null!;
-        // DECSCNM (screen-wide reverse video) is not tracked by XtermSharp; kept false.
-        private bool _screenReverse = false;
+        private GhosttyVtSession _terminal = null!;
+        private readonly GhosttyFrame _frame = new();
+        private readonly GhosttyColorRgb[] _nativePalette = new GhosttyColorRgb[256];
+        private readonly Dictionary<(uint Id, ulong Generation), CanvasBitmap> _kittyBitmaps = new();
         private string _currentFont = BundledFonts.BlexMonoNerdFontFamilyName;
         private string _currentControlFont = BundledFonts.BlexMonoNerdFontFamilyName;
         private string _currentCursorStyle = TerminalCursorStyles.Solid;
@@ -86,6 +92,8 @@ namespace modterm
 
         private CanvasTextFormat? _normalTextFormat;
         private CanvasTextFormat? _boldTextFormat;
+        private CanvasTextFormat? _italicTextFormat;
+        private CanvasTextFormat? _boldItalicTextFormat;
         private string? _cachedFontFamily;
         private float _cachedFontSize;
         private float _boldHorizontalScale = 1f;
@@ -106,6 +114,8 @@ namespace modterm
                 _currentTextFormat.FontFamily = BundledFonts.ResolveFontFamily(_currentFont);
                 _normalTextFormat = null;
                 _boldTextFormat = null;
+                _italicTextFormat = null;
+                _boldItalicTextFormat = null;
             }
         }
 
@@ -138,7 +148,11 @@ namespace modterm
         public string CurrentCursorStyle
         {
             get => _currentCursorStyle;
-            set => _currentCursorStyle = TerminalCursorStyles.Normalize(value);
+            set
+            {
+                _currentCursorStyle = TerminalCursorStyles.Normalize(value);
+                _terminal?.SetDefaultCursor(TerminalCursorStyles.IsUnderline(_currentCursorStyle), blink: true);
+            }
         }
 
         public CanvasTextFormat CurrentControlTextFormat 
@@ -164,15 +178,20 @@ namespace modterm
         public void Initialize()
         {
             
-            // Initialize the XtermSharp terminal engine. Size is corrected on first draw
-            // once the canvas measures how many rows/columns fit.
-            // ConvertEol must be false: ConPTY moves the cursor down a row (keeping the
-            // column) with a bare LF and emits an explicit CR when it wants column 0.
-            // Converting LF to CR+LF pulls the cursor to column 0 mid-frame, which made
-            // ECH erase box borders (btop) and misplace delta rows (gitui).
-            _terminal = new XtermSharp.Terminal(
-                new ModtermTerminalDelegate(ModtermWinInstance),
-                new XtermSharp.TerminalOptions { Cols = 80, Rows = 25, Scrollback = 5000, ConvertEol = false });
+            GhosttyPngDecoder.Install();
+            _terminal = new GhosttyVtSession(80, 25, GhosttyVtSession.DefaultScrollbackLines);
+            _terminal.WritePty += bytes => ModtermWinInstance.ConPtyTerminal?.WriteInput(bytes);
+            _terminal.ClipboardText += text =>
+            {
+                ModtermWinInstance.DispatcherQueue.TryEnqueue(() =>
+                {
+                    DataPackage dataPackage = new DataPackage();
+                    dataPackage.SetText(text.Replace("\n", Environment.NewLine));
+                    Clipboard.SetContent(dataPackage);
+                    Clipboard.Flush();
+                });
+            };
+            GhosttyVtSession.FillDefaultPalette(_nativePalette);
 
             // set default values
             _currentTextFormat = new CanvasTextFormat
@@ -192,7 +211,10 @@ namespace modterm
             _cursorTimer.Interval = TimeSpan.FromMilliseconds(_cursorSpeed);
             _cursorTimer.Tick += (s, e) =>
             {
-                _cursorVisible = !_cursorVisible;
+                if (_frame.CursorBlinking)
+                    _cursorVisible = !_cursorVisible;
+                else
+                    _cursorVisible = true;
                 ModtermWinInstance.InvalidateModtermCanvas();
             };
             _cursorTimer.Start();
@@ -255,23 +277,40 @@ namespace modterm
             ApplyTerminalPaletteOverrides(config.Palette);
             ApplySystemBackdrop(config.BackdropKind, wInstance);
             _backgroundBrush.Color = GetBackgroundArgb();
+            PushPaletteToEmulator();
         }
 
         private void ApplyTerminalPaletteOverrides(Dictionary<string, Color>? palette)
         {
             Array.Clear(_terminalPaletteOverrides, 0, _terminalPaletteOverrides.Length);
-            if (palette is null || palette.Count == 0)
+            GhosttyVtSession.FillDefaultPalette(_nativePalette);
+            if (palette is not null && palette.Count > 0)
             {
-                return;
-            }
-
-            for (int i = 0; i < TerminalPalette.StandardNames.Length; i++)
-            {
-                if (TerminalPalette.TryGetColor(palette, i, out Color color))
+                for (int i = 0; i < TerminalPalette.StandardNames.Length; i++)
                 {
-                    _terminalPaletteOverrides[i] = color;
+                    if (TerminalPalette.TryGetColor(palette, i, out Color color))
+                    {
+                        _terminalPaletteOverrides[i] = color;
+                        _nativePalette[i] = GhosttyColorRgb.FromBytes(color.R, color.G, color.B);
+                    }
                 }
             }
+
+            PushPaletteToEmulator();
+        }
+
+        private void PushPaletteToEmulator()
+        {
+            if (_terminal is null)
+                return;
+
+            GhosttyColorRgb fg = GhosttyColorRgb.FromBytes(_outputColor.R, _outputColor.G, _outputColor.B);
+            Color window = GetBackgroundArgb();
+            GhosttyColorRgb bg = window.A == 0
+                ? GhosttyColorRgb.FromBytes(0, 0, 0)
+                : GhosttyColorRgb.FromBytes(window.R, window.G, window.B);
+            _terminal.ApplyPalette(_nativePalette, fg, bg);
+            _terminal.SetDefaultCursor(TerminalCursorStyles.IsUnderline(_currentCursorStyle), blink: true);
         }
 
         public SolidColorBrush GetBackgroundBrush()
@@ -289,7 +328,10 @@ namespace modterm
 
             if (Math.Abs(_selectionStart.X - _selectionEnd.X) < 2 &&
                 Math.Abs(_selectionStart.Y - _selectionEnd.Y) < 2)
+            {
+                _terminal.ClearSelection();
                 return;
+            }
 
             _selectionRange = new TextRange
             {
@@ -297,49 +339,17 @@ namespace modterm
                 End = GetTextPositionFromPoint(_selectionEnd)
             };
 
-            _selectedText = GetText(_selectionRange);
+            _terminal.SetSelection(
+                _selectionRange.Start.Column,
+                _selectionRange.Start.Row,
+                _selectionRange.End.Column,
+                _selectionRange.End.Row);
+            _selectedText = GetSelectedText();
         }
 
-        // Stream-based (reading-order) text extraction across the selection span, matching
-        // the behavior of the previous engine. Rows are absolute buffer indices.
-        private string GetText(TextRange range)
+        private string GetSelectedText()
         {
-            int startCol = range.Start.Column;
-            int startRow = range.Start.Row;
-            int endCol = range.End.Column;
-            int endRow = range.End.Row;
-
-            if (startRow > endRow || (startRow == endRow && startCol > endCol))
-            {
-                (startCol, endCol) = (endCol, startCol);
-                (startRow, endRow) = (endRow, startRow);
-            }
-
-            var lines = _terminal.Buffer.Lines;
-            if (startRow < 0 || startRow >= lines.Length)
-                return string.Empty;
-
-            var sb = new StringBuilder();
-            for (int row = startRow; row <= endRow && row < lines.Length; row++)
-            {
-                int c0 = (row == startRow) ? startCol : 0;
-                int c1 = (row == endRow) ? endCol : _columns - 1;
-
-                if (row != startRow)
-                    sb.Append('\n');
-
-                var line = lines[row];
-                if (line == null)
-                    continue;
-
-                for (int i = c0; i <= c1 && i < line.Length; i++)
-                {
-                    var cd = line[i];
-                    sb.Append(cd.Code == 0 ? ' ' : (char)(uint)cd.Rune);
-                }
-            }
-
-            return sb.ToString();
+            return _terminal?.GetSelectedText() ?? string.Empty;
         }
 
         public bool IsInTextArea(Point point)
@@ -391,8 +401,7 @@ namespace modterm
             double lineHeight = CurrentFontSize + _lineHeightPadding;
             int column = (int)Math.Floor((point.X - _leftTextPadding) / _measuredCharWidth);
             int visibleRow = (int)Math.Floor((point.Y - _topTextPadding) / lineHeight);
-            int topRow = _isSelecting ? _selectionTopRow : _terminal.Buffer.YBase - _scrollOffset;
-
+            int topRow = 0;
             column = Math.Clamp(column, 0, Math.Max(0, Columns - 1));
             visibleRow = Math.Clamp(visibleRow, 0, Math.Max(0, Lines - 1));
 
@@ -423,8 +432,8 @@ namespace modterm
                 if (!string.IsNullOrEmpty(text))
                 {
                     _scrollOffset = 0;
-                    ModtermWinInstance.ConPtyTerminal?.WriteInput(
-                        VtUserInput.WrapPaste(text, _terminal.BracketedPasteMode));
+                    _terminal.ScrollToBottom();
+                    ModtermWinInstance.ConPtyTerminal?.WriteInput(_terminal.EncodePaste(text));
                 }
                 ModtermWinInstance.InvalidateModtermCanvas();
             }
@@ -432,11 +441,14 @@ namespace modterm
 
         public void OnOutputReceived(object? sender, byte[] data)
         {
-            // Feed raw PTY bytes to the VT parser (preserves UTF-8 split across reads).
-            if (_scrollOffset > 0 && !_isSelecting) _scrollOffset = 0;
+            if (_scrollOffset > 0 && !_isSelecting)
+            {
+                _scrollOffset = 0;
+                _terminal.ScrollToBottom();
+            }
             if (data is { Length: > 0 })
             {
-                _terminal.Feed(data, data.Length);
+                _terminal.Write(data);
                 ModtermWinInstance.InvalidateModtermCanvas();
             }
         }
@@ -446,18 +458,36 @@ namespace modterm
             if (rows == 0)
                 return;
 
-            int previousOffset = _scrollOffset;
-            _scrollOffset += rows;
-            ClampScrollOffset();
+            _terminal.ScrollBackBy(rows);
+            _scrollOffset = _terminal.IsScrolledBack ? 1 : 0;
+            ModtermWinInstance.InvalidateModtermCanvas();
+        }
 
-            if (_scrollOffset != previousOffset)
-                ModtermWinInstance.InvalidateModtermCanvas();
+        public void FollowLiveOutput()
+        {
+            _scrollOffset = 0;
+            _terminal?.ScrollToBottom();
+        }
+
+        public void ClearHostSelection()
+        {
+            _isSelecting = false;
+            _selectionRange = null;
+            _selectedText = string.Empty;
+            _terminal?.ClearSelection();
+        }
+
+        public void ResizeEmulatorToGrid()
+        {
+            if (_terminal is null || _columns <= 0 || _lines <= 0 || _measuredCharWidth <= 0)
+                return;
+
+            _terminal.Resize(_columns, _lines, CellWidthPixels, CellHeightPixels);
         }
 
         private void ClampScrollOffset()
         {
-            int maxScrollOffset = Math.Max(0, _terminal.Buffer.YBase);
-            _scrollOffset = Math.Clamp(_scrollOffset, 0, maxScrollOffset);
+            _scrollOffset = _terminal.IsScrolledBack ? Math.Max(1, _scrollOffset) : 0;
         }
 
         public void ResetEmulator()
@@ -469,7 +499,10 @@ namespace modterm
             _isSelecting = false;
             _selectionRange = null;
             _selectedText = string.Empty;
-            _terminal.Feed("\x1bc");
+            _terminal.Reset();
+            foreach (CanvasBitmap bitmap in _kittyBitmaps.Values)
+                bitmap.Dispose();
+            _kittyBitmaps.Clear();
         }
 
         /// <summary>
@@ -494,9 +527,7 @@ namespace modterm
             _lines = rows;
             _columns = cols;
 
-            // Reflow the emulator buffer first, then notify the pseudo console so the shell
-            // sees the new size and redraws against the reflowed contents.
-            _terminal.Resize(cols, rows);
+            _terminal.Resize(cols, rows, CellWidthPixels, CellHeightPixels);
             ModtermWinInstance.ConPtyTerminal.Resize((short)cols, (short)rows);
 
             _scrollOffset = 0;
@@ -532,9 +563,9 @@ namespace modterm
             }
         }
 
-        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false, bool fitToCell = false, float cellHeight = 0f, float horizontalScale = 1f)
+        public void DrawText(string text, float x, float y, float width, Color color, Color bgColor, CanvasTextFormat textFormat, bool foregroundIsDefault = false, bool backgroundIsDefault = false, bool fitToCell = false, float cellHeight = 0f, float horizontalScale = 1f, int underline = 0, bool strikethrough = false)
         {
-            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault, fitToCell, cellHeight, horizontalScale));
+            _effectSequence.Add(new DrawTextCall(text, x, y, width, color, bgColor, textFormat, foregroundIsDefault, backgroundIsDefault, fitToCell, cellHeight, horizontalScale, underline, strikethrough));
         }
 
         public void ModtermCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
@@ -555,7 +586,9 @@ namespace modterm
                 _lines = measuredRows;
                 _columns = measuredCols;
                 _measuredCharWidth = measuredCharWidth;
-                _terminal.Resize(_columns, _lines);
+                double startLineHeight = CurrentFontSize + _lineHeightPadding;
+                _terminal.Resize(_columns, _lines, (uint)Math.Max(1, _measuredCharWidth), (uint)Math.Max(1, startLineHeight));
+                PushPaletteToEmulator();
 
                 var terminal = ModtermWinInstance.EnsureTerminalInstanceForStart();
                 if (terminal.Started)
@@ -566,81 +599,79 @@ namespace modterm
 
             BeginEffectSequence(sender, args.DrawingSession);
 
-            // Keep the VT controller's TopRow as the live screen position; scrollback only changes what we render.
             ClampScrollOffset();
-            int topRow = _terminal.Buffer.YBase - _scrollOffset;
-            var selectionRange = _isSelecting ? _selectionRange : null;
             double lineHeight = CurrentFontSize + _lineHeightPadding;
 
             EnsureTextFormats();
             EnsureBoldAdvanceScale(args.DrawingSession);
+            _terminal.Capture(_frame);
 
-            for (int visibleRow = 0; visibleRow < _lines; visibleRow++)
+            DrawKittyImages(args.DrawingSession, lineHeight, belowText: true);
+            DrawCapturedCells((float)lineHeight);
+            EndEffectSequence();
+
+            DrawKittyImages(args.DrawingSession, lineHeight, belowText: false);
+            DrawBlinkingCursor(args.DrawingSession, lineHeight);
+            _titleBarLabels?.DrawLabels(sender, args.DrawingSession, this);
+        }
+
+        private void DrawCapturedCells(float lineHeight)
+        {
+            int rows = Math.Min(_lines, _frame.Rows);
+            int cols = Math.Min(_columns, _frame.Cols);
+            if (rows <= 0 || cols <= 0 || _frame.Cells.Length == 0)
+                return;
+
+            for (int visibleRow = 0; visibleRow < rows; visibleRow++)
             {
-                int logicalRow = topRow + visibleRow;
-                float y = _topTextPadding + (float)(visibleRow * lineHeight);
-                var sourceLine = (logicalRow >= 0 && logicalRow < _terminal.Buffer.Lines.Length)
-                    ? _terminal.Buffer.Lines[logicalRow]
-                    : null;
-
-                // Run-batching state: accumulate contiguous cells with identical SGR
-                // attributes so the row can be drawn as a small number of DrawText calls
-                // instead of one per cell. Unsafe glyphs (box-drawing, combining marks,
-                // etc.) break the run and are drawn individually to preserve alignment.
+                float y = _topTextPadding + (visibleRow * lineHeight);
                 bool runActive = false;
                 int runStartCol = 0;
                 Color runFg = default;
                 Color runBg = default;
                 bool runFgDefault = false;
                 bool runBgDefault = false;
+                bool runStrikethrough = false;
+                int runUnderline = 0;
                 CanvasTextFormat? runFormat = null;
                 _runBuffer.Clear();
 
-                for (int col = 0; col < _columns; col++)
+                for (int col = 0; col < cols; col++)
                 {
-                    XtermSharp.CharData cd = (sourceLine != null && col < sourceLine.Length)
-                        ? sourceLine[col]
-                        : XtermSharp.CharData.Null;
+                    GhosttyCell cell = _frame.Cells[visibleRow * _frame.Cols + col];
+                    if (cell.Width == 0)
+                    {
+                        if (runActive)
+                        {
+                            FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!, lineHeight, runUnderline, runStrikethrough);
+                            runActive = false;
+                        }
+                        continue;
+                    }
 
-                    XtermAttr.Decode(cd.Attribute, out int fgIdx, out int bgIdx, out XtermSharp.FLAGS flags);
-
-                    bool inverted = selectionRange != null && selectionRange.Contains(col, logicalRow);
-                    bool cellReverse = (flags & XtermSharp.FLAGS.INVERSE) != 0;
-                    ResolveCellColors(
-                        fgIdx,
-                        bgIdx,
-                        _screenReverse ^ inverted ^ cellReverse,
-                        out Color fg,
-                        out Color bg,
-                        out bool fgDefault,
-                        out bool bgDefault);
-
-                    if ((flags & XtermSharp.FLAGS.INVISIBLE) != 0)
+                    ResolveCapturedCellColors(in cell, out Color fg, out Color bg, out bool fgDefault, out bool bgDefault);
+                    if (cell.Invisible)
                         fg = bg;
+                    if (cell.Faint)
+                        fg = Color.FromArgb((byte)Math.Max(40, fg.A / 2), fg.R, fg.G, fg.B);
 
-                    // A cell holds a single code point (no multi-codepoint combining marks).
-                    string runeString = cd.Code == 0 ? " " : RuneToString((uint)cd.Rune);
+                    string runeString = string.IsNullOrEmpty(cell.Text) ? " " : cell.Text;
                     char displayChar = runeString.Length == 1 ? runeString[0] : '\uFFFF';
-                    string combining = string.Empty;
-
-                    CanvasTextFormat cellFormat = (flags & XtermSharp.FLAGS.BOLD) != 0 ? _boldTextFormat! : _normalTextFormat!;
-
-                    // Only batch cells whose glyph is known to use the primary monospace
-                    // font's natural advance (printable ASCII). Box-drawing, braille,
-                    // resolved missing glyphs, and combining sequences are drawn per-cell
-                    // at the measured grid so they stay column-aligned.
-                    bool canBatch = combining.Length == 0 && IsSafeForBatch(displayChar);
+                    CanvasTextFormat cellFormat = FormatFor(cell.Bold, cell.Italic);
+                    bool canBatch = runeString.Length == 1 && IsSafeForBatch(displayChar);
 
                     bool matchesRun = runActive
                         && ReferenceEquals(runFormat, cellFormat)
                         && runFg == fg
                         && runBg == bg
                         && runFgDefault == fgDefault
-                        && runBgDefault == bgDefault;
+                        && runBgDefault == bgDefault
+                        && runUnderline == cell.Underline
+                        && runStrikethrough == cell.Strikethrough;
 
                     if (runActive && (!canBatch || !matchesRun))
                     {
-                        FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!, (float)lineHeight);
+                        FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!, lineHeight, runUnderline, runStrikethrough);
                         runActive = false;
                     }
 
@@ -654,60 +685,147 @@ namespace modterm
                             runBg = bg;
                             runFgDefault = fgDefault;
                             runBgDefault = bgDefault;
+                            runUnderline = cell.Underline;
+                            runStrikethrough = cell.Strikethrough;
                             runFormat = cellFormat;
                         }
                         _runBuffer.Append(displayChar);
                     }
                     else
                     {
-                        string cellText = runeString + combining;
                         float cellX = _leftTextPadding + (col * _measuredCharWidth);
-                        // Braille patterns are absent from typical monospace fonts (Consolas),
-                        // so they resolve through font fallback whose glyph cell is taller than
-                        // our row. Scale those to the grid cell so TUI braille graphs stay within
-                        // their rows instead of bleeding vertically.
-                        bool fitToCell = IsBrailleChar(displayChar);
+                        bool fitToCell = runeString.Length == 1 && IsBrailleChar(displayChar);
                         DrawText(
-                            cellText,
+                            runeString,
                             cellX,
                             y,
-                            _measuredCharWidth,
+                            _measuredCharWidth * Math.Max(1, (int)cell.Width),
                             fg,
                             bg,
                             cellFormat,
                             fgDefault,
                             bgDefault,
                             fitToCell,
-                            (float)lineHeight,
-                            HorizontalScaleFor(cellFormat));
+                            lineHeight,
+                            HorizontalScaleFor(cellFormat),
+                            cell.Underline,
+                            cell.Strikethrough);
                     }
                 }
 
                 if (runActive)
+                    FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!, lineHeight, runUnderline, runStrikethrough);
+            }
+        }
+
+        private CanvasTextFormat FormatFor(bool bold, bool italic)
+        {
+            if (bold && italic)
+                return _boldItalicTextFormat!;
+            if (bold)
+                return _boldTextFormat!;
+            if (italic)
+                return _italicTextFormat!;
+            return _normalTextFormat!;
+        }
+
+        private void ResolveCapturedCellColors(
+            in GhosttyCell cell,
+            out Color fg,
+            out Color bg,
+            out bool fgDefault,
+            out bool bgDefault)
+        {
+            fgDefault = cell.FgDefault && !cell.Selected;
+            bgDefault = cell.BgDefault && !cell.Selected;
+            fg = fgDefault ? _outputColor : Color.FromArgb(255, cell.Fg.R, cell.Fg.G, cell.Fg.B);
+            bg = bgDefault ? Colors.Transparent : Color.FromArgb(255, cell.Bg.R, cell.Bg.G, cell.Bg.B);
+
+            if (cell.Selected)
+            {
+                Color selectedFg = bgDefault ? InverseForegroundColor() : (bg.A == 0 ? InverseForegroundColor() : bg);
+                Color selectedBg = fgDefault ? Opaque(_outputColor) : Opaque(fg);
+                fg = selectedFg;
+                bg = selectedBg;
+                fgDefault = false;
+                bgDefault = false;
+            }
+        }
+
+        private void DrawKittyImages(CanvasDrawingSession ds, double lineHeight, bool belowText)
+        {
+            if (_frame.Images.Count == 0)
+                return;
+
+            foreach (KittyImageBlit blit in _frame.Images)
+            {
+                if (blit.BelowText != belowText)
+                    continue;
+                if (blit.Rgba.Length == 0 || blit.ImageWidth <= 0 || blit.ImageHeight <= 0)
+                    continue;
+
+                CanvasBitmap bitmap = GetOrCreateKittyBitmap(ds, blit);
+                float x = _leftTextPadding + (blit.ViewportColumn * _measuredCharWidth) + blit.XOffset;
+                float y = _topTextPadding + (float)(blit.ViewportRow * lineHeight) + blit.YOffset;
+                float width = blit.PixelWidth > 0 ? blit.PixelWidth : blit.ImageWidth;
+                float height = blit.PixelHeight > 0 ? blit.PixelHeight : blit.ImageHeight;
+                var dest = new Rect(x, y, width, height);
+                if (blit.SourceWidth > 0 && blit.SourceHeight > 0)
                 {
-                    FlushRun(y, runStartCol, runFg, runBg, runFgDefault, runBgDefault, runFormat!, (float)lineHeight);
+                    var source = new Rect(blit.SourceX, blit.SourceY, blit.SourceWidth, blit.SourceHeight);
+                    ds.DrawImage(bitmap, dest, source);
+                }
+                else
+                {
+                    ds.DrawImage(bitmap, dest);
+                }
+            }
+        }
+
+        private CanvasBitmap GetOrCreateKittyBitmap(ICanvasResourceCreator resourceCreator, KittyImageBlit blit)
+        {
+            var key = (blit.ImageId, blit.Generation);
+            if (_kittyBitmaps.TryGetValue(key, out CanvasBitmap? cached) && cached != null)
+                return cached;
+
+            CanvasBitmap bitmap = CanvasBitmap.CreateFromBytes(
+                resourceCreator,
+                blit.Rgba,
+                blit.ImageWidth,
+                blit.ImageHeight,
+                DirectXPixelFormat.R8G8B8A8UIntNormalized);
+            _kittyBitmaps[key] = bitmap;
+            if (_kittyBitmaps.Count > 64)
+            {
+                List<(uint Id, ulong Generation)> stale = new();
+                foreach (var existing in _kittyBitmaps.Keys)
+                {
+                    if (existing != key)
+                        stale.Add(existing);
+                    if (stale.Count > 32)
+                        break;
+                }
+                foreach (var item in stale)
+                {
+                    if (_kittyBitmaps.Remove(item, out CanvasBitmap? old))
+                        old.Dispose();
                 }
             }
 
-            EndEffectSequence();
-
-            // Cursor must be painted after the cell glyphs. TUI apps fill every cell,
-            // so a pre-glyph cursor rectangle is covered completely.
-            DrawBlinkingCursor(args.DrawingSession, lineHeight);
-
-            // draw all UI controls
-            _titleBarLabels?.DrawLabels(sender, args.DrawingSession, this);
+            return bitmap;
         }
 
         private void DrawBlinkingCursor(CanvasDrawingSession ds, double lineHeight)
         {
-            if (!_cursorVisible || _scrollOffset != 0 || _terminal.CursorHidden)
+            if (_scrollOffset != 0 || !_frame.CursorVisible || !_frame.CursorInViewport)
+                return;
+            if (_frame.CursorBlinking && !_cursorVisible)
                 return;
             if (_lines <= 0 || _columns <= 0 || _measuredCharWidth <= 0)
                 return;
 
-            int col = Math.Clamp(_terminal.Buffer.X, 0, _columns - 1);
-            int row = _terminal.Buffer.Y;
+            int col = Math.Clamp(_frame.CursorX, 0, _columns - 1);
+            int row = _frame.CursorY;
             if (row < 0 || row >= _lines)
                 return;
 
@@ -715,45 +833,35 @@ namespace modterm
             float y = _topTextPadding + (float)(row * lineHeight);
             float height = (float)lineHeight;
 
-            int logicalRow = _terminal.Buffer.YBase + row;
-            var sourceLine = (logicalRow >= 0 && logicalRow < _terminal.Buffer.Lines.Length)
-                ? _terminal.Buffer.Lines[logicalRow]
-                : null;
-            XtermSharp.CharData cd = (sourceLine != null && col < sourceLine.Length)
-                ? sourceLine[col]
-                : XtermSharp.CharData.Null;
+            GhosttyCell cell = default;
+            if (row < _frame.Rows && col < _frame.Cols && _frame.Cells.Length > row * _frame.Cols + col)
+                cell = _frame.Cells[row * _frame.Cols + col];
 
-            XtermAttr.Decode(cd.Attribute, out int fgIdx, out int bgIdx, out XtermSharp.FLAGS flags);
-            bool inverted = _isSelecting && _selectionRange != null && _selectionRange.Contains(col, logicalRow);
-            bool cellReverse = (flags & XtermSharp.FLAGS.INVERSE) != 0;
-            ResolveCellColors(
-                fgIdx,
-                bgIdx,
-                _screenReverse ^ inverted ^ cellReverse,
-                out Color fg,
-                out Color bg,
-                out bool fgDefault,
-                out bool bgDefault);
-
+            ResolveCapturedCellColors(in cell, out Color fg, out Color bg, out bool fgDefault, out bool bgDefault);
             Color fill = fgDefault ? _outputColor : fg;
-            Color glyph = bgDefault ? InverseForegroundColor() : bg;
+            Color glyph = bgDefault || bg.A == 0 ? InverseForegroundColor() : bg;
 
-            if (TerminalCursorStyles.IsUnderline(_currentCursorStyle))
+            if (TerminalCursorStyles.IsUnderline(_currentCursorStyle)
+                || _frame.CursorStyle == GhosttyRenderStateCursorVisualStyle.Underline)
             {
                 const float underlineThickness = 2f;
                 ds.FillRectangle(x, y + height - underlineThickness, _measuredCharWidth, underlineThickness, fill);
                 return;
             }
 
+            if (_frame.CursorStyle == GhosttyRenderStateCursorVisualStyle.Bar)
+            {
+                ds.FillRectangle(x, y, 2f, height, fill);
+                return;
+            }
+
             ds.FillRectangle(x, y, _measuredCharWidth, height, fill);
 
-            string runeString = cd.Code == 0 ? " " : RuneToString((uint)cd.Rune);
+            string runeString = string.IsNullOrEmpty(cell.Text) ? " " : cell.Text;
             if (string.IsNullOrWhiteSpace(runeString))
                 return;
 
-            CanvasTextFormat format = (flags & XtermSharp.FLAGS.BOLD) != 0
-                ? _boldTextFormat ?? _currentTextFormat
-                : _normalTextFormat ?? _currentTextFormat;
+            CanvasTextFormat format = FormatFor(cell.Bold, cell.Italic);
             DrawScaledText(ds, runeString.Replace(' ', '\u00A0'), x, y, glyph, format, HorizontalScaleFor(format));
         }
 
@@ -823,6 +931,14 @@ namespace modterm
                         DrawGlyphFitted(glyphDs, call, call.Color);
                     else
                         DrawGlyphOnGrid(glyphDs, call, call.Color, replaceSpaces: true);
+
+                    if (call.Underline > 0)
+                    {
+                        float thickness = call.Underline >= 2 ? 2f : 1f;
+                        glyphDs.FillRectangle(call.X, call.Y + call.Height - thickness - 1f, call.Width, thickness, call.Color);
+                    }
+                    if (call.Strikethrough)
+                        glyphDs.FillRectangle(call.X, call.Y + (call.Height * 0.55f), call.Width, 1f, call.Color);
                 }
             }
 
@@ -987,7 +1103,9 @@ namespace modterm
         }
 
         private float HorizontalScaleFor(CanvasTextFormat format)
-            => ReferenceEquals(format, _boldTextFormat) ? _boldHorizontalScale : 1f;
+            => ReferenceEquals(format, _boldTextFormat) || ReferenceEquals(format, _boldItalicTextFormat)
+                ? _boldHorizontalScale
+                : 1f;
 
         private void DrawGlyphOnGrid(CanvasDrawingSession ds, DrawTextCall call, Color color, bool replaceSpaces)
         {
@@ -1033,6 +1151,14 @@ namespace modterm
                 FontWeight = FontWeights.Normal,
                 WordWrapping = CanvasWordWrapping.NoWrap
             };
+            _italicTextFormat = new CanvasTextFormat
+            {
+                FontFamily = resolvedFontFamily,
+                FontSize = CurrentFontSize,
+                FontWeight = FontWeights.Normal,
+                FontStyle = Windows.UI.Text.FontStyle.Italic,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
             // Bundled bold is a separate TTF; FontWeight.Bold against the regular file
             // synthesizes a wider outline that walks off the cell grid.
             _boldTextFormat = new CanvasTextFormat
@@ -1044,13 +1170,23 @@ namespace modterm
                     : FontWeights.Bold,
                 WordWrapping = CanvasWordWrapping.NoWrap
             };
+            _boldItalicTextFormat = new CanvasTextFormat
+            {
+                FontFamily = BundledFonts.ResolveFontFamily(CurrentFont, bold: true),
+                FontSize = CurrentFontSize,
+                FontWeight = BundledFonts.BundledBoldUsesDedicatedFace(CurrentFont)
+                    ? FontWeights.Normal
+                    : FontWeights.Bold,
+                FontStyle = Windows.UI.Text.FontStyle.Italic,
+                WordWrapping = CanvasWordWrapping.NoWrap
+            };
             _cachedFontFamily = CurrentFont;
             _cachedFontSize = CurrentFontSize;
             _boldHorizontalScale = 1f;
             _boldAdvanceReady = false;
         }
 
-        private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format, float lineHeight)
+        private void FlushRun(float y, int startCol, Color fg, Color bg, bool fgDefault, bool bgDefault, CanvasTextFormat format, float lineHeight, int underline = 0, bool strikethrough = false)
         {
             float x = _leftTextPadding + (startCol * _measuredCharWidth);
             float width = _runBuffer.Length * _measuredCharWidth;
@@ -1066,48 +1202,10 @@ namespace modterm
                 bgDefault,
                 fitToCell: false,
                 cellHeight: lineHeight,
-                horizontalScale: HorizontalScaleFor(format));
+                horizontalScale: HorizontalScaleFor(format),
+                underline,
+                strikethrough);
             _runBuffer.Clear();
-        }
-
-        /// <summary>
-        /// Applies SGR reverse / selection / DECSCNM by swapping palette indices, then
-        /// maps host defaults. After reverse, default fg/bg become the inverted-default
-        /// sentinel so the cell is filled (theme foreground bar, window-color text)
-        /// instead of skipping the background and painting with a dummy black.
-        /// </summary>
-        private void ResolveCellColors(
-            int fgIdx,
-            int bgIdx,
-            bool reverse,
-            out Color fg,
-            out Color bg,
-            out bool fgDefault,
-            out bool bgDefault)
-        {
-            if (reverse)
-            {
-                (fgIdx, bgIdx) = (bgIdx, fgIdx);
-                if (fgIdx == XtermSharp.Renderer.DefaultColor)
-                    fgIdx = XtermSharp.Renderer.InvertedDefaultColor;
-                if (bgIdx == XtermSharp.Renderer.DefaultColor)
-                    bgIdx = XtermSharp.Renderer.InvertedDefaultColor;
-            }
-
-            fgDefault = XtermAttr.IsHostDefault(fgIdx);
-            bgDefault = XtermAttr.IsHostDefault(bgIdx);
-
-            if (fgIdx == XtermSharp.Renderer.InvertedDefaultColor)
-                fg = InverseForegroundColor();
-            else
-                fg = fgDefault ? _outputColor : ResolvePaletteColor(fgIdx, _outputColor);
-
-            if (bgIdx == XtermSharp.Renderer.InvertedDefaultColor)
-                bg = Opaque(_outputColor);
-            else if (bgDefault)
-                bg = Colors.Transparent;
-            else
-                bg = ResolvePaletteColor(bgIdx, Colors.Black);
         }
 
         private Color InverseForegroundColor()
@@ -1188,40 +1286,6 @@ namespace modterm
 
             ds.DrawTextLayout(layout, 0f, 0f, color);
             ds.Transform = prior;
-        }
-
-        // Maps a 0-255 palette index to its RGB color; default/inverted-default sentinels
-        // (256/257) fall back to the supplied theme color. Indices 0-15 may be overridden
-        // by the active theme's optional Palette dictionary.
-        private Color ResolvePaletteColor(int index, Color themeDefault)
-        {
-            if (index >= 0 && index < _terminalPaletteOverrides.Length
-                && _terminalPaletteOverrides[index] is Color overrideColor)
-            {
-                return overrideColor;
-            }
-
-            var palette = XtermSharp.Color.DefaultAnsiColors;
-            if (index >= 0 && index < palette.Count)
-            {
-                var c = palette[index];
-                return Color.FromArgb(255, c.Red, c.Green, c.Blue);
-            }
-
-            return themeDefault;
-        }
-
-        // Converts a Unicode code point to a string, handling astral (supplementary) planes.
-        private static string RuneToString(uint codePoint)
-        {
-            try
-            {
-                return char.ConvertFromUtf32((int)codePoint);
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                return "\uFFFD";
-            }
         }
 
         public static string GetHexStringFromColor(Color color)

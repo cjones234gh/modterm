@@ -1,6 +1,6 @@
 # modterm
 
-This is a GPU accelerated terminal emulator for Windows 11, running powershell, wsl, git-bash, cmd, etc.. It features VT emulation, full color support, and a configurable glass-like UI built on WinUI and Win2D. It uses XtermSharp for VT emulation and Windows ConPTY for pty support. It has an easy to use configuration and theming GUI launched from the context menu.
+This is a GPU accelerated terminal emulator for Windows 11, running powershell, wsl, git-bash, cmd, etc.. It features VT emulation, truecolor, Kitty graphics, and a configurable glass-like UI built on WinUI and Win2D. It uses libghostty (`ghostty-vt`) for VT emulation and Windows ConPTY for pty support. It has an easy to use configuration and theming GUI launched from the context menu.
 
 # Releases
 
@@ -8,18 +8,10 @@ This is a GPU accelerated terminal emulator for Windows 11, running powershell, 
 
 # To Build from Source
 
-Clone this repo, and then also clone https://github.com/cjones234gh/XtermSharp next to it. Modterm has a project reference to XtermSharp.
+Clone this repo. The libghostty native library is restored from NuGet (`RoyalApps.RoyalTerminal.GhosttySharp.Native.Win64`).
 
-Build modterm in Visual Studio with F5, or Cursor AI with F5.
+Build modterm in Visual Studio with F5, or Cursor AI with F5. x64 is the supported architecture for libghostty.
 
 # Known Issues
 
 * Running different TUI apps often requires running `reset` before launch in git-bash, WSL, and Powershell environments for correct rendering, for now.
-
-* Color is currently limited to a 256 color palette, RGB values are translated to the nearest palette entry.
-
-
-
-
-
-

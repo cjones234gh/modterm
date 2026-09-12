@@ -52,10 +52,10 @@
     <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageReference Include="RoyalApps.RoyalTerminal.GhosttySharp.Native.Win64" Version="0.5.2" />
     <PackageReference Include="WinUIEx" Version="2.9.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\XtermSharp\XtermSharp\XtermSharp.csproj" />
     <ProjectReference Include="..\modtermTE\modtermTE.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
@@ -72,11 +72,9 @@
       <_ModtermTeDestDir>$(OutputPath)ThemeEditor\</_ModtermTeDestDir>
     </PropertyGroup>
     <ItemGroup>
-      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*"
-                        Exclude="$(_ModtermTeOutputDir)win-*\**;$(_ModtermTeOutputDir)publish\**" />
+      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*" Exclude="$(_ModtermTeOutputDir)win-*\**;$(_ModtermTeOutputDir)publish\**" />
       <!-- ProjectReference can still drop TE bits next to modterm; clear those so only ThemeEditor\ remains. -->
-      <_FlatThemeEditorArtifacts Include="$(OutputPath)modtermTE.*"
-                                 Exclude="$(OutputPath)ThemeEditor\**" />
+      <_FlatThemeEditorArtifacts Include="$(OutputPath)modtermTE.*" Exclude="$(OutputPath)ThemeEditor\**" />
       <_FlatThemeEditorArtifacts Include="$(OutputPath)ModtermTeWindow.xbf" />
     </ItemGroup>
     <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(_ModtermTeDestDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
@@ -89,10 +87,8 @@
       <_ModtermTeDestDir>$(PublishDir)ThemeEditor\</_ModtermTeDestDir>
     </PropertyGroup>
     <ItemGroup>
-      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*"
-                        Exclude="$(_ModtermTeOutputDir)win-*\**;$(_ModtermTeOutputDir)publish\**" />
-      <_FlatThemeEditorArtifacts Include="$(PublishDir)modtermTE.*"
-                                 Exclude="$(PublishDir)ThemeEditor\**" />
+      <_ModtermTeOutput Include="$(_ModtermTeOutputDir)**\*.*" Exclude="$(_ModtermTeOutputDir)win-*\**;$(_ModtermTeOutputDir)publish\**" />
+      <_FlatThemeEditorArtifacts Include="$(PublishDir)modtermTE.*" Exclude="$(PublishDir)ThemeEditor\**" />
       <_FlatThemeEditorArtifacts Include="$(PublishDir)ModtermTeWindow.xbf" />
     </ItemGroup>
     <Copy SourceFiles="@(_ModtermTeOutput)" DestinationFiles="@(_ModtermTeOutput->'$(_ModtermTeDestDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
