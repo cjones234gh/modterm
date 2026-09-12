@@ -39,10 +39,7 @@ namespace modterm
         public void DrawLabels(CanvasControl sender, CanvasDrawingSession cds, ModtermRender mtd)
         {
             ArrangeLabels(sender, cds, mtd);
-            foreach (var label in Labels)
-            {
-                label.Draw(sender, cds, mtd);
-            }
+            mtd.DrawModtermLabels(sender, cds, Labels);
             
         }
 

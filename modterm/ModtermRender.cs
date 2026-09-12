@@ -759,94 +759,197 @@ namespace modterm
 
         public void DrawModtermLabel(CanvasControl sender, CanvasDrawingSession cds, DisplayLabel label)
         {
-            Color labelColor = _labelColor;
-            Color labelBlurColor = _labelBlurColor;
+            DrawModtermLabels(sender, cds, new[] { label });
+        }
 
-            // blur layer - draw text content
-            using (var commandList = new CanvasCommandList(sender))
+        public void DrawModtermLabels(CanvasControl sender, CanvasDrawingSession cds, IReadOnlyList<DisplayLabel> labels)
+        {
+            if (labels.Count == 0)
+                return;
+
+            using var commandList = new CanvasCommandList(sender);
+            using (var clds = commandList.CreateDrawingSession())
             {
-                using (var clds = commandList.CreateDrawingSession())
+                foreach (DisplayLabel label in labels)
                 {
-                    clds.DrawText(label.TextContent, (float)label.Location.X + _controlPadding,
-                        (float)label.Location.Y + _controlPadding / 4, labelBlurColor, _currentControlTextFormat);
+                    clds.DrawText(
+                        label.TextContent,
+                        (float)label.Location.X + _controlPadding,
+                        (float)label.Location.Y + _controlPadding / 4,
+                        _labelColor,
+                        _currentControlTextFormat);
                 }
-
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = _blurAmount };
-                cds.DrawImage(blurEffect);
             }
 
-            
-            // sharp layer - draw text content
-            cds.DrawText(label.TextContent, (float)label.Location.X + _controlPadding,
-                (float)label.Location.Y + _controlPadding / 4, labelColor, _currentControlTextFormat);
-
+            DrawGlowComposite(cds, commandList, _labelBlurColor);
         }
 
         private void DrawEffectSequence()
         {
-            // Blurred glow layer
-            using (var commandList = new CanvasCommandList(_sender))
+            using var backgrounds = new CanvasCommandList(_sender);
+            using var defaultGlyphs = new CanvasCommandList(_sender);
+            using var coloredGlyphs = new CanvasCommandList(_sender);
+
+            bool hasBackgrounds = false;
+            bool hasDefaultGlyphs = false;
+            bool hasColoredGlyphs = false;
+
+            using (var backgroundDs = backgrounds.CreateDrawingSession())
+            using (var defaultDs = defaultGlyphs.CreateDrawingSession())
+            using (var coloredDs = coloredGlyphs.CreateDrawingSession())
             {
-                using (var clds = commandList.CreateDrawingSession())
+                foreach (DrawTextCall call in _effectSequence)
                 {
-                    foreach (DrawTextCall call in _effectSequence)
+                    if (!call.BackgroundIsDefault)
                     {
-                        // draw a background rectangle only for explicit cell backgrounds (not SGR default / host fill)
-                        if (!call.BackgroundIsDefault)
-                        {
-                            clds.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
-                        }
+                        backgroundDs.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
+                        hasBackgrounds = true;
                     }
-                }
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = _blurAmount };
-                _drawSession.DrawImage(blurEffect);
-            }
 
-            // Sharp layer
-            foreach (DrawTextCall call in _effectSequence)
-            {
-                if (!call.BackgroundIsDefault)
-                {
-                    _drawSession.FillRectangle(call.X, call.Y, call.Width, call.Height, call.BackgroundColor);
-                }
-            }
-
-            // Blurred glow layer
-            using (var commandList = new CanvasCommandList(_sender))
-            {
-                using (var clds = commandList.CreateDrawingSession())
-                {
-                    foreach (DrawTextCall call in _effectSequence)
+                    bool glowUsesThemeColor = call.ForegroundIsDefault || call.Color == _outputColor;
+                    CanvasDrawingSession glyphDs;
+                    if (glowUsesThemeColor)
                     {
-                        Color glyphColor = (call.ForegroundIsDefault || call.Color == _outputColor)
-                            ? _outputBlurColor
-                            : call.Color;
-
-                        if (call.FitToCell)
-                        {
-                            DrawGlyphFitted(clds, call, glyphColor);
-                        }
-                        else
-                        {
-                            DrawGlyphOnGrid(clds, call, glyphColor, replaceSpaces: false);
-                        }
+                        glyphDs = defaultDs;
+                        hasDefaultGlyphs = true;
                     }
+                    else
+                    {
+                        glyphDs = coloredDs;
+                        hasColoredGlyphs = true;
+                    }
+
+                    if (call.FitToCell)
+                        DrawGlyphFitted(glyphDs, call, call.Color);
+                    else
+                        DrawGlyphOnGrid(glyphDs, call, call.Color, replaceSpaces: true);
                 }
-                var blurEffect = new GaussianBlurEffect { Source = commandList, BlurAmount = _blurAmount };
-                _drawSession.DrawImage(blurEffect);
             }
 
-            // Sharp layer
-            foreach (DrawTextCall call in _effectSequence)
+            using var effects = new EffectDisposer();
+            var output = effects.Track(new CompositeEffect { Mode = CanvasComposite.SourceOver });
+
+            ICanvasImage? glyphGlowSource = null;
+            if (hasDefaultGlyphs && _outputBlurColor != _outputColor)
             {
-                if (call.FitToCell)
+                var tinted = effects.Track(CreateRgbReplaceEffect(defaultGlyphs, _outputBlurColor));
+                if (hasColoredGlyphs)
                 {
-                    DrawGlyphFitted(_drawSession, call, call.Color);
+                    var merged = effects.Track(new CompositeEffect { Mode = CanvasComposite.SourceOver });
+                    merged.Sources.Add(tinted);
+                    merged.Sources.Add(coloredGlyphs);
+                    glyphGlowSource = merged;
                 }
                 else
                 {
-                    DrawGlyphOnGrid(_drawSession, call, call.Color, replaceSpaces: true);
+                    glyphGlowSource = tinted;
                 }
+            }
+            else if (hasDefaultGlyphs && hasColoredGlyphs)
+            {
+                var merged = effects.Track(new CompositeEffect { Mode = CanvasComposite.SourceOver });
+                merged.Sources.Add(defaultGlyphs);
+                merged.Sources.Add(coloredGlyphs);
+                glyphGlowSource = merged;
+            }
+            else if (hasDefaultGlyphs)
+            {
+                glyphGlowSource = defaultGlyphs;
+            }
+            else if (hasColoredGlyphs)
+            {
+                glyphGlowSource = coloredGlyphs;
+            }
+
+            if (hasBackgrounds)
+            {
+                if (_blurAmount > 0f)
+                    output.Sources.Add(effects.Track(CreateBlur(backgrounds)));
+                output.Sources.Add(backgrounds);
+            }
+
+            if (glyphGlowSource != null && _blurAmount > 0f)
+                output.Sources.Add(effects.Track(CreateBlur(glyphGlowSource)));
+
+            if (hasDefaultGlyphs)
+                output.Sources.Add(defaultGlyphs);
+            if (hasColoredGlyphs)
+                output.Sources.Add(coloredGlyphs);
+
+            if (output.Sources.Count == 0)
+                return;
+
+            _drawSession.DrawImage(
+                output.Sources.Count == 1 ? (ICanvasImage)output.Sources[0] : output);
+        }
+
+        private void DrawGlowComposite(CanvasDrawingSession ds, ICanvasImage source, Color glowColor)
+        {
+            if (_blurAmount <= 0f)
+            {
+                ds.DrawImage(source);
+                return;
+            }
+
+            using var glow = new ShadowEffect
+            {
+                Source = source,
+                BlurAmount = _blurAmount,
+                ShadowColor = glowColor,
+                Optimization = EffectOptimization.Speed
+            };
+            using var composite = new CompositeEffect { Mode = CanvasComposite.SourceOver };
+            composite.Sources.Add(glow);
+            composite.Sources.Add(source);
+            ds.DrawImage(composite);
+        }
+
+        private GaussianBlurEffect CreateBlur(ICanvasImage source)
+        {
+            return new GaussianBlurEffect
+            {
+                Source = source,
+                BlurAmount = _blurAmount,
+                BorderMode = EffectBorderMode.Soft,
+                Optimization = EffectOptimization.Speed
+            };
+        }
+
+        private static ColorMatrixEffect CreateRgbReplaceEffect(ICanvasImage source, Color color)
+        {
+            float r = color.R / 255f;
+            float g = color.G / 255f;
+            float b = color.B / 255f;
+            return new ColorMatrixEffect
+            {
+                Source = source,
+                AlphaMode = CanvasAlphaMode.Premultiplied,
+                ClampOutput = true,
+                ColorMatrix = new Matrix5x4
+                {
+                    M41 = r,
+                    M42 = g,
+                    M43 = b,
+                    M44 = 1f
+                }
+            };
+        }
+
+        private sealed class EffectDisposer : IDisposable
+        {
+            private readonly List<IDisposable> _items = new List<IDisposable>(8);
+
+            public T Track<T>(T item) where T : IDisposable
+            {
+                _items.Add(item);
+                return item;
+            }
+
+            public void Dispose()
+            {
+                for (int i = _items.Count - 1; i >= 0; i--)
+                    _items[i].Dispose();
+                _items.Clear();
             }
         }
 
