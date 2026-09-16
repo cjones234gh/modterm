@@ -12,6 +12,3 @@ Clone this repo. The libghostty native library is restored from NuGet (`RoyalApp
 
 Build modterm in Visual Studio with F5, or Cursor AI with F5. x64 is the supported architecture for libghostty.
 
-# Known Issues
-
-* If you run into display issues with TUI apps in git-bash, WSL, Powershell, run 'reset'.
