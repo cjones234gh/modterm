@@ -426,3 +426,4 @@ deploy/staging/**
 !deploy/staging/note.md
 deploy/output/
 deploy/dependencies/*.exe
+.aider*
