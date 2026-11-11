@@ -54,6 +54,10 @@ namespace modterm
         private int _mouseReportButton = -1;
         private int _lastReportedMouseCol = -1;
         private int _lastReportedMouseRow = -1;
+        private bool _retainWordSelection;
+        private bool _wordPointerCaptured;
+        private long _lastTextClickTicks = -1;
+        private Point _lastTextClickPoint;
         private readonly HashSet<Windows.System.VirtualKey> _ptyHeldKeys = new();
 
         public void InvalidateModtermCanvas()

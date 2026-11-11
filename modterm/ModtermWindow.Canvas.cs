@@ -2,6 +2,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 using Windows.Foundation;
 using Windows.System;
@@ -186,10 +187,25 @@ namespace modterm
             if (button != 0)
                 return;
 
+            _retainWordSelection = false;
             _mtr.ClearHostSelection();
 
             if (!_mtr.IsInTextArea(currentPoint))
+            {
+                _lastTextClickTicks = -1;
                 return;
+            }
+
+            bool wordClick = IsRepeatTextClick(currentPoint);
+            RememberTextClick(currentPoint);
+            if (wordClick && _mtr.TrySelectWordAt(currentPoint))
+            {
+                _retainWordSelection = true;
+                _wordPointerCaptured = ModtermCanvas.CapturePointer(e.Pointer);
+                ModtermCanvas.Invalidate();
+                e.Handled = true;
+                return;
+            }
 
             _mtr.IsSelecting = true;
             _mtr.SelectionStart = currentPoint;
@@ -231,6 +247,9 @@ namespace modterm
                     return;
             }
 
+            if (_retainWordSelection)
+                return;
+
             if (!_mtr.IsSelecting)
                 return;
 
@@ -263,20 +282,46 @@ namespace modterm
                 return;
             }
 
-            if (!_mtr.IsSelecting)
+            if (_retainWordSelection)
+            {
+                _retainWordSelection = false;
+                _mtr.IsSelecting = false;
+                _mtr.CopySelectedTextToClipboard();
+                ReleaseWordPointer(e.Pointer);
+                ModtermCanvas.Invalidate();
+                e.Handled = true;
                 return;
+            }
+
+            if (!_mtr.IsSelecting)
+            {
+                ReleaseWordPointer(e.Pointer);
+                return;
+            }
 
             _mtr.SelectionEnd = currentPoint;
             _mtr.UpdateSelectedText();
             _mtr.IsSelecting = false;
             _mtr.CopySelectedTextToClipboard();
+            ReleaseWordPointer(e.Pointer);
             ModtermCanvas.Invalidate();
         }
 
         private void ModtermCanvas_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
         {
             if (_mouseReportButton < 0)
+            {
+                if (_retainWordSelection)
+                {
+                    _retainWordSelection = false;
+                    _mtr.IsSelecting = false;
+                    _mtr.CopySelectedTextToClipboard();
+                    ModtermCanvas.Invalidate();
+                }
+
+                _wordPointerCaptured = false;
                 return;
+            }
 
             if (ShouldSendMouseRelease())
             {
@@ -463,6 +508,43 @@ namespace modterm
                 _ => -1
             };
         }
+
+        private bool IsRepeatTextClick(Point point)
+        {
+            if (_lastTextClickTicks < 0)
+                return false;
+
+            long elapsed = Environment.TickCount64 - _lastTextClickTicks;
+            if (elapsed < 0 || elapsed > GetDoubleClickTime())
+                return false;
+
+            return Math.Abs(point.X - _lastTextClickPoint.X) <= GetSystemMetrics(SmCxDoubleClk)
+                && Math.Abs(point.Y - _lastTextClickPoint.Y) <= GetSystemMetrics(SmCyDoubleClk);
+        }
+
+        private void RememberTextClick(Point point)
+        {
+            _lastTextClickTicks = Environment.TickCount64;
+            _lastTextClickPoint = point;
+        }
+
+        private void ReleaseWordPointer(Pointer pointer)
+        {
+            if (!_wordPointerCaptured)
+                return;
+
+            _wordPointerCaptured = false;
+            ModtermCanvas.ReleasePointerCapture(pointer);
+        }
+
+        private const int SmCxDoubleClk = 36;
+        private const int SmCyDoubleClk = 37;
+
+        [DllImport("user32.dll")]
+        private static extern uint GetDoubleClickTime();
+
+        [DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
 
         private static bool IsKeyDown(VirtualKey key)
         {

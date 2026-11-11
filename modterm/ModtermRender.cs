@@ -412,6 +412,133 @@ namespace modterm
             };
         }
 
+        /// <summary>
+        /// Selects the contiguous non-whitespace run on the viewport row under
+        /// <paramref name="point"/>, expanding left and right until whitespace.
+        /// </summary>
+        public bool TrySelectWordAt(Point point)
+        {
+            if (_terminal is null || !TryGetViewportCell(point, clamp: false, out int col, out int row))
+                return false;
+
+            _terminal.Capture(_frame);
+
+            int cols = Math.Min(_columns, _frame.Cols);
+            int rows = Math.Min(_lines, _frame.Rows);
+            if (cols <= 0 || rows <= 0 || row >= rows || col >= cols || _frame.Cells.Length == 0)
+                return false;
+
+            if (!TryGetWordBounds(row, col, cols, out int startCol, out int endCol))
+                return false;
+
+            _selectionRange = new TextRange
+            {
+                Start = new TextPosition { Column = startCol, Row = row },
+                End = new TextPosition { Column = endCol, Row = row },
+            };
+            _terminal.SetSelection(startCol, row, endCol, row);
+            _selectedText = GetSelectedText();
+            _isSelecting = false;
+
+            double lineHeight = CurrentFontSize + _lineHeightPadding;
+            _selectionStart = new Point(
+                _leftTextPadding + (startCol * _measuredCharWidth),
+                _topTextPadding + (row * lineHeight));
+            _selectionEnd = new Point(
+                _leftTextPadding + ((endCol + 0.9) * _measuredCharWidth),
+                _selectionStart.Y);
+            _selectionTopRow = row;
+            return true;
+        }
+
+        private bool TryGetWordBounds(int row, int col, int cols, out int startCol, out int endCol)
+        {
+            startCol = 0;
+            endCol = 0;
+            if (!TryResolveGlyphColumn(row, col, cols, out int glyphCol))
+                return false;
+            if (!IsWordCell(CellAt(row, glyphCol)))
+                return false;
+
+            int start = glyphCol;
+            while (start > 0)
+            {
+                if (!TryResolveGlyphColumn(row, start - 1, cols, out int prev) || prev >= start)
+                    break;
+                if (!IsWordCell(CellAt(row, prev)))
+                    break;
+                start = prev;
+            }
+
+            GhosttyCell glyph = CellAt(row, glyphCol);
+            int end = glyphCol + Math.Max(1, (int)glyph.Width) - 1;
+            if (end >= cols)
+                end = cols - 1;
+
+            while (end + 1 < cols)
+            {
+                int look = end + 1;
+                GhosttyCell next = CellAt(row, look);
+                if (next.Width == 0 || !IsWordCell(next))
+                    break;
+
+                end = Math.Min(cols - 1, look + Math.Max(1, (int)next.Width) - 1);
+            }
+
+            startCol = start;
+            endCol = end;
+            return end >= start;
+        }
+
+        private bool TryResolveGlyphColumn(int row, int col, int cols, out int glyphCol)
+        {
+            glyphCol = col;
+            if (col < 0 || col >= cols)
+                return false;
+
+            GhosttyCell cell = CellAt(row, col);
+            if (cell.Width > 0)
+                return true;
+
+            int cursor = col - 1;
+            while (cursor >= 0 && CellAt(row, cursor).Width == 0)
+                cursor--;
+
+            if (cursor < 0)
+                return false;
+
+            GhosttyCell glyph = CellAt(row, cursor);
+            int spanEnd = cursor + Math.Max(1, (int)glyph.Width) - 1;
+            if (col > spanEnd)
+                return false;
+
+            glyphCol = cursor;
+            return glyph.Width > 0;
+        }
+
+        private GhosttyCell CellAt(int row, int col)
+        {
+            int index = (row * _frame.Cols) + col;
+            if ((uint)index >= (uint)_frame.Cells.Length)
+                return default;
+
+            return _frame.Cells[index];
+        }
+
+        private static bool IsWordCell(in GhosttyCell cell)
+        {
+            if (cell.Width == 0 || string.IsNullOrEmpty(cell.Text))
+                return false;
+
+            foreach (char ch in cell.Text)
+            {
+                if (!char.IsWhiteSpace(ch))
+                    return true;
+            }
+
+            return false;
+        }
+
         public void CopySelectedTextToClipboard()
         {
             if (string.IsNullOrEmpty(_selectedText))
