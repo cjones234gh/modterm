@@ -4,7 +4,7 @@ This is a GPU accelerated terminal emulator for Windows 11, running powershell, 
 
 # Releases
 
-[0.9.0-alpha](https://github.com/cjones234gh/modterm/releases/tag/v0.9.0-alpha) - Link to a binary installer, if you don't want to build from source.
+[0.9.1-alpha](https://github.com/cjones234gh/modterm/releases/tag/v0.9.1-alpha) - Link to a binary installer, if you don't want to build from source.
 
 # To Build from Source
 
